@@ -1,6 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { mkdirSync, writeFileSync } from 'node:fs';
 
 const criticalRoutes = ['home','type','ask','matches','people','followups','poster','language','settings'];
+const artifactDir = 'p10-artifacts';
+
+function projectSlug(name: string) {
+  return name.replace(/[^a-z0-9-]+/gi, '-').toLowerCase();
+}
 
 test('P10 captures startup, heap and local-storage measurements', async ({ page }, testInfo) => {
   await page.goto('/#/home');
@@ -23,8 +29,12 @@ test('P10 captures startup, heap and local-storage measurements', async ({ page 
     };
   });
 
+  mkdirSync(artifactDir, { recursive: true });
+  const metricJson = JSON.stringify(metrics, null, 2);
+  writeFileSync(`${artifactDir}/${projectSlug(testInfo.project.name)}-runtime-metrics.json`, metricJson);
+  console.log(`[P10_METRICS:${testInfo.project.name}] ${JSON.stringify(metrics)}`);
   await testInfo.attach('p10-runtime-metrics.json', {
-    body: Buffer.from(JSON.stringify(metrics, null, 2)),
+    body: Buffer.from(metricJson),
     contentType: 'application/json',
   });
 
@@ -34,7 +44,10 @@ test('P10 captures startup, heap and local-storage measurements', async ({ page 
   if (metrics.storageUsageBytes != null) expect(metrics.storageUsageBytes).toBeLessThan(20 * 1024 * 1024);
 });
 
-test('P10 critical screens have names, focusable controls and no horizontal overflow', async ({ page }) => {
+test('P10 critical screens have names, focusable controls, visual baselines and no horizontal overflow', async ({ page }, testInfo) => {
+  mkdirSync(artifactDir, { recursive: true });
+  const project = projectSlug(testInfo.project.name);
+
   for (const route of criticalRoutes) {
     await page.goto(`/#/${route}`);
     await expect(page.getByRole('heading').first()).toBeVisible();
@@ -63,6 +76,12 @@ test('P10 critical screens have names, focusable controls and no horizontal over
     expect(audit.undersized, `${route}: undersized primary touch targets`).toBe(0);
     expect(audit.overflowPx, `${route}: horizontal overflow`).toBeLessThanOrEqual(1);
     expect(audit.lang).toMatch(/^(en|ta)$/);
+
+    await page.screenshot({
+      path: `${artifactDir}/${project}-${route}.png`,
+      fullPage: true,
+      animations: 'disabled',
+    });
   }
 
   await page.goto('/#/home');
