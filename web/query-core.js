@@ -22,10 +22,10 @@ function interpret(input){
  const location=PLACES.find(p=>lower.includes(p.toLowerCase()))||null;
  const pair=TYPE_PATTERNS.find(([,re])=>re.test(lower));
  const phoneMatch=lower.match(/\d[\d\s()+-]{3,}\d/); const phoneTerm=phoneMatch?phoneMatch[0].replace(/\D/g,''):null;
- const personRole=/\bowner\b/i.test(lower)?'owner':/\bseller\b/i.test(lower)?'seller':/\btenant\b/i.test(lower)?'tenant':/\bbuyer\b/i.test(lower)?'buyer':null;
- const entity=/\b(?:match|matches|suitable|fit)\b/i.test(lower)?'matches':/\b(?:owner|seller|buyer|tenant|person|people|contact|phone|number)\b/i.test(lower)?'people':/\b(?:property|properties|land|plot|site|house|home|flat|apartment|veedu|manai|nilam)\b/i.test(lower)?'properties':'all';
+ const personRole=/\bowners?\b/i.test(lower)?'owner':/\bsellers?\b/i.test(lower)?'seller':/\btenants?\b/i.test(lower)?'tenant':/\bbuyers?\b/i.test(lower)?'buyer':null;
+ const entity=/\b(?:match|matches|suitable|fit)\b/i.test(lower)?'matches':/\b(?:owners?|sellers?|buyers?|tenants?|person|people|contacts?|phone|number)\b/i.test(lower)?'people':/\b(?:property|properties|land|plot|site|house|home|flat|apartment|veedu|manai|nilam)\b/i.test(lower)?'properties':'all';
  const intent=/\b(?:rent|rental|vaadagai|vadagai)\b/i.test(lower)?'rent':/\b(?:buy|purchase|want|need)\b/i.test(lower)?'buy':/\b(?:sale|sell|selling)\b/i.test(lower)?'sale':null;
- const stop=new Set(['show','find','me','all','the','in','at','for','under','below','max','budget','is','up','to','properties','property','people','person','contact','contacts','phone','number','owner','owners','seller','sellers','tenant','tenants','matches','match','buyer','buyers','land','plot','site','house','home','flat','apartment','buy','sale','sell','selling','rent','rental','want','wants','need','needs','looking','with','lakh','lakhs','lac','crore','cr','rs']);
+ const stop=new Set(['show','find','me','all','the','in','at','for','under','below','max','budget','is','up','to','properties','property','people','person','contact','contacts','phone','number','owner','owners','seller','sellers','tenant','tenants','matches','match','buyer','buyers','land','plot','site','house','home','flat','apartment','buy','sale','sell','selling','rent','rental','want','wants','need','needs','looking','with','who','lakh','lakhs','lac','crore','cr','rs']);
  const terms=lower.replace(/[^a-z0-9+\s]/g,' ').split(/\s+/).filter(x=>x.length>1&&!stop.has(x)&&!PLACES.some(p=>p.toLowerCase()===x)&&!/^\d/.test(x));
  return {raw,normalized,terms,phoneTerm,location,propertyType:pair?pair[0]:null,maxPrice:money(normalized),entity,intent,personRole};
 }
