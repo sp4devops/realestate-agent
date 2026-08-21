@@ -3,6 +3,8 @@
 
   const DRAFT_KEY = 'pa.captureDraft';
   const app = document.getElementById('app');
+  const extractor = window.PropertyAssistantCapture.createExtractor();
+  const uncertaintyLabels = { locality:'Location', propertyType:'Property type', primaryPhone:'Primary phone', name:'Name', budgetMax:'Budget', price:'Price' };
 
   function currentRoute(){ return (location.hash.replace(/^#\/?/,'') || '').split('?')[0]; }
   function esc(value){ return String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
@@ -14,17 +16,22 @@
   function renderType(){
     app.innerHTML = shell(`<section class="page"><p class="eyebrow">TYPE & SAVE</p><h1>Type & Save</h1><p class="lead">Tell Property Assistant naturally about one buyer, tenant, owner, or property. Parsing works locally without a model.</p><label class="capture-field"><span>Business note</span><textarea data-testid="capture-text" rows="7" placeholder="Example: Arun wants land in Erode, budget 25 lakh, phone 98765 43210"></textarea></label><div class="page-actions"><button type="button" class="button primary" data-testid="analyze-capture">Review details</button><button type="button" class="button" data-route="home">Cancel</button></div><p class="capture-error" data-testid="capture-error" hidden></p></section>`, '');
     bindRouteButtons();
-    document.querySelector('[data-testid="analyze-capture"]').addEventListener('click',()=>{
+    document.querySelector('[data-testid="analyze-capture"]').addEventListener('click',async()=>{
+      const button=document.querySelector('[data-testid="analyze-capture"]');
       const text=document.querySelector('[data-testid="capture-text"]').value;
-      const parsed=window.PropertyAssistantCapture.parse(text);
-      if(!parsed.ok){ const error=document.querySelector('[data-testid="capture-error"]'); error.hidden=false; error.textContent=parsed.error; return; }
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(parsed));
-      location.hash='#/review';
+      button.disabled=true;
+      try {
+        const parsed=await extractor.extract(text);
+        if(!parsed.ok){ const error=document.querySelector('[data-testid="capture-error"]'); error.hidden=false; error.textContent=parsed.error; return; }
+        sessionStorage.setItem(DRAFT_KEY, JSON.stringify(parsed));
+        location.hash='#/review';
+      } finally { button.disabled=false; }
     });
   }
 
   function reviewBody(parsed){
-    const uncertain = parsed.uncertain.length ? `<div class="placeholder-card"><strong>Check these details</strong><p data-testid="uncertain-fields">${esc(parsed.uncertain.join(', '))}</p></div>` : `<div class="placeholder-card"><strong>Looks complete</strong><p>No low-confidence fields were detected by the local rules.</p></div>`;
+    const labels=parsed.uncertain.map(key=>uncertaintyLabels[key] || key);
+    const uncertain = labels.length ? `<div class="placeholder-card"><strong>Please check these details</strong><p data-testid="uncertain-fields">${esc(labels.join(', '))}</p></div>` : `<div class="placeholder-card"><strong>Looks complete</strong><p>No low-confidence fields were detected by the local rules.</p></div>`;
     if(parsed.kind==='property'){
       return `${uncertain}<form data-testid="review-form">${field('Property type','propertyType',parsed.property.propertyType)}${field('Locality','locality',parsed.property.locality)}${field('Intent','intent',parsed.property.intent)}${field('Price','price',money(parsed.property.price),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save property</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
     }
@@ -50,7 +57,12 @@
   function saveRequirement(form){
     const repo=window.__PA_REPOSITORY__;
     const person=repo.create('people',{ name:String(form.get('name')||'').trim(), role:'buyer', primaryPhone:String(form.get('primaryPhone')||'').trim(), alternatePhones:[] });
-    repo.create('requirements',{ personId:person.id, intent:String(form.get('intent')||'buy'), propertyType:String(form.get('propertyType')||'').trim(), locations:[String(form.get('locality')||'').trim()].filter(Boolean), budgetMin:null, budgetMax:numberOrNull(form.get('budgetMax')) });
+    try {
+      repo.create('requirements',{ personId:person.id, intent:String(form.get('intent')||'buy'), propertyType:String(form.get('propertyType')||'').trim(), locations:[String(form.get('locality')||'').trim()].filter(Boolean), budgetMin:null, budgetMax:numberOrNull(form.get('budgetMax')) });
+    } catch(error) {
+      repo.remove('people', person.id);
+      throw error;
+    }
     sessionStorage.removeItem(DRAFT_KEY);
     location.hash=`#/person?id=${encodeURIComponent(person.id)}`;
   }
