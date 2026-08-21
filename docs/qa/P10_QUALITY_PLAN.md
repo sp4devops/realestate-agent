@@ -17,9 +17,10 @@ The P10 Playwright suite records and checks:
 - Primary controls meet a 44 px minimum touch target.
 - Keyboard focus is visibly indicated.
 - Typed capture, persistence and navigation remain usable after the browser network is switched offline.
-- Typed capture remains usable when media/STT/model capabilities are unavailable.
+- Typed capture remains usable when microphone/STT capability is unavailable.
+- Desktop and mobile full-page screenshots are captured for Home, Type, Ask, Matches, People, Follow-ups, Poster, Language and Settings as the P10 visual baseline set.
 
-Runtime metrics are attached to the Playwright test result as `p10-runtime-metrics.json` for both desktop and mobile Chromium projects.
+CI retains `p10-artifacts/` inside the Playwright artifact. It contains project-specific runtime-metrics JSON and the critical-screen visual baseline PNGs. Metrics are also printed in the Playwright job log for direct evidence.
 
 ## Initial conservative CI guardrails
 
