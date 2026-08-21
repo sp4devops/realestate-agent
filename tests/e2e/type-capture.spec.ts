@@ -30,3 +30,16 @@ test('empty typed capture gives a useful local validation error', async ({ page 
   await page.getByTestId('analyze-capture').click();
   await expect(page.getByTestId('capture-error')).toContainText('Type something');
 });
+
+test('invalid reviewed buyer details do not leave an orphan person', async ({ page }) => {
+  await page.goto('/#/type');
+  await page.getByTestId('capture-text').fill('Rollback Demo wants land in Erode, budget 20 lakh, phone 97654 32109');
+  await page.getByTestId('analyze-capture').click();
+  await expect(page.getByRole('heading', { name: 'Check what I understood' })).toBeVisible();
+  await page.getByTestId('field-name').fill('Rollback Demo');
+  await page.getByTestId('field-intent').fill('invalid-intent');
+  await page.getByTestId('save-capture').click();
+  await expect(page.getByTestId('review-error')).toContainText('requirement intent is invalid');
+  const orphanCount = await page.evaluate(() => window.__PA_REPOSITORY__.list('people').filter(person => person.name === 'Rollback Demo').length);
+  expect(orphanCount).toBe(0);
+});
