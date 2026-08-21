@@ -27,6 +27,11 @@ test('short advisor note does not parse Perundurai as the Tanglish name marker',
   assert.ok(!result.uncertain.includes('propertyType'));
 });
 
+test('common Indian mobile separators normalize to one structured phone', () => {
+  assert.equal(parse('Arun wants site in Pollachi budget 25L phone 987 654 3210').person.primaryPhone, '+91 98765 43210');
+  assert.equal(parse('Arun wants site in Tambaram budget 25 lakh phone +91-98765-43210').person.primaryPhone, '+91 98765 43210');
+});
+
 test('Tanglish buyer note works without a model', () => {
   const result = parse('Name is Ravi, Erode la land venum, budget 20 lakh, phone 91234 56789');
   assert.equal(result.kind, 'requirement');
