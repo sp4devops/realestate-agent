@@ -10,6 +10,7 @@ const app = await readFile(new URL('../../web/app.js', import.meta.url), 'utf8')
 const styles = await readFile(new URL('../../web/styles.css', import.meta.url), 'utf8');
 const voiceUi = await readFile(new URL('../../web/voice-ui.js', import.meta.url), 'utf8');
 const queryUi = await readFile(new URL('../../web/query-ui.js', import.meta.url), 'utf8');
+const settingsUi = await readFile(new URL('../../web/settings-ui.js', import.meta.url), 'utf8');
 
 test('Android shell uses secure local asset origin, navigation lock and system-bar insets', () => {
   assert.match(mainActivity, /WebViewAssetLoader/);
@@ -28,6 +29,15 @@ test('Android exposes local on-device speech recognition for capture and Ask', (
   assert.match(mainActivity, /startOnDeviceQuerySpeech/);
   assert.match(voiceUi, /__PA_ON_DEVICE_STT_RESULT__/);
   assert.match(queryUi, /__PA_ON_DEVICE_QUERY_STT_RESULT__/);
+});
+
+test('Android exports encrypted backups through a user-selected document with no storage permission', () => {
+  assert.match(mainActivity, /ACTION_CREATE_DOCUMENT/);
+  assert.match(mainActivity, /exportBackup/);
+  assert.match(mainActivity, /__PA_BACKUP_EXPORT_RESULT__/);
+  assert.match(settingsUi, /PropertyAssistantHost\.exportBackup/);
+  assert.match(settingsUi, /__PA_BACKUP_EXPORT_RESULT__/);
+  assert.doesNotMatch(manifest, /WRITE_EXTERNAL_STORAGE|READ_EXTERNAL_STORAGE|MANAGE_EXTERNAL_STORAGE/);
 });
 
 test('Android OS backup and device transfer are disabled for private local memory', () => {
