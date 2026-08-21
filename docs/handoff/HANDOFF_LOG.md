@@ -2,6 +2,78 @@
 
 Append-only session history. New entries go at the top beneath this introduction or at the end; do not rewrite historical facts.
 
+## 2026-08-21 23:36 IST — P6 late reviewer repair complete
+
+**Branch:** `ai/p6-ask-search-results`
+
+**PR:** #7 — P6: Ask/Search and operational result cards
+
+**Late review finding and repair:**
+
+- Final code review found a blocking relevance gap: explicit people queries such as `find buyers looking for land in Erode under 25 lakh` selected people but did not apply the linked requirement/property filters, so unrelated people could be returned.
+- Added structured role-aware people filtering: buyer/tenant searches evaluate linked requirements; owner/seller searches evaluate owned property supply.
+- Separated person role cues from transaction intent so role-only queries such as `find buyers` remain broad and do not invent a buy requirement.
+- Added correct demand/supply intent semantics so `buy` queries search sale inventory while buyer requirements remain `buy`.
+- Added plural role cues (`buyers`, `owners`, `sellers`, `tenants`) and removed grammatical cue `who` from residual free-text matching.
+- Added regression fixtures/tests for role-only people lookup, linked buyer requirement filtering, linked owner inventory filtering, and buy-to-sale inventory behavior.
+
+**CI/failure loop:**
+
+- Exact-head Quality Gates #165 (`32511282598`) correctly failed the newly added unit tests because plural role cues were not normalized and `who` leaked into residual terms. Harness and Android were green; the failure was diagnosed from the JS/unit logs rather than blindly rerun.
+- Fixed the grammar normalization defects and pushed functional repair HEAD `5919b67dd983940552ccfc42350697b18e681061`.
+- Quality Gates #167 (`32511450726`) completed successfully for that exact functional HEAD: Detect, Harness, JS/unit/lint/type checks, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
+
+**Reviewer gates after late repair:**
+
+- Senior Code Reviewer: PASS — linked filtering, role/intent separation, buy-to-sale semantics, query relevance, escaping, route/event ownership, and microphone lifecycle reviewed; no Critical/High finding remains.
+- Senior QA Reviewer: PASS — role-only lookup, linked buyer/owner filtering, budget/location/type/intent regressions, English/Tanglish/starter Tamil queries, typed/voice parity, STT fallback, desktop/mobile E2E, and Android packaging covered.
+- Product/UX Guardrail Reviewer: PASS — Ask remains local-first, deterministic, private, action-card oriented, and within P6 scope without cloud search, CRM expansion, or premature P8 communication behavior.
+
+**State:** P6 functional/reviewer repair is green on `5919b67dd983940552ccfc42350697b18e681061`. The state/handoff documentation commits move PR HEAD, so one final exact-HEAD Quality Gates run remains mandatory before merge.
+
+**Merge rule:** PR #7 must not be merged without explicit user authorization.
+
+**Next after authorized merge:** verify `main`, then begin P7 — Poster capture and OCR lead flow — on a fresh focused branch/PR.
+
+## 2026-08-21 22:36 IST — P6 Ask/Search and operational result cards complete
+
+**Branch:** `ai/p6-ask-search-results`
+
+**PR:** #7 — P6: Ask/Search and operational result cards
+
+**Implementation evidence:**
+
+- Replaced the Ask placeholder with a real local natural-language search flow that interprets text into entity, locality, property type, price, intent, phone, and residual-term filters.
+- Added operational result cards for people, properties, and persisted matches. Cards open the underlying local record instead of returning chat-only prose.
+- Kept voice and typed Ask on one shared query contract; voice reuses the P4 local STT adapter and typed Ask remains usable when STT/microphone access fails.
+- Added English, Tanglish/regional aliases, and starter Tamil-script aliases for launch-priority property/locality query patterns, including Tamil lakh/crore normalization.
+- Added first-class phone-number lookup and prevented property-specific filters from leaking unrelated people into results.
+- Preserved local-first/privacy behavior: no network search/backend was introduced, microphone tracks stop on completion/route exit/page hide, and abandoned voice queries cannot produce results after navigation.
+- Preserved shell navigation on the dynamically owned Ask screen and separated result-action binding so repeated searches do not stack duplicate event listeners.
+
+**CI/failure loop:**
+
+- Initial Quality Gates #137 (`32505282381`) failed JS unit search because parsed currency unit `lakh` leaked into residual search terms; currency units were removed from free-text terms.
+- After adding Ask microphone route-exit cleanup, Quality Gates #143 (`32505508097`) failed inherited desktop/mobile primary navigation because the dynamic Ask renderer replaced the shell after base listeners were bound. P6 now binds its owned shell route controls.
+- Quality Gates #145 (`32505697792`) then completed successfully for `35396c340985acb80170bdeea0dbfca0257bbf44` with all required jobs green.
+- Reviewer pass found four additional completion gaps: property-filter queries could leak unrelated people, numeric phone lookup was ineffective, Tamil-script query coverage was absent, and repeated result renders could stack duplicate listeners. These were repaired with regression coverage.
+- Post-review Quality Gates #151 (`32506054555`) caught one residual phone-cue issue: the word `phone` remained a required free-text term and filtered out the correct number match. Entity cue terms were removed from free-text matching.
+- Final functional/reviewer-repair Quality Gates #153 (`32506163608`) completed successfully for `c98445da3dbcfa802d77a93be4b0b75918252579`: Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
+
+**Reviewer gates after repair:**
+
+- Senior Code Reviewer: PASS — interpretation/search correctness, escaping, filter relevance, phone handling, route/event ownership, and microphone lifecycle reviewed; no remaining Critical/High finding.
+- Senior QA Reviewer: PASS — English/Tanglish/starter Tamil queries, people/property/match cards, price/location/type filters, phone lookup, voice/text parity, STT failure fallback, route-exit microphone cleanup, navigation, desktop/mobile E2E, and Android packaging covered.
+- Product/UX Guardrail Reviewer: PASS — Ask stays local/offline, returns operational cards instead of chat-only answers, supports voice and text through one contract, and does not pull P8 communication actions or cloud behavior forward.
+
+**Nonblocking constraints:** P6 query interpretation is intentionally a starter deterministic vocabulary/locality/Tamil-alias set. It is not unrestricted natural-language understanding; real pilot queries should expand coverage. Search over matches follows the P5 persisted-match freshness contract until repository-level recalculation is introduced.
+
+**State:** P6 acceptance is complete on functional/reviewer-repair HEAD `c98445da3dbcfa802d77a93be4b0b75918252579`. This state/handoff documentation moves PR HEAD, so one final exact-HEAD Quality Gates run is mandatory before merge.
+
+**Merge rule:** PR #7 must not be merged without explicit user authorization.
+
+**Next after authorized merge:** verify `main`, then begin P7 — Poster capture and OCR lead flow — on a fresh focused branch/PR.
+
 ## 2026-08-21 22:10 IST — P5 deterministic Matching and Action Brain complete
 
 **Branch:** `ai/p5-matching-action-brain`

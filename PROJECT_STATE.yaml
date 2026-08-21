@@ -2,38 +2,38 @@ schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
 status: ready_for_merge
-active_phase: P5
-active_phase_name: Matching and action brain
-last_verified_commit: 702baa505a743e1b419feebf9dc68f6888bfed74
-last_updated: 2026-08-21T22:10:00+05:30
-active_pr: 6
-active_branch: ai/p5-matching-action-brain
+active_phase: P6
+active_phase_name: Ask/search and operational result cards
+last_verified_commit: 5919b67dd983940552ccfc42350697b18e681061
+last_updated: 2026-08-21T23:39:00+05:30
+active_pr: 7
+active_branch: ai/p6-ask-search-results
 
 ci_gate:
   status: green
-  verified_head_sha: 702baa505a743e1b419feebf9dc68f6888bfed74
+  verified_head_sha: 5919b67dd983940552ccfc42350697b18e681061
   workflow_name: Quality Gates
-  workflow_run_id: 32504524903
-  workflow_run_number: 125
+  workflow_run_id: 32511450726
+  workflow_run_number: 167
   workflow_status: completed
   workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: P5 reviewer-repair functional HEAD is terminal green. This state/handoff documentation moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
+  note: P6 late-review functional repair HEAD is terminal green. State/handoff documentation is now current and moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
 
 review_gates:
   code_review:
     status: pass
     blocking_findings: 0
-    note: Deterministic hard-vs-preference matching, persisted recalculation, error propagation, and idempotent follow-up action reviewed. Duplicate open follow-ups were fixed before completion; no Critical/High finding remains.
+    note: Final review found explicit people queries ignored linked requirement/property filters. Repair now separates role from intent, filters buyers/tenants through requirements and owners/sellers through owned inventory, maps buy demand to sale supply, and preserves role-only lookup. No Critical/High finding remains.
   qa_review:
     status: pass
     blocking_findings: 0
-    note: Hard property/intent rules, exact/nearby locality, budget tolerance, ranking, Suresh-Murugan E2E, update-triggered recalculation, dynamic match routes, follow-up idempotency, typed-capture regression, desktop/mobile Playwright, and Android packaging are covered.
+    note: English, Tanglish and starter Tamil-script queries, role-only people lookup, linked buyer/owner filters, budget/location/type/intent filters, phone lookup, people/property/match cards, typed/voice shared contract, STT fallback, route-exit microphone cleanup, desktop/mobile Playwright and Android packaging are covered.
   product_guardrail_review:
     status: pass
     blocking_findings: 0
-    note: Matching is local, deterministic and explainable; action output stays simple and avoids marketplace/CRM/cloud behavior. Call/WhatsApp/share actions remain correctly owned by P8.
+    note: Ask remains local/offline, deterministic and action-card oriented. The repair improves business-meaning correctness without cloud/search backend behavior, CRM expansion, or premature P8 communication actions.
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -53,7 +53,7 @@ phases:
   P3: {name: Type capture and structured extraction, status: done}
   P4: {name: Voice capture and multilingual understanding, status: done}
   P5: {name: Matching and action brain, status: done}
-  P6: {name: Ask/search and operational result cards, status: pending}
+  P6: {name: Ask/search and operational result cards, status: done}
   P7: {name: Poster capture and OCR lead flow, status: pending}
   P8: {name: After-call recap follow-ups and communication actions, status: pending}
   P9: {name: Backup restore settings language and privacy hardening, status: pending}
@@ -62,22 +62,26 @@ phases:
   P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
-  - id: P5-T1
+  - id: P6-T1
     status: done
     owner: ai-agent
-    description: Implement deterministic demand/supply ranking, hard-vs-preference rules, persisted explainable matches, recalculation, match detail/action cards, and Suresh-Murugan acceptance coverage.
-  - id: P5-T2
+    description: Implement shared typed/voice natural-language query contract, deterministic local interpretation/search, operational result cards, linked people/property filters, phone lookup, starter Tamil/Tanglish aliases and offline fallback.
+  - id: P6-T2
     status: ready_for_merge
     owner: ai-agent
-    description: Verify final state/handoff exact-head CI and merge PR #6 only when explicit merge authorization is given.
+    description: Verify final state/handoff exact-head CI and merge PR #7 only when explicit merge authorization is given.
+  - id: P6-T3
+    status: deferred
+    owner: ai-agent
+    description: Expand deterministic query vocabulary, Tamil morphology and locality coverage using real pilot queries; starter P6 coverage must not be marketed as unrestricted natural-language understanding.
+  - id: P5-T2
+    status: done
+    owner: ai-agent
+    description: PR #6 merged to main as bbbc11b37d6840f32e4bd2d29c82cde8e42a4d77 after exact-head Quality Gates #129 success and explicit user authorization.
   - id: P5-T3
     status: deferred
     owner: ai-agent
-    description: Expand deterministic nearby-locality knowledge and add an explicit negotiability domain field when capture/domain schema owns that business fact; P5 does not invent negotiability from missing data.
-  - id: P4-T2
-    status: done
-    owner: ai-agent
-    description: PR #5 merged to main as 18a612c553b50bcf7de6fb6042b3c1b20e5aafde after exact-head Quality Gates #111 success and explicit user authorization.
+    description: Expand deterministic nearby-locality knowledge and add an explicit negotiability domain field when capture/domain schema owns that business fact.
   - id: P4-T3
     status: deferred
     owner: ai-agent
@@ -98,38 +102,54 @@ known_constraints:
   - P2 uses a versioned repository contract over localStorage as the first shared persistence adapter.
   - P3 deterministic extraction intentionally covers a focused starter vocabulary/locality set; replaceable local models can improve understanding while fallback remains mandatory.
   - P4 STT integration is a replaceable local adapter; production engine weights remain a P10/P11 packaging/benchmark concern.
-  - P5 nearby-locality knowledge is a small deterministic starter dictionary, not a claim of complete geographic adjacency.
-  - P5 currently treats up to 10 percent above budget as a possible-negotiation preference. No explicit negotiability field exists in the current domain schema, so the matcher must not invent seller negotiability.
-  - P5 recalculates/persists matches when match routes render; a repository event/transaction mechanism may replace this trigger if scale later warrants it without changing deterministic ranking rules.
+  - P5 nearby-locality knowledge is a small deterministic starter dictionary and P5 does not invent negotiability.
+  - P5 persists recalculated matches when match routes render; repository-level event recalculation may replace that trigger later if scale warrants it.
+  - P6 deterministic query interpretation intentionally covers a starter real-estate vocabulary/locality/Tamil alias set. Real pilot queries must drive expansion; unsupported phrasing should return no/limited local results rather than fabricated answers.
+  - P6 people filtering links buyer/tenant queries to requirements and owner/seller queries to owned properties; role-only lookup does not invent transaction filters.
+  - P6 searches persisted matches; match freshness follows the P5 recalculation contract until a repository-level recalculation trigger is introduced.
 
 last_checks:
-  - check: P4 merge
+  - check: P5 merge
     result: pass
-    evidence: PR #5 merged to main as 18a612c553b50bcf7de6fb6042b3c1b20e5aafde after final exact-head Quality Gates run 32503427986 (#111) succeeded and explicit user authorization was given.
-  - check: P5 initial PR CI
+    evidence: PR #6 merged to main as bbbc11b37d6840f32e4bd2d29c82cde8e42a4d77 after final exact-head Quality Gates run 32504827723 (#129) succeeded and explicit user authorization was given.
+  - check: P6 initial PR CI
     result: fail_then_fixed
-    evidence: Quality Gates run 32504122302 (#119) failed only the inherited desktop/mobile navigation assertion because Match detail became a real ID-driven P5 route instead of the old static placeholder. JS/unit and Android were green; matching acceptance itself did not fail.
-  - check: P5 dynamic-route repair CI
+    evidence: Quality Gates #137 (32505282381) failed JS unit search because parsed currency unit lakh leaked into residual text terms; currency units were removed from free-text terms.
+  - check: P6 microphone/privacy repair CI
+    result: fail_then_fixed
+    evidence: Quality Gates #143 (32505508097) exposed dead bottom-nav bindings after the dynamic Ask screen replaced the shell DOM; P6 now rebinds shell route controls while retaining route-exit microphone cleanup.
+  - check: P6 repaired baseline CI
     result: pass
-    evidence: Quality Gates run 32504270978 (#121) completed successfully for 55487bd094b3865ced5234710ec610a1e37d1f2a with Detect, Harness, JS/unit, Playwright, Android and Required gate summary all green.
-  - check: P5 reviewer repair
+    evidence: Quality Gates #145 (32505697792) completed successfully for 35396c340985acb80170bdeea0dbfca0257bbf44 with all required jobs green.
+  - check: P6 reviewer repairs
     result: pass
-    evidence: Repeated Follow up actions could create duplicate open records. Follow-up creation was made idempotent, stale-match deletion now propagates repository errors, and E2E regression coverage was added through 702baa505a743e1b419feebf9dc68f6888bfed74.
-  - check: P5 post-review CI
+    evidence: Fixed property-filter relevance leakage, phone-number lookup, starter Tamil-script query normalization, duplicate event binding, and phone entity-cue filtering with regression tests through c98445da3dbcfa802d77a93be4b0b75918252579.
+  - check: P6 post-review CI
     result: pass
-    evidence: Quality Gates run 32504524903 (#125) completed successfully for 702baa505a743e1b419feebf9dc68f6888bfed74; Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
+    evidence: Quality Gates #153 (32506163608) completed successfully for c98445da3dbcfa802d77a93be4b0b75918252579; Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
+  - check: P6 final exact-head pre-late-review CI
+    result: pass
+    evidence: Quality Gates #157 (32506521431) completed successfully for be46b2b68c01f02c93a3dee4fa2151fa47b0a2e0 with every required job green.
+  - check: P6 late code review
+    result: fail_then_fixed
+    evidence: Final reviewer found explicit people queries such as buyers looking for land in Erode ignored linked requirements/owned-property filters. Repair added structured role-aware filtering, buy-to-sale inventory semantics, plural role cues and role-only lookup regression coverage. Intermediate Quality Gates #165 (32511282598) correctly failed new unit tests on plural grammar cues; those normalization defects were fixed rather than rerun blindly.
+  - check: P6 late-review repair CI
+    result: pass
+    evidence: Quality Gates #167 (32511450726) completed successfully for 5919b67dd983940552ccfc42350697b18e681061; Detect, Harness, JS/unit/lint/type, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
   - check: code reviewer
     result: pass
-    evidence: Matching correctness, persistence sync, error behavior and action idempotency reviewed; no Critical/High finding remains.
+    evidence: Final repaired query interpretation/search, linked requirement/property filtering, intent semantics, escaping, route binding, microphone lifecycle and event ownership reviewed; no Critical/High finding remains.
   - check: QA reviewer
     result: pass
-    evidence: P5 acceptance, preference/hard-rule edges, recalculation, Suresh-Murugan flow, duplicate-action regression and cross-platform regression coverage reviewed; no Critical/High finding remains.
+    evidence: P6 acceptance plus role/filter relevance regressions, native-language starter coverage, typed/voice parity, failure paths, desktop/mobile E2E and Android packaging are covered; no Critical/High finding remains.
   - check: product guardrail reviewer
     result: pass
-    evidence: Explainable deterministic matching advances Match and Act without cloud/model dependence, CRM expansion or premature P8 communication actions.
+    evidence: Local-first Ask, operational cards, linked business-memory filtering, typed/voice parity and starter Tamil/Tanglish support preserve the core product loop without cloud/chat-only/CRM drift.
+  - check: P6 late-review handoff
+    result: pass
+    evidence: docs/handoff/HANDOFF_LOG.md now records the blocking late-review relevance finding, repair semantics, Quality Gates #165 failure diagnosis, Quality Gates #167 success, and all three reviewer passes.
 
 next_actions:
-  - Append P5 completion evidence to docs/handoff/HANDOFF_LOG.md.
-  - Wait for Quality Gates on the exact final PR HEAD created by state/handoff documentation commits and inspect all required jobs.
-  - If terminal success, mark PR #6 ready for review; do not merge without explicit merge authorization.
-  - After authorized P5 merge, confirm main and begin P6 Ask/Search and operational result cards on a fresh focused branch/PR.
+  - Wait for Quality Gates on the exact final PR HEAD created by the completed state/handoff documentation commits and inspect every required job.
+  - If terminal success, PR #7 is merge-ready; do not merge without explicit merge authorization.
+  - After authorized P6 merge, confirm main and begin P7 Poster capture and OCR lead flow on a fresh focused branch/PR.
