@@ -11,22 +11,27 @@ function renderAfterCall(){
  const p=pending();
  app.innerHTML=shell(`<section class="page"><p class="eyebrow">AFTER CALL</p><h1>After-call recap</h1><p class="lead">Save what changed after a call. Property Assistant does not record the call.</p>${p?`<div class="card opportunity" data-testid="after-call-return-prompt"><div><strong>Back from a call action?</strong><p>Add a quick recap while it is fresh. The number below comes only from the action you launched in Property Assistant.</p></div></div>`:''}<label class="field"><span>Phone number</span><input data-testid="recap-phone" inputmode="tel" value="${esc(p?.phone||'')}" placeholder="Optional" /></label><div class="page-actions"><button class="button" type="button" data-testid="use-recent-number">Use recent number if available</button></div><label class="field"><span>What changed?</span><textarea rows="5" data-testid="recap-summary" placeholder="Example: Wants a 2BHK near Erode, budget up to 25 lakh."></textarea></label><label class="field"><span>Follow up at</span><input type="datetime-local" data-testid="recap-due" /></label><div class="page-actions"><button class="button primary" type="button" data-testid="save-call-recap">Save recap</button><button class="button" type="button" data-testid="skip-call-recap">Skip</button></div><p class="lead" data-testid="recap-status"></p></section>`,'');
  bindShell();
- document.querySelector('[data-testid="use-recent-number"]').addEventListener('click',async()=>{const status=document.querySelector('[data-testid="recap-status"]');status.textContent='Checking only permitted recent-number sources…';const number=await comm.recentNumber();if(number){document.querySelector('[data-testid="recap-phone"]').value=number;status.textContent='Recent number filled.';}else status.textContent='Recent number is not available on this platform. Enter it manually if needed.';});
+ document.querySelector('[data-testid="use-recent-number"]').addEventListener('click',async()=>{const status=document.querySelector('[data-testid="recap-status"]');status.textContent='Checking only permitted recent-number sources…';try{const number=await comm.recentNumber();if(number){document.querySelector('[data-testid="recap-phone"]').value=number;status.textContent='Recent number filled.';}else status.textContent='Recent number is not available on this platform. Enter it manually if needed.';}catch(_){status.textContent='Recent number could not be read. Enter it manually if needed.';}});
  document.querySelector('[data-testid="save-call-recap"]').addEventListener('click',saveRecap);
  document.querySelector('[data-testid="skip-call-recap"]').addEventListener('click',()=>{core.clearPendingAfterCall(localStorage);location.hash='#/home';});
 }
 function saveRecap(){
  const status=document.querySelector('[data-testid="recap-status"]');
+ const button=document.querySelector('[data-testid="save-call-recap"]');
+ button.disabled=true;
  try{
   const phone=document.querySelector('[data-testid="recap-phone"]').value;
   const person=core.findPersonByPhone(repo,phone);
   const records=core.buildRecords({phone,summary:document.querySelector('[data-testid="recap-summary"]').value,dueAt:document.querySelector('[data-testid="recap-due"]').value,personId:person?.id||null});
-  const interaction=repo.create('interactions',records.interaction);
-  let followUp=null;if(records.followUp)followUp=repo.create('followUps',records.followUp);
+  const saved=repo.transact((tx)=>{
+    const interaction=tx.create('interactions',records.interaction);
+    const followUp=records.followUp?tx.create('followUps',records.followUp):null;
+    return {interaction,followUp};
+  });
   core.clearPendingAfterCall(localStorage);
-  status.textContent=followUp?'Recap and follow-up saved locally.':'Recap saved locally.';
+  status.textContent=saved.followUp?'Recap and follow-up saved locally.':'Recap saved locally.';
   location.hash='#/followups';
- }catch(error){status.textContent=error.message||'Could not save recap.';}
+ }catch(error){status.textContent=error.message||'Could not save recap.';button.disabled=false;}
 }
 function resolvePhone(f){return core.resolveFollowUpPhone(repo,f);}
 function shareText(f){const phone=resolvePhone(f);return `${f.title}${phone?` · ${phone}`:''} · ${new Date(f.dueAt).toLocaleString()}`;}
