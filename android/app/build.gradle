@@ -1,8 +1,10 @@
 plugins { id 'com.android.application' }
 
 def versionFile = rootProject.file('../VERSION')
-def releaseVersionName = versionFile.exists() ? versionFile.text.trim() : '0.11.0-rc.1'
-def releaseVersionCode = (System.getenv('PA_VERSION_CODE') ?: '11') as Integer
+def releaseVersionName = versionFile.exists() ? versionFile.text.trim() : '0.11.0-rc.3'
+def releaseVersionCode = (System.getenv('PA_VERSION_CODE') ?: '13') as Integer
+def applicationIdValue = System.getenv('PA_APPLICATION_ID') ?: 'ai.propertyassistant.app'
+def applicationLabel = System.getenv('PA_APPLICATION_LABEL') ?: 'Property Assistant'
 
 def releaseStore = System.getenv('PA_RELEASE_STORE_FILE') ?: (project.findProperty('paReleaseStoreFile') ?: '')
 def releaseStorePassword = System.getenv('PA_RELEASE_STORE_PASSWORD') ?: (project.findProperty('paReleaseStorePassword') ?: '')
@@ -14,11 +16,13 @@ android {
   namespace 'ai.propertyassistant.app'
   compileSdk 35
   defaultConfig {
-    applicationId 'ai.propertyassistant.app'
+    applicationId applicationIdValue
     minSdk 24
     targetSdk 35
     versionCode releaseVersionCode
     versionName releaseVersionName
+    resValue 'string', 'app_name', applicationLabel
+    resValue 'string', 'app_version_label', releaseVersionName
   }
 
   signingConfigs {
