@@ -15,6 +15,11 @@ const requiredStaticRoutes = [
   ['settings','Settings & Backup']
 ];
 
+async function seedDemo(page) {
+  await page.goto('/#/home');
+  await page.evaluate(() => (window as any).__PA_REPOSITORY__.seedSynthetic());
+}
+
 test('all approved shell routes render, including dynamic persistence/capture/match routes', async ({ page }) => {
   await page.goto('/#/home');
   await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
@@ -23,12 +28,14 @@ test('all approved shell routes render, including dynamic persistence/capture/ma
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
   }
 
+  await seedDemo(page);
   await page.goto('/#/type');
   await expect(page.getByRole('heading', { name: 'Type & Save', exact: true })).toBeVisible();
   await page.goto('/#/person?id=person-suresh');
   await expect(page.getByTestId('person-name')).toHaveText('Suresh (Demo)');
   await page.goto('/#/property?id=property-murugan');
   await expect(page.getByTestId('property-title')).toContainText('land in Erode');
+  await page.goto('/#/matches');
   await page.goto('/#/match?id=match-requirement-suresh-property-murugan');
   await expect(page.getByTestId('match-title')).toContainText('Suresh (Demo)');
 
@@ -88,6 +95,16 @@ test('display language and input language are independent', async ({ page }) => 
   expect(after).toBe(before);
   expect(await page.evaluate(() => localStorage.getItem('pa.displayLanguage'))).toBe('tg');
   expect(await page.evaluate(() => localStorage.getItem('pa.inputLanguage'))).toBe('ta');
+});
+
+test('fresh install does not inject synthetic people or properties', async ({ page }) => {
+  await page.goto('/#/home');
+  const counts = await page.evaluate(() => ({
+    people: (window as any).__PA_REPOSITORY__.list('people').length,
+    properties: (window as any).__PA_REPOSITORY__.list('properties').length,
+    requirements: (window as any).__PA_REPOSITORY__.list('requirements').length
+  }));
+  expect(counts).toEqual({ people: 0, properties: 0, requirements: 0 });
 });
 
 test('mobile shell has no unintended horizontal overflow', async ({ page }, testInfo) => {
