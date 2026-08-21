@@ -22,9 +22,12 @@ test('Tanglish buyer note works without a model', () => {
   assert.equal(result.requirement.budgetMax, 2000000);
 });
 
-test('Tamil property note extracts supply fields', () => {
-  const result = parse('ஈரோடு Erode நிலம் விற்பனை price 2200000 phone 93456 78901');
+test('Tamil property note extracts supply fields and preserves owner phone', () => {
+  const result = parse('பெயர் Murugan, Erode நிலம் விற்பனை price 2200000 phone 93456 78901');
   assert.equal(result.kind, 'property');
+  assert.equal(result.person.name, 'Murugan');
+  assert.equal(result.person.role, 'owner');
+  assert.equal(result.person.primaryPhone, '+91 93456 78901');
   assert.equal(result.property.intent, 'sale');
   assert.equal(result.property.propertyType, 'land');
   assert.equal(result.property.locality, 'Erode');
@@ -50,7 +53,7 @@ test('extractor accepts a valid replaceable model adapter result', async () => {
     kind:'property',
     confidence:0.9,
     uncertain:[],
-    person:null,
+    person:{ name:'Meena', role:'owner', primaryPhone:'+91 90000 00444', alternatePhones:[] },
     requirement:null,
     property:{ intent:'sale', propertyType:'house', locality:'Chennai', price:5000000, ownerPersonId:null }
   };
@@ -63,6 +66,6 @@ test('extractor falls back to deterministic rules when adapter throws or is inva
   const throwing = createExtractor({ extract: async () => { throw new Error('model unavailable'); } });
   assert.equal((await throwing.extract(note)).requirement.budgetMax, 2500000);
 
-  const invalid = createExtractor({ extract: async () => ({ ok:true, kind:'unknown', uncertain:[] }) });
+  const invalid = createExtractor({ extract: async () => ({ ok:true, kind:'property', uncertain:[], person:null, property:{} }) });
   assert.equal((await invalid.extract(note)).person.name, 'Arun');
 });
