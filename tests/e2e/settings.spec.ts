@@ -5,12 +5,22 @@ test('settings creates an encrypted local backup and shows privacy/status', asyn
   await expect(page.getByRole('heading', { name: 'Settings & Backup', exact: true })).toBeVisible();
   await expect(page.getByText(/Core data is not uploaded by default/i)).toBeVisible();
   await page.getByTestId('backup-password').fill('device-safe-123');
+  await page.getByTestId('backup-password-confirm').fill('device-safe-123');
   const downloadPromise=page.waitForEvent('download');
   await page.getByTestId('create-backup').click();
   const download=await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.pabackup$/);
   await expect(page.getByTestId('settings-status')).toContainText('Encrypted backup created');
   await expect(page.getByTestId('backup-status')).toContainText('Last backup:');
+});
+
+test('backup creation rejects mismatched password confirmation', async ({ page }) => {
+  await page.goto('/#/settings');
+  await page.getByTestId('backup-password').fill('device-safe-123');
+  await page.getByTestId('backup-password-confirm').fill('device-safe-456');
+  await page.getByTestId('create-backup').click();
+  await expect(page.getByTestId('settings-status')).toContainText('Backup passwords do not match');
+  await expect(page.getByTestId('backup-status')).toHaveText('No backup created yet.');
 });
 
 test('wrong restore password fails safely without changing local records', async ({ page }) => {

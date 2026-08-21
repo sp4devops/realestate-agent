@@ -54,16 +54,30 @@ function validateDomainSnapshot(snapshot){
  const temp={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value)};
  return persistence.createRepository(temp).loadSnapshot();
 }
+function restoreStorageValue(storage,key,value){if(value==null){if(typeof storage.removeItem==='function')storage.removeItem(key);else storage.setItem(key,'');}else storage.setItem(key,value);}
 async function restorePayload(payload,{imageStore,storage}){
  assert(payload&&payload.domain&&payload.settings,'Backup contents are incomplete');
  const display=payload.settings.displayLanguage,input=payload.settings.inputLanguage;
  assert(['en','ta','tg'].includes(display),'Backup display language is invalid');
  assert(['auto','en','ta','tg'].includes(input),'Backup input language is invalid');
+ const persistence=root.PropertyAssistantPersistence;
  const validated=validateDomainSnapshot(payload.domain);
  const imageRecords=(payload.posterImages||[]).map(item=>{assert(item&&typeof item.id==='string'&&item.id,'Backup poster image is invalid');return {...item,blob:base64ToBlob(item.data,item.type)};});
- if(imageStore&&typeof imageStore.replaceAll==='function')await imageStore.replaceAll(imageRecords);
- storage.setItem(root.PropertyAssistantPersistence.STORAGE_KEY,JSON.stringify(validated));
- storage.setItem('pa.displayLanguage',display);storage.setItem('pa.inputLanguage',input);
+ const domainKey=persistence.STORAGE_KEY;
+ const previous={domain:storage.getItem(domainKey),display:storage.getItem('pa.displayLanguage'),input:storage.getItem('pa.inputLanguage')};
+ const canReplaceImages=Boolean(imageStore&&typeof imageStore.replaceAll==='function');
+ const previousImages=canReplaceImages&&typeof imageStore.list==='function'?await imageStore.list():null;
+ try{
+  storage.setItem(domainKey,JSON.stringify(validated));
+  storage.setItem('pa.displayLanguage',display);storage.setItem('pa.inputLanguage',input);
+  if(canReplaceImages)await imageStore.replaceAll(imageRecords);
+ }catch(error){
+  try{
+   restoreStorageValue(storage,domainKey,previous.domain);restoreStorageValue(storage,'pa.displayLanguage',previous.display);restoreStorageValue(storage,'pa.inputLanguage',previous.input);
+   if(previousImages&&canReplaceImages)await imageStore.replaceAll(previousImages);
+  }catch(_){throw new Error('Restore failed and previous local data could not be fully recovered');}
+  throw new Error(`Restore could not be completed; previous local data was kept. ${error.message||''}`.trim());
+ }
  return {createdAt:payload.createdAt||null,images:imageRecords.length};
 }
 root.PropertyAssistantBackup={FORMAT,VERSION,ITERATIONS,encryptPayload,decryptBackup,createPayload,restorePayload};

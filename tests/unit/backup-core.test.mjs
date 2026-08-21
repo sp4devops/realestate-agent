@@ -18,6 +18,17 @@ test('encrypted backup round-trips structured local data and language settings',
  assert.equal(restored.entities.people['person-1'].name,'Suresh');assert.equal(target.getItem('pa.displayLanguage'),'ta');assert.equal(target.getItem('pa.inputLanguage'),'tg');
 });
 
+test('poster images are included in a produced backup and restored with their bytes',async()=>{
+ const source=storage();const repo=persistence.createRepository(source);repo.seedSynthetic();
+ const original=new Blob([new Uint8Array([1,2,3,4])],{type:'image/png'});
+ const imageStore={list:async()=>[{id:'poster-image-1',blob:original,name:'poster.png',type:'image/png',size:4,createdAt:'2026-08-22T00:00:00.000Z'}]};
+ const payload=await backup.createPayload({repository:repo,imageStore,storage:source});
+ assert.equal(payload.posterImages.length,1);assert.equal(payload.posterImages[0].data,'AQIDBA==');
+ let restored=[];const targetImages={list:async()=>[],replaceAll:async records=>{restored=records;}};
+ await backup.restorePayload(payload,{imageStore:targetImages,storage:storage()});
+ assert.equal(restored.length,1);assert.equal(restored[0].id,'poster-image-1');assert.equal(restored[0].blob.type,'image/png');assert.deepEqual([...new Uint8Array(await restored[0].blob.arrayBuffer())],[1,2,3,4]);
+});
+
 test('wrong password and corrupt or unrelated files fail without replacing current data',async()=>{
  const source=storage();const repo=persistence.createRepository(source);repo.seedSynthetic();
  const encrypted=await backup.encryptPayload(await backup.createPayload({repository:repo,imageStore:null,storage:source}),'correct-123');
@@ -28,6 +39,15 @@ test('wrong password and corrupt or unrelated files fail without replacing curre
  const badDomain=persistence.freshDatabase();badDomain.entities.people['broken']={id:'different-id',name:'Broken',role:'buyer',primaryPhone:'+91 90000 00009',alternatePhones:[]};
  const badPayload={domain:badDomain,settings:{displayLanguage:'en',inputLanguage:'auto'}};
  await assert.rejects(()=>backup.restorePayload(badPayload,{imageStore:null,storage:target}),/record id is inconsistent/i);assert.equal(target.getItem(persistence.STORAGE_KEY),before);
+});
+
+test('failed poster-image restore rolls structured settings back to previous values',async()=>{
+ const oldStore=storage({'pa.displayLanguage':'en','pa.inputLanguage':'auto'});const oldRepo=persistence.createRepository(oldStore);oldRepo.seedSynthetic();const oldDomain=oldStore.getItem(persistence.STORAGE_KEY);
+ const newDomain=persistence.freshDatabase();newDomain.entities.people['new-person']={id:'new-person',name:'New Person',role:'buyer',primaryPhone:'+91 90000 00008',alternatePhones:[],createdAt:'2026-08-22T00:00:00.000Z',updatedAt:'2026-08-22T00:00:00.000Z'};
+ let calls=0;const imageStore={list:async()=>[{id:'old-image',blob:new Blob(['old']),name:'old',type:'text/plain'}],replaceAll:async()=>{calls+=1;if(calls===1)throw new Error('disk full');}};
+ const payload={domain:newDomain,settings:{displayLanguage:'ta',inputLanguage:'tg'},posterImages:[]};
+ await assert.rejects(()=>backup.restorePayload(payload,{imageStore,storage:oldStore}),/previous local data was kept/i);
+ assert.equal(oldStore.getItem(persistence.STORAGE_KEY),oldDomain);assert.equal(oldStore.getItem('pa.displayLanguage'),'en');assert.equal(oldStore.getItem('pa.inputLanguage'),'auto');assert.equal(calls,2);
 });
 
 test('backup password must be at least eight characters',async()=>{
