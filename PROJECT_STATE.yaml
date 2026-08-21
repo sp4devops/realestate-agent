@@ -2,38 +2,38 @@ schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
 status: ready_for_merge
-active_phase: P3
-active_phase_name: Type capture and structured extraction
-last_verified_commit: 77f026862a10b79c042681502054ee7a82995d9d
-last_updated: 2026-08-21T21:46:54+05:30
-active_pr: 4
-active_branch: ai/p3-type-capture-extraction
+active_phase: P4
+active_phase_name: Voice capture and multilingual understanding
+last_verified_commit: 19be73c7e1fc4eaa2926e88ca9d4bac0c692ff41
+last_updated: 2026-08-21T21:53:00+05:30
+active_pr: 5
+active_branch: ai/p4-voice-capture-multilingual
 
 ci_gate:
   status: green
-  verified_head_sha: 77f026862a10b79c042681502054ee7a82995d9d
+  verified_head_sha: 19be73c7e1fc4eaa2926e88ca9d4bac0c692ff41
   workflow_name: Quality Gates
-  workflow_run_id: 32501936498
-  workflow_run_number: 88
+  workflow_run_id: 32503106436
+  workflow_run_number: 107
   workflow_status: completed
   workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: P3 final functional/reviewer-repair HEAD is terminal green. This state/handoff documentation moves PR HEAD, so one final live exact-HEAD Quality Gates verification remains mandatory before merge.
+  note: P4 reviewer-repair HEAD is terminal green. This state/handoff documentation moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
 
 review_gates:
   code_review:
     status: pass
     blocking_findings: 0
-    note: Review found non-atomic buyer save, missing model-adapter boundary, and property-supply owner contact loss; all were repaired with regression coverage. No Critical/High correctness, architecture, security/privacy, or maintainability finding remains.
+    note: Initial review found active microphone tracks could survive route exit; route/page cleanup and regression coverage were added in 19be73c7. No Critical/High correctness, privacy, architecture, resource-use, or maintainability finding remains.
   qa_review:
     status: pass
     blocking_findings: 0
-    note: English/Tamil/Tanglish parser fixtures, no-model/model-fallback behavior, correction-before-save, empty/invalid input, rollback safety, buyer/property persistence, owner phone linkage, desktop/mobile Playwright, and Android packaging are covered; no Critical/High finding remains.
+    note: Tamil/English/Tanglish normalization fixtures, STT success/failure, microphone permission denial, route-exit microphone cleanup, shared review handoff, typed-capture fallback, Android permission bridge, desktop/mobile Playwright, and Android packaging are covered.
   product_guardrail_review:
     status: pass
     blocking_findings: 0
-    note: Type & Save remains equal to voice capture, local-first/model-optional, uses friendly uncertainty prompts, preserves first-class contact data, and does not pull voice or matching behavior forward. No Critical/High finding remains.
+    note: Speak & Save remains simple and local-first, Type & Save remains fully usable when microphone/STT fails, input language stays independent from display language, and no call-recording assumption or cloud STT dependency was introduced.
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -51,7 +51,7 @@ phases:
   P1: {name: Application skeleton and navigation, status: done}
   P2: {name: Local domain model and persistence, status: done}
   P3: {name: Type capture and structured extraction, status: done}
-  P4: {name: Voice capture and multilingual understanding, status: pending}
+  P4: {name: Voice capture and multilingual understanding, status: done}
   P5: {name: Matching and action brain, status: pending}
   P6: {name: Ask/search and operational result cards, status: pending}
   P7: {name: Poster capture and OCR lead flow, status: pending}
@@ -62,18 +62,22 @@ phases:
   P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
-  - id: P3-T1
+  - id: P4-T1
     status: done
     owner: ai-agent
-    description: Implement local multilingual Type & Save parsing, replaceable model adapter/fallback, uncertainty review/correction, and buyer/property persistence with owner contact preservation.
-  - id: P3-T2
+    description: Implement microphone capture, local STT adapter contract, regional normalization, Android permission bridge, shared review handoff, failure recovery, telemetry, and regression tests.
+  - id: P4-T2
     status: ready_for_merge
     owner: ai-agent
-    description: Verify final state/handoff exact-head CI and merge PR #4 only when explicit merge authorization is given.
-  - id: P2-T2
+    description: Verify final state/handoff exact-head CI and merge PR #5 only when explicit merge authorization is given.
+  - id: P4-T3
+    status: deferred
+    owner: ai-agent
+    description: Select, package, and benchmark production local STT engine weights/runtime on representative target hardware before release/pilot; P4 adapter and failure-safe workflow are complete without bundling a specific engine.
+  - id: P3-T2
     status: done
     owner: ai-agent
-    description: PR #3 merged to main as 7372766204d0a4e95f13df99cb17e2ba2d80cda7 after exact-head Quality Gates #59 success and explicit user authorization.
+    description: PR #4 merged to main as 10b76b2126c1e185f16f545eb1534a1b9f8ead4d after exact-head Quality Gates #92 success and explicit user authorization.
   - id: P0-T2
     status: deferred
     owner: ai-agent
@@ -87,37 +91,37 @@ known_constraints:
   - Normal Android apps must not assume unrestricted cellular-call audio capture/transcription.
   - UI display language must remain independent from voice/input language.
   - P1 desktop is the loopback-served web-compatible shell; packaged desktop release infrastructure is scheduled for P11.
-  - P2 uses a versioned repository contract over localStorage as the first shared persistence adapter; a future native database adapter may replace the backend without changing domain schemas when justified.
-  - P3 deterministic extraction intentionally covers a focused starter vocabulary/locality set; a replaceable local model adapter can improve understanding later while deterministic fallback remains mandatory.
-  - Voice/STT remains owned by P4; deterministic matching remains owned by P5.
+  - P2 uses a versioned repository contract over localStorage as the first shared persistence adapter.
+  - P3 deterministic extraction intentionally covers a focused starter vocabulary/locality set; replaceable local models can improve understanding while fallback remains mandatory.
+  - P4 records audio only while Speak & Save is active, stops tracks on completion/route exit/page hide, and never introduces Internet permission.
+  - P4 STT integration is a replaceable local adapter; production engine weights are not yet bundled. P10/P11 must benchmark/select/package an open local engine before release/pilot.
+  - CI records audio-byte size and adapter latency for test fixtures, but hosted CI is not representative 4 GB Android hardware; representative memory/latency measurement is deferred to P10.
 
 last_checks:
-  - check: P2 merge
+  - check: P3 merge
     result: pass
-    evidence: PR #3 merged to main as 7372766204d0a4e95f13df99cb17e2ba2d80cda7 after final exact-head Quality Gates run 32497272687 (#59) succeeded.
-  - check: P3 initial PR CI
-    result: fail_then_fixed
-    evidence: Quality Gates run 32501008768 (#68) failed Playwright because P3 replaced the canonical Type & Save heading and the inherited route test treated Review as static despite its draft prerequisite; canonical title and dynamic-route tests were repaired.
-  - check: P3 route-repair CI
+    evidence: PR #4 merged to main as 10b76b2126c1e185f16f545eb1534a1b9f8ead4d after final exact-head Quality Gates run 32502221208 (#92) succeeded.
+  - check: P4 initial CI
     result: pass
-    evidence: Quality Gates run 32501210163 (#72) completed successfully for bd4e599c12b6a0879b8bc0ef74eb4a97c19d65d5 with all required jobs green.
-  - check: P3 reviewer repairs
+    evidence: Quality Gates run 32502884002 (#103) completed successfully for b3cd63e48cb4402dcc4584b9e1e89804a7decdce with Harness, JS/unit, Playwright, Android and required summary green.
+  - check: P4 privacy reviewer repair
     result: pass
-    evidence: Added replaceable extractor adapter/fallback, rollback-safe buyer persistence, friendly uncertainty labels, and supply-owner contact preservation with regression tests through 77f026862a10b79c042681502054ee7a82995d9d.
-  - check: P3 post-review CI
+    evidence: Added route/page microphone cleanup, abandoned-recording suppression, and voice audio-size/STT-latency telemetry with E2E regression coverage through 19be73c7e1fc4eaa2926e88ca9d4bac0c692ff41.
+  - check: P4 post-review CI
     result: pass
-    evidence: Quality Gates run 32501936498 (#88) completed successfully for 77f026862a10b79c042681502054ee7a82995d9d; Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
+    evidence: Quality Gates run 32503106436 (#107) completed successfully for 19be73c7e1fc4eaa2926e88ca9d4bac0c692ff41; Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
   - check: code reviewer
     result: pass
-    evidence: Atomicity, adapter-boundary, and owner-contact findings closed; no Critical/High finding remains.
+    evidence: Microphone lifetime/privacy finding closed; no Critical/High finding remains.
   - check: QA reviewer
     result: pass
-    evidence: P3 acceptance, failure paths, correction, rollback, persistence, multilingual fixtures, and cross-platform regression coverage reviewed; no Critical/High finding remains.
+    evidence: Voice success, normalization, permission denial, STT failure, route-exit cleanup, typed fallback, Android permission/build, and desktop/mobile regression paths reviewed.
   - check: product guardrail reviewer
     result: pass
-    evidence: Local-first/model-optional behavior, first-class phone preservation, simple review UX, scope control, and Type & Save prominence are preserved.
+    evidence: Local-first privacy, language independence, simple Speak/Type parity, no call-recording assumptions, and later-phase boundaries preserved.
 
 next_actions:
-  - Wait for Quality Gates on the exact final PR HEAD created by this state/handoff documentation update and inspect every required job.
-  - If terminal success, mark PR #4 ready for review; do not merge without explicit merge authorization.
-  - After authorized P3 merge, confirm main and start P4 Voice capture and multilingual understanding on a fresh focused branch/PR.
+  - Append P4 completion evidence to docs/handoff/HANDOFF_LOG.md.
+  - Wait for Quality Gates on the exact final PR HEAD created by state/handoff documentation commits and inspect all required jobs.
+  - If terminal success, mark PR #5 ready for review; do not merge without explicit merge authorization.
+  - After authorized P4 merge, confirm main and begin P5 deterministic Matching and Action Brain on a fresh focused branch/PR.
