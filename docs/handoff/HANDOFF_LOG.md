@@ -2,6 +2,43 @@
 
 Append-only session history. New entries go at the top beneath this introduction or at the end; do not rewrite historical facts.
 
+## 2026-08-21 20:51 IST — P2 local domain model and persistence complete
+
+**Branch:** `ai/p2-local-domain-persistence`
+
+**PR:** #3 — P2: local domain model and persistence
+
+**Implementation evidence:**
+
+- Added versioned local repository `web/domain-store.js` with language-neutral collections for people, contacts, requirements, properties, interactions, follow-ups, matches, and poster leads.
+- Added create/read/update/delete, schema migration/versioning, structural validation, relationship validation, and referenced-record delete protection.
+- Preserved primary phone separately from alternate phone numbers and rejected duplicate primary/alternate identity within a person.
+- Kept poster location separate from capture location in the domain contract.
+- Added deterministic synthetic demo records only when the complete domain store is empty; existing user records are never overwritten by seeding.
+- Wired People, person detail, and property detail screens to actual persisted local data while keeping later-phase AI/matching/OCR behavior unimplemented.
+- Added HTML escaping around rendered local records and kept domain records independent from display/input language settings.
+- Documented the dependency-free `localStorage` adapter as the first shared persistence backend; native database/encrypted backup evolution remains replaceable and phase-owned later.
+
+**CI/failure loop:**
+
+- Quality Gates run #49 (`32496543931`) failed Playwright because the inherited P1 route test still expected the placeholder `Person detail` heading after P2 replaced it with real seeded person/property screens. Harness, JS/unit, and Android passed in that run.
+- Updated navigation E2E to verify persisted dynamic detail routes; Quality Gates run #51 (`32496720063`) completed successfully for `25530be9c59b7a650ff68c8233c509b4f4a29104`.
+- Senior Code Review then found a blocking integrity gap: relationships such as requirement → person could reference missing records, and deletion could leave dangling references.
+- Added database-wide validation, foreign-reference checks, deletion protection, and regression coverage in `4464ae7c5a8d1b7e6124b1b002c37f3aaf406bd3`.
+- Quality Gates run #55 (`32496985833`) completed successfully for that reviewer-repair HEAD: Detect, Harness, JS/unit, Playwright E2E, Android tests/build, APK upload, and Required gate summary all succeeded.
+
+**Reviewer gates after repair:**
+
+- Senior Code Reviewer: PASS — referential-integrity finding closed; no remaining Critical/High correctness, architecture, security/privacy, resource-use, or maintainability finding.
+- Senior QA Reviewer: PASS — CRUD/reload, phone preservation, migration, malformed data, referential integrity, language isolation, desktop/mobile E2E, and Android packaging reviewed; no remaining Critical/High finding.
+- Product/UX Guardrail Reviewer: PASS — local-first/model-optional behavior, language-neutral memory, simplicity, Property Assistant scope, and later-phase boundaries preserved.
+
+**State:** P2 acceptance is complete on implementation/reviewer-repair HEAD `4464ae7c5a8d1b7e6124b1b002c37f3aaf406bd3`. This state/handoff documentation moves PR HEAD, so one final exact-HEAD Quality Gates run is mandatory before merge.
+
+**Merge rule:** PR #3 must not be merged without explicit user authorization.
+
+**Next after authorized merge:** verify `main`, then begin P3 — Type capture and structured extraction — on a fresh focused branch/PR.
+
 ## 2026-08-21 19:33 IST — P1 shell complete and reviewed
 
 **Branch:** `ai/p1-app-shell-navigation`
