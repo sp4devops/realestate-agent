@@ -1,0 +1,79 @@
+name: Release Candidates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'ai/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rc-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-candidates:
+    name: Build and smoke release candidates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Prepare ephemeral Android RC signing key
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/pa-signing"
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/pa-signing/rc.jks" \
+            -storepass rc-password \
+            -alias property-assistant-rc \
+            -keypass rc-password \
+            -keyalg RSA -keysize 2048 -validity 2 \
+            -dname "CN=Property Assistant CI RC, OU=Development, O=Property Assistant, C=IN"
+      - name: Build signed Android release candidate APK
+        env:
+          PA_RELEASE_STORE_FILE: ${{ runner.temp }}/pa-signing/rc.jks
+          PA_RELEASE_STORE_PASSWORD: rc-password
+          PA_RELEASE_KEY_ALIAS: property-assistant-rc
+          PA_RELEASE_KEY_PASSWORD: rc-password
+          PA_VERSION_CODE: 11
+        run: |
+          chmod +x gradlew
+          ./gradlew clean :app:assembleRelease --stacktrace
+          test -f android/app/build/outputs/apk/release/app-release.apk
+      - name: Build desktop release candidate
+        run: python3 scripts/build_desktop_rc.py --out dist
+      - name: Smoke desktop packaged candidate
+        shell: bash
+        run: |
+          rc_dir="$(find dist -maxdepth 1 -type d -name 'PropertyAssistant-*-desktop' | head -n1)"
+          test -n "$rc_dir"
+          python3 "$rc_dir/launcher.py" --smoke
+      - name: Verify desktop archive
+        shell: bash
+        run: |
+          archive="$(find dist -maxdepth 1 -type f -name 'PropertyAssistant-*-desktop.zip' | head -n1)"
+          test -n "$archive"
+          unzip -l "$archive" | grep -q 'web/index.html'
+          unzip -l "$archive" | grep -q 'launcher.py'
+      - name: Upload Android release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: property-assistant-android-rc
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload desktop release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: property-assistant-desktop-rc
+          path: dist/PropertyAssistant-*-desktop.zip
+          if-no-files-found: error
+          retention-days: 14
