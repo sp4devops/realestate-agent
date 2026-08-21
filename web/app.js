@@ -17,24 +17,24 @@ const inputLanguages = [
 
 const routes = {
   splash: ['Property Assistant','Private, local-first memory and deal assistant for Property Advisors.'],
-  onboarding: ['Welcome','Set up the app without technical steps.'],
+  onboarding: ['Welcome','Set up the app in a few simple steps. Your business memory stays on this device.'],
   home: ['Home','Capture new business memory and see what needs attention.'],
-  speak: ['Speak & Save','Voice capture will be added in Phase P4. Typed capture remains independent.'],
-  type: ['Type & Save','Natural-language typed capture will be implemented in Phase P3.'],
+  speak: ['Speak & Save','Capture a spoken note using on-device speech recognition when available.'],
+  type: ['Type & Save','Capture a natural-language business note and review the extracted details before saving.'],
   review: ['Review','Confirm extracted information before saving.'],
   'after-call': ['After-call recap','Quickly capture what changed after a call without recording the call itself.'],
   ask: ['Ask','Search your local business memory with voice or typing.'],
   people: ['People','Remember Property Advisors, owners, buyers, tenants and contacts.'],
-  person: ['Person detail','Contact and requirement details will live here.'],
-  property: ['Property detail','Property facts and actions will live here.'],
-  matches: ['Matches','Demand and supply will connect here automatically.'],
+  person: ['Person detail','View contact details and saved requirements.'],
+  property: ['Property detail','View structured property facts and related actions.'],
+  matches: ['Matches','See demand and supply connections with clear match reasons.'],
   match: ['Match detail','Understand why a match exists and take the next action.'],
   poster: ['Scan Poster','Capture a poster or choose an image.'],
   'poster-review': ['Poster review','Confirm phone number and extracted details before save.'],
-  'poster-lead': ['Poster lead','Keep poster details separate from photo capture location.'],
+  'poster-lead': ['Poster lead','Review saved poster details and matching opportunities.'],
   followups: ['Follow-ups','See useful next actions without CRM complexity.'],
   language: ['Language','Display language and speech/input language are separate settings.'],
-  settings: ['Settings & Backup','Privacy, backup and restore controls will live here.']
+  settings: ['Settings & Backup','Manage privacy, encrypted backup, restore and personalization.']
 };
 
 const primaryNav = [
@@ -89,7 +89,8 @@ function renderProperty(){
   const id=routeParams().get('id') || 'property-murugan';
   const property=repository.get('properties', id);
   if(!property) return shell(`<section class="page"><h1>Property not found</h1><p class="lead">This local record no longer exists.</p>${button('Back to Home','home')}</section>`, '');
-  return shell(`<section class="page"><p class="eyebrow">LOCAL MEMORY</p><h1 data-testid="property-title">${escapeHtml(property.propertyType)} in ${escapeHtml(property.locality)}</h1><p class="lead">${escapeHtml(property.intent)} · ${property.price == null ? 'Price not set' : `₹${Number(property.price).toLocaleString('en-IN')}`}</p><div class="placeholder-card"><strong>Stored locally</strong><p>This structured property record is independent of display language and AI availability.</p></div><div class="page-actions">${button('View Matches','matches')}</div></section>`, '');
+  const size=property.size ? ` · ${escapeHtml(property.size.value)} ${escapeHtml(property.size.unit)}` : '';
+  return shell(`<section class="page"><p class="eyebrow">LOCAL MEMORY</p><h1 data-testid="property-title">${escapeHtml(property.propertyType)} in ${escapeHtml(property.locality)}</h1><p class="lead">${escapeHtml(property.intent)}${size} · ${property.price == null ? 'Price not set' : `₹${Number(property.price).toLocaleString('en-IN')}`}</p><div class="placeholder-card"><strong>Stored locally</strong><p>This structured property record is independent of display language and AI availability.</p></div><div class="page-actions">${button('View Matches','matches')}</div></section>`, '');
 }
 
 function renderLanguage(){
@@ -102,7 +103,12 @@ function renderLanguage(){
 function renderGeneric(id){
   const [title,description]=routes[id] || ['Not found','This screen does not exist.'];
   const actions={splash:button('Get started','onboarding','button primary'),onboarding:button('Continue to Home','home','button primary'),speak:button('Use Type & Save instead','type','button primary'),type:button('Review example','review','button primary'),review:button('Back to Home','home','button primary'),'after-call':button('Back to Home','home','button primary'),ask:button('Back to Home','home'),matches:button('Open match detail','match'),match:button('Follow up','followups'),poster:button('Review captured poster','poster-review','button primary'),'poster-review':button('Save poster lead','poster-lead','button primary'),'poster-lead':button('View Matches','matches'),followups:button('Back to Home','home'),settings:button('Language','language','button primary')}[id] || button('Back to Home','home');
-  const content=`<section class="page"><p class="eyebrow">PROPERTY ASSISTANT</p><h1 data-testid="screen-title">${title}</h1><p class="lead">${description}</p><div class="placeholder-card"><strong>Phase-owned workflow</strong><p>This route is wired and intentionally avoids fake AI or matching behavior before its owning phase.</p></div><div class="page-actions">${actions}</div></section>`;
+  const trust = id==='splash'
+    ? `<div class="welcome-card"><strong>Private by default</strong><p>Capture people, properties and requirements without sending your business memory to a cloud account.</p></div>`
+    : id==='onboarding'
+      ? `<div class="welcome-card"><strong>Ready for everyday work</strong><p>Choose your language, capture a note, review the details and save. You can change settings later.</p></div>`
+      : `<div class="welcome-card"><strong>Local-first</strong><p>Your core records remain on this device and stay usable without an AI model.</p></div>`;
+  const content=`<section class="page"><p class="eyebrow">PROPERTY ASSISTANT</p><h1 data-testid="screen-title">${title}</h1><p class="lead">${description}</p>${trust}<div class="page-actions">${actions}</div></section>`;
   if(id==='splash') return `<div class="splash">${content}</div>`;
   return shell(content, primaryNav.some(([nav])=>nav===id)?id:'');
 }
@@ -122,5 +128,15 @@ function bind(){
   document.querySelectorAll('[data-input-language]').forEach(el=>el.addEventListener('click',()=>{ localStorage.setItem(STORAGE_KEYS.input,el.dataset.inputLanguage); render(); }));
 }
 
+function updateKeyboardState(){
+  const viewport=window.visualViewport;
+  if(!viewport){ document.body.classList.remove('keyboard-open'); return; }
+  const keyboardLikelyOpen=(window.innerHeight - viewport.height) > 140;
+  document.body.classList.toggle('keyboard-open', keyboardLikelyOpen);
+}
+
+window.visualViewport?.addEventListener('resize', updateKeyboardState);
+window.addEventListener('focusin',()=>setTimeout(updateKeyboardState,60));
+window.addEventListener('focusout',()=>setTimeout(updateKeyboardState,160));
 window.addEventListener('hashchange',render);
-window.addEventListener('DOMContentLoaded',render);
+window.addEventListener('DOMContentLoaded',()=>{ render(); updateKeyboardState(); });
