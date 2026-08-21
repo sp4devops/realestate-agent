@@ -10,10 +10,10 @@ active_pr: 1
 active_branch: ai/bootstrap-project-harness
 
 ci_gate:
-  status: failed
-  head_sha: fe8ae19ae1e3915ad1a77f6f031cb7102655505d
+  status: blocked
+  head_sha: 366211346d74b5bef15b3587a887304cc533e106
   required_for_advance: true
-  observed_issue: Earlier harness workflow runs failed; validator contained a formatting-brittle semantic check. The validator has been corrected and the agent execution loop is now mandatory.
+  observed_issue: Earlier harness runs failed because the validator used a formatting-brittle literal phrase check. That defect is fixed. Current connector run lookup cannot retrieve push-triggered runs for this private branch, so terminal success for current HEAD cannot yet be observed here.
   terminal_success_required: true
 
 product_contract:
@@ -69,6 +69,9 @@ blockers:
   - id: P0-B1
     severity: medium
     description: The connector can create UTF-8 repository files but does not provide direct upload of the two attached source files; concise locked guardrails and visual acceptance contract are committed instead.
+  - id: P0-B2
+    severity: high
+    description: Current ChatGPT GitHub run lookup only exposes pull-request-triggered workflow runs and cannot observe this branch's push-triggered run; phase advancement is blocked until terminal CI for current HEAD is observable. Repo-native scripts/ci_wait.sh provides blocking wait/log behavior for agents with gh CLI access.
 
 known_constraints:
   - Cash build-cost target is zero until product validation/revenue threshold.
@@ -85,15 +88,17 @@ last_checks:
     evidence: PR #1 remains open and mergeable.
   - check: CI failure diagnosis
     result: fail_then_fixed
-    evidence: scripts/harness_check.py expected normalized phrase 'not a generic CRM' but Markdown emphasis split the literal string; validator now normalizes Markdown/punctuation.
+    evidence: scripts/harness_check.py used a literal semantic phrase that Markdown formatting split; validator now normalizes formatting and punctuation.
   - check: agent control loop
     result: pass_design
-    evidence: docs/engineering/AGENT_EXECUTION_LOOP.md and AGENTS.md now require discover/poll/inspect/fix/repeat and prohibit advancement without terminal green CI for current HEAD.
+    evidence: AGENTS.md and docs/engineering/AGENT_EXECUTION_LOOP.md require push -> discover -> poll -> completed -> inspect -> fix -> repeat and prohibit phase advancement without current-HEAD green CI.
+  - check: blocking watcher
+    result: added
+    evidence: scripts/ci_wait.sh uses gh run watch --exit-status and prints failed logs; non-green or missing CI exits non-zero.
 
 next_actions:
-  - Discover the workflow run/checks for current HEAD after this state commit.
-  - Poll until terminal completion.
-  - If failed, inspect exact job logs, fix, push, and repeat without advancing.
+  - From an environment with authenticated gh CLI, run scripts/ci_wait.sh for current HEAD and block until completion.
+  - If failed, inspect emitted logs, fix the root cause, push, and rerun the watcher.
   - When CI is green, run separate code reviewer, QA reviewer, and product-guardrail reviewer passes.
-  - Resolve Critical/High findings and repeat CI if any code changes result.
+  - Resolve Critical/High findings and repeat CI after fixes.
   - Mark P0 complete only after current HEAD has terminal green CI plus green review gates.
