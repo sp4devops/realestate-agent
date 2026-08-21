@@ -16,7 +16,7 @@
     const existing=repo.list('matches');
     for(const old of existing){
       const next=wanted.get(old.id);
-      if(!next){ try{ repo.remove('matches',old.id); }catch(_){} continue; }
+      if(!next){ repo.remove('matches',old.id); continue; }
       if(old.score!==next.score || JSON.stringify(old.reasons)!==JSON.stringify(next.reasons)) repo.update('matches',old.id,next);
       wanted.delete(old.id);
     }
@@ -48,7 +48,7 @@
     const id=params().get('id') || 'match-requirement-suresh-property-murugan';
     const match=repo.get('matches',id);
     if(!match){ app.innerHTML=shell(`<section class="page"><h1>Match not found</h1><p class="lead">This match no longer qualifies after the latest changes.</p><button class="button" data-route="matches">Back to Matches</button></section>`,'matches'); bind(); return; }
-    const {requirement,property,buyer,owner}=resolve(match);
+    const {property,buyer,owner}=resolve(match);
     const reasons=match.reasons.map(reason=>`<li>${esc(reason)}</li>`).join('');
     app.innerHTML=shell(`<section class="page"><p class="eyebrow">WHY THIS MATCH</p><h1 data-testid="match-title">${esc(buyer?.name || 'Buyer')} ↔ ${esc(property.propertyType)} in ${esc(property.locality)}</h1><p class="lead">Match score ${match.score} · ${money(property.price)}</p><div class="placeholder-card"><strong>Why it matched</strong><ul data-testid="match-reasons">${reasons}</ul></div><div class="placeholder-card"><strong>People</strong><p>Buyer: ${esc(buyer?.name || 'Unknown')} · ${esc(buyer?.primaryPhone || '')}</p><p>Owner: ${esc(owner?.name || 'Unknown')} · ${esc(owner?.primaryPhone || '')}</p></div><div class="page-actions"><button class="button primary" type="button" data-followup-match="${esc(match.id)}">Follow up</button><button class="button" type="button" data-route="matches">Back to Matches</button></div><p data-testid="match-action-status" hidden></p></section>`,'matches');
     bind();
@@ -57,9 +57,13 @@
   function createFollowup(matchIdValue){
     const match=repo.get('matches',matchIdValue); if(!match) return;
     const {property,buyer}=resolve(match);
+    const existing=repo.list('followUps').find(item=>item.status==='open' && item.personId===buyer?.id && item.propertyId===property?.id);
+    const el=document.querySelector('[data-testid="match-action-status"]');
+    if(existing){ if(el){el.hidden=false;el.textContent='An open follow-up already exists for this match.';} return existing; }
     const due=new Date(Date.now()+24*60*60*1000).toISOString();
-    repo.create('followUps',{dueAt:due,status:'open',title:`Follow up: ${buyer?.name || 'buyer'} ↔ ${property?.propertyType || 'property'} in ${property?.locality || ''}`,personId:buyer?.id || null,propertyId:property?.id || null});
-    const el=document.querySelector('[data-testid="match-action-status"]'); if(el){el.hidden=false;el.textContent='Follow-up saved locally.';}
+    const created=repo.create('followUps',{dueAt:due,status:'open',title:`Follow up: ${buyer?.name || 'buyer'} ↔ ${property?.propertyType || 'property'} in ${property?.locality || ''}`,personId:buyer?.id || null,propertyId:property?.id || null});
+    if(el){el.hidden=false;el.textContent='Follow-up saved locally.';}
+    return created;
   }
 
   function bind(){
