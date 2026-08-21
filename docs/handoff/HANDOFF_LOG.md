@@ -2,6 +2,43 @@
 
 Append-only session history. New entries go at the top beneath this introduction or at the end; do not rewrite historical facts.
 
+## 2026-08-21 22:10 IST — P5 deterministic Matching and Action Brain complete
+
+**Branch:** `ai/p5-matching-action-brain`
+
+**PR:** #6 — P5: deterministic matching and action brain
+
+**Implementation evidence:**
+
+- Added deterministic local demand/supply evaluation and ranking with property type and transaction intent as hard compatibility rules.
+- Added explainable preference scoring for exact location, starter nearby-locality alternatives, in-budget pricing, and up-to-10-percent price tolerance as a possible-negotiation case.
+- Added persisted match synchronization so changed requirements/properties recalculate and stale matches disappear.
+- Replaced placeholder Matches/Match detail screens with ranked match cards, complete reason lists, buyer/owner contact context, and a local Follow up action.
+- Made Follow up idempotent so repeated taps cannot create duplicate open follow-ups for the same buyer/property.
+- Reproduced the seeded Suresh (Demo) ↔ Murugan land in Erode example at score 100 with explicit exact-location and within-budget reasons.
+- Preserved phase boundaries: core matching requires no AI/cloud, and direct Call/WhatsApp/share actions remain owned by P8.
+
+**CI/failure loop:**
+
+- Initial Quality Gates run #119 (`32504122302`) failed only inherited desktop/mobile navigation tests because P5 replaced the static `Match detail` placeholder with a real ID-driven route. JS/unit and Android were green and the P5 matching acceptance tests themselves did not fail.
+- Updated route coverage to exercise the seeded dynamic match detail; Quality Gates run #121 (`32504270978`) completed successfully for `55487bd094b3865ced5234710ec610a1e37d1f2a` with all required jobs green.
+- Reviewer pass then found a user-visible action issue: repeated Follow up taps could create duplicate open records. The action was made idempotent, stale-match removal now propagates repository errors, and E2E regression coverage was added through `702baa505a743e1b419feebf9dc68f6888bfed74`.
+- Post-review Quality Gates run #125 (`32504524903`) completed successfully for that exact functional HEAD: Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
+
+**Reviewer gates after repair:**
+
+- Senior Code Reviewer: PASS — deterministic rule correctness, persistence synchronization, error handling, and follow-up idempotency reviewed; no remaining Critical/High finding.
+- Senior QA Reviewer: PASS — hard-vs-preference rules, nearby/price tolerance, ranking, Suresh↔Murugan E2E, update recalculation, duplicate-action regression, desktop/mobile routes, typed-capture regression, and Android packaging covered.
+- Product/UX Guardrail Reviewer: PASS — matching remains local, deterministic and explainable, output leads to a simple useful action, and no marketplace/CRM/cloud or premature P8 communication behavior was introduced.
+
+**Nonblocking constraints:** nearby-place knowledge is a starter deterministic dictionary, not complete geographic coverage. The domain schema does not yet carry an explicit negotiability field, so P5 uses bounded price tolerance as a possible-negotiation preference and never invents seller negotiability.
+
+**State:** P5 acceptance is complete on functional/reviewer-repair HEAD `702baa505a743e1b419feebf9dc68f6888bfed74`. This state/handoff documentation moves PR HEAD, so one final exact-HEAD Quality Gates run is mandatory before merge.
+
+**Merge rule:** PR #6 must not be merged without explicit user authorization.
+
+**Next after authorized merge:** verify `main`, then begin P6 — Ask/Search and operational result cards — on a fresh focused branch/PR.
+
 ## 2026-08-21 21:53 IST — P4 voice capture and multilingual understanding complete
 
 **Branch:** `ai/p4-voice-capture-multilingual`

@@ -2,38 +2,38 @@ schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
 status: ready_for_merge
-active_phase: P4
-active_phase_name: Voice capture and multilingual understanding
-last_verified_commit: 19be73c7e1fc4eaa2926e88ca9d4bac0c692ff41
-last_updated: 2026-08-21T21:53:00+05:30
-active_pr: 5
-active_branch: ai/p4-voice-capture-multilingual
+active_phase: P5
+active_phase_name: Matching and action brain
+last_verified_commit: 702baa505a743e1b419feebf9dc68f6888bfed74
+last_updated: 2026-08-21T22:10:00+05:30
+active_pr: 6
+active_branch: ai/p5-matching-action-brain
 
 ci_gate:
   status: green
-  verified_head_sha: 19be73c7e1fc4eaa2926e88ca9d4bac0c692ff41
+  verified_head_sha: 702baa505a743e1b419feebf9dc68f6888bfed74
   workflow_name: Quality Gates
-  workflow_run_id: 32503106436
-  workflow_run_number: 107
+  workflow_run_id: 32504524903
+  workflow_run_number: 125
   workflow_status: completed
   workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: P4 reviewer-repair HEAD is terminal green. This state/handoff documentation moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
+  note: P5 reviewer-repair functional HEAD is terminal green. This state/handoff documentation moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
 
 review_gates:
   code_review:
     status: pass
     blocking_findings: 0
-    note: Initial review found active microphone tracks could survive route exit; route/page cleanup and regression coverage were added in 19be73c7. No Critical/High correctness, privacy, architecture, resource-use, or maintainability finding remains.
+    note: Deterministic hard-vs-preference matching, persisted recalculation, error propagation, and idempotent follow-up action reviewed. Duplicate open follow-ups were fixed before completion; no Critical/High finding remains.
   qa_review:
     status: pass
     blocking_findings: 0
-    note: Tamil/English/Tanglish normalization fixtures, STT success/failure, microphone permission denial, route-exit microphone cleanup, shared review handoff, typed-capture fallback, Android permission bridge, desktop/mobile Playwright, and Android packaging are covered.
+    note: Hard property/intent rules, exact/nearby locality, budget tolerance, ranking, Suresh-Murugan E2E, update-triggered recalculation, dynamic match routes, follow-up idempotency, typed-capture regression, desktop/mobile Playwright, and Android packaging are covered.
   product_guardrail_review:
     status: pass
     blocking_findings: 0
-    note: Speak & Save remains simple and local-first, Type & Save remains fully usable when microphone/STT fails, input language stays independent from display language, and no call-recording assumption or cloud STT dependency was introduced.
+    note: Matching is local, deterministic and explainable; action output stays simple and avoids marketplace/CRM/cloud behavior. Call/WhatsApp/share actions remain correctly owned by P8.
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -52,7 +52,7 @@ phases:
   P2: {name: Local domain model and persistence, status: done}
   P3: {name: Type capture and structured extraction, status: done}
   P4: {name: Voice capture and multilingual understanding, status: done}
-  P5: {name: Matching and action brain, status: pending}
+  P5: {name: Matching and action brain, status: done}
   P6: {name: Ask/search and operational result cards, status: pending}
   P7: {name: Poster capture and OCR lead flow, status: pending}
   P8: {name: After-call recap follow-ups and communication actions, status: pending}
@@ -62,22 +62,26 @@ phases:
   P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
-  - id: P4-T1
+  - id: P5-T1
     status: done
     owner: ai-agent
-    description: Implement microphone capture, local STT adapter contract, regional normalization, Android permission bridge, shared review handoff, failure recovery, telemetry, and regression tests.
-  - id: P4-T2
+    description: Implement deterministic demand/supply ranking, hard-vs-preference rules, persisted explainable matches, recalculation, match detail/action cards, and Suresh-Murugan acceptance coverage.
+  - id: P5-T2
     status: ready_for_merge
     owner: ai-agent
-    description: Verify final state/handoff exact-head CI and merge PR #5 only when explicit merge authorization is given.
+    description: Verify final state/handoff exact-head CI and merge PR #6 only when explicit merge authorization is given.
+  - id: P5-T3
+    status: deferred
+    owner: ai-agent
+    description: Expand deterministic nearby-locality knowledge and add an explicit negotiability domain field when capture/domain schema owns that business fact; P5 does not invent negotiability from missing data.
+  - id: P4-T2
+    status: done
+    owner: ai-agent
+    description: PR #5 merged to main as 18a612c553b50bcf7de6fb6042b3c1b20e5aafde after exact-head Quality Gates #111 success and explicit user authorization.
   - id: P4-T3
     status: deferred
     owner: ai-agent
-    description: Select, package, and benchmark production local STT engine weights/runtime on representative target hardware before release/pilot; P4 adapter and failure-safe workflow are complete without bundling a specific engine.
-  - id: P3-T2
-    status: done
-    owner: ai-agent
-    description: PR #4 merged to main as 10b76b2126c1e185f16f545eb1534a1b9f8ead4d after exact-head Quality Gates #92 success and explicit user authorization.
+    description: Select, package, and benchmark production local STT engine weights/runtime on representative target hardware before release/pilot.
   - id: P0-T2
     status: deferred
     owner: ai-agent
@@ -93,35 +97,39 @@ known_constraints:
   - P1 desktop is the loopback-served web-compatible shell; packaged desktop release infrastructure is scheduled for P11.
   - P2 uses a versioned repository contract over localStorage as the first shared persistence adapter.
   - P3 deterministic extraction intentionally covers a focused starter vocabulary/locality set; replaceable local models can improve understanding while fallback remains mandatory.
-  - P4 records audio only while Speak & Save is active, stops tracks on completion/route exit/page hide, and never introduces Internet permission.
-  - P4 STT integration is a replaceable local adapter; production engine weights are not yet bundled. P10/P11 must benchmark/select/package an open local engine before release/pilot.
-  - CI records audio-byte size and adapter latency for test fixtures, but hosted CI is not representative 4 GB Android hardware; representative memory/latency measurement is deferred to P10.
+  - P4 STT integration is a replaceable local adapter; production engine weights remain a P10/P11 packaging/benchmark concern.
+  - P5 nearby-locality knowledge is a small deterministic starter dictionary, not a claim of complete geographic adjacency.
+  - P5 currently treats up to 10 percent above budget as a possible-negotiation preference. No explicit negotiability field exists in the current domain schema, so the matcher must not invent seller negotiability.
+  - P5 recalculates/persists matches when match routes render; a repository event/transaction mechanism may replace this trigger if scale later warrants it without changing deterministic ranking rules.
 
 last_checks:
-  - check: P3 merge
+  - check: P4 merge
     result: pass
-    evidence: PR #4 merged to main as 10b76b2126c1e185f16f545eb1534a1b9f8ead4d after final exact-head Quality Gates run 32502221208 (#92) succeeded.
-  - check: P4 initial CI
+    evidence: PR #5 merged to main as 18a612c553b50bcf7de6fb6042b3c1b20e5aafde after final exact-head Quality Gates run 32503427986 (#111) succeeded and explicit user authorization was given.
+  - check: P5 initial PR CI
+    result: fail_then_fixed
+    evidence: Quality Gates run 32504122302 (#119) failed only the inherited desktop/mobile navigation assertion because Match detail became a real ID-driven P5 route instead of the old static placeholder. JS/unit and Android were green; matching acceptance itself did not fail.
+  - check: P5 dynamic-route repair CI
     result: pass
-    evidence: Quality Gates run 32502884002 (#103) completed successfully for b3cd63e48cb4402dcc4584b9e1e89804a7decdce with Harness, JS/unit, Playwright, Android and required summary green.
-  - check: P4 privacy reviewer repair
+    evidence: Quality Gates run 32504270978 (#121) completed successfully for 55487bd094b3865ced5234710ec610a1e37d1f2a with Detect, Harness, JS/unit, Playwright, Android and Required gate summary all green.
+  - check: P5 reviewer repair
     result: pass
-    evidence: Added route/page microphone cleanup, abandoned-recording suppression, and voice audio-size/STT-latency telemetry with E2E regression coverage through 19be73c7e1fc4eaa2926e88ca9d4bac0c692ff41.
-  - check: P4 post-review CI
+    evidence: Repeated Follow up actions could create duplicate open records. Follow-up creation was made idempotent, stale-match deletion now propagates repository errors, and E2E regression coverage was added through 702baa505a743e1b419feebf9dc68f6888bfed74.
+  - check: P5 post-review CI
     result: pass
-    evidence: Quality Gates run 32503106436 (#107) completed successfully for 19be73c7e1fc4eaa2926e88ca9d4bac0c692ff41; Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
+    evidence: Quality Gates run 32504524903 (#125) completed successfully for 702baa505a743e1b419feebf9dc68f6888bfed74; Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
   - check: code reviewer
     result: pass
-    evidence: Microphone lifetime/privacy finding closed; no Critical/High finding remains.
+    evidence: Matching correctness, persistence sync, error behavior and action idempotency reviewed; no Critical/High finding remains.
   - check: QA reviewer
     result: pass
-    evidence: Voice success, normalization, permission denial, STT failure, route-exit cleanup, typed fallback, Android permission/build, and desktop/mobile regression paths reviewed.
+    evidence: P5 acceptance, preference/hard-rule edges, recalculation, Suresh-Murugan flow, duplicate-action regression and cross-platform regression coverage reviewed; no Critical/High finding remains.
   - check: product guardrail reviewer
     result: pass
-    evidence: Local-first privacy, language independence, simple Speak/Type parity, no call-recording assumptions, and later-phase boundaries preserved.
+    evidence: Explainable deterministic matching advances Match and Act without cloud/model dependence, CRM expansion or premature P8 communication actions.
 
 next_actions:
-  - Append P4 completion evidence to docs/handoff/HANDOFF_LOG.md.
+  - Append P5 completion evidence to docs/handoff/HANDOFF_LOG.md.
   - Wait for Quality Gates on the exact final PR HEAD created by state/handoff documentation commits and inspect all required jobs.
-  - If terminal success, mark PR #5 ready for review; do not merge without explicit merge authorization.
-  - After authorized P4 merge, confirm main and begin P5 deterministic Matching and Action Brain on a fresh focused branch/PR.
+  - If terminal success, mark PR #6 ready for review; do not merge without explicit merge authorization.
+  - After authorized P5 merge, confirm main and begin P6 Ask/Search and operational result cards on a fresh focused branch/PR.

@@ -8,7 +8,6 @@ const requiredStaticRoutes = [
   ['ask','Ask'],
   ['people','People'],
   ['matches','Matches'],
-  ['match','Match detail'],
   ['poster','Scan Poster'],
   ['poster-review','Poster review'],
   ['poster-lead','Poster lead'],
@@ -17,7 +16,7 @@ const requiredStaticRoutes = [
   ['settings','Settings & Backup']
 ];
 
-test('all approved shell routes render, including dynamic persistence/capture routes', async ({ page }) => {
+test('all approved shell routes render, including dynamic persistence/capture/match routes', async ({ page }) => {
   await page.goto('/#/home');
   await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
   for (const [route, heading] of requiredStaticRoutes) {
@@ -31,6 +30,8 @@ test('all approved shell routes render, including dynamic persistence/capture ro
   await expect(page.getByTestId('person-name')).toHaveText('Suresh (Demo)');
   await page.goto('/#/property?id=property-murugan');
   await expect(page.getByTestId('property-title')).toContainText('land in Erode');
+  await page.goto('/#/match?id=match-requirement-suresh-property-murugan');
+  await expect(page.getByTestId('match-title')).toContainText('Suresh (Demo)');
 });
 
 test('primary shell navigation is wired with no dead primary controls', async ({ page }) => {
