@@ -2,6 +2,42 @@
 
 Append-only session history. New entries go at the top beneath this introduction or at the end; do not rewrite historical facts.
 
+## 2026-08-21 21:53 IST — P4 voice capture and multilingual understanding complete
+
+**Branch:** `ai/p4-voice-capture-multilingual`
+
+**PR:** #5 — P4: voice capture and multilingual understanding
+
+**Implementation evidence:**
+
+- Replaced the Speak & Save placeholder with real microphone capture using `MediaRecorder`, with explicit recording/processing/error states and immediate fallback to Type & Save.
+- Added Android `RECORD_AUDIO` runtime permission handling and a WebView audio-capture permission bridge without adding Internet permission.
+- Added replaceable local STT service contract with Tamil/Tanglish/English language hints and failure-safe behavior when a local recognizer is unavailable or errors.
+- Added local regional normalization dictionaries for Erode/Kovai/Chennai/Trichy/Tiruppur aliases and land/house/apartment/rent vocabulary before handing transcripts to the proven P3 extractor.
+- Voice and type now share the same review/correction/persistence path; voice drafts retain raw and normalized transcripts plus `sourceChannel: voice`.
+- Added privacy/resource cleanup so microphone tracks stop on completion, route exit, and page hide; abandoned recordings cannot create a draft after navigation.
+- Added lightweight voice telemetry for audio byte size and STT adapter latency. Hosted CI is not treated as representative 4 GB Android performance evidence.
+- Production STT engine weights/runtime are not bundled yet; the P4 local adapter contract is complete and P10/P11 must select/package/benchmark the open local engine before pilot/release.
+
+**CI/review loop:**
+
+- Initial Quality Gates run #103 (`32502884002`) completed successfully for `b3cd63e48cb4402dcc4584b9e1e89804a7decdce`: Harness, JS/unit, Playwright, Android build/tests/APK, and required summary were green.
+- Senior review found a blocking privacy/resource issue: navigating away during recording could leave the microphone stream active.
+- Added route/page cleanup, abandoned-recording suppression, telemetry, and E2E coverage through `19be73c7e1fc4eaa2926e88ca9d4bac0c692ff41`.
+- Post-review Quality Gates run #107 (`32503106436`) completed successfully for that exact HEAD with all required jobs green.
+
+**Reviewer gates after repair:**
+
+- Senior Code Reviewer: PASS — microphone lifetime/privacy finding closed; no remaining Critical/High correctness, architecture, security/privacy, resource-use, or maintainability finding.
+- Senior QA Reviewer: PASS — multilingual normalization, STT success/failure, microphone denial, route-exit cleanup, shared review handoff, typed fallback, Android permission/build, and desktop/mobile regression paths covered.
+- Product/UX Guardrail Reviewer: PASS — Speak & Save remains simple/local-first, Type & Save remains fully usable when voice fails, display/input language separation is preserved, and no cloud STT or call-recording assumption was introduced.
+
+**State:** P4 acceptance is complete on functional/reviewer-repair HEAD `19be73c7e1fc4eaa2926e88ca9d4bac0c692ff41`. This state/handoff documentation moves PR HEAD, so one final exact-HEAD Quality Gates run is mandatory before merge.
+
+**Merge rule:** PR #5 must not be merged without explicit user authorization.
+
+**Next after authorized merge:** verify `main`, then begin P5 — deterministic Matching and Action Brain — on a fresh focused branch/PR.
+
 ## 2026-08-21 21:46 IST — P3 Type & Save extraction complete
 
 **Branch:** `ai/p3-type-capture-extraction`
