@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 await import('../../web/voice-core.js');
 await import('../../web/query-core.js');
 const {interpret,search}=globalThis.PropertyAssistantQuery;
-const snapshot={entities:{people:{u1:{id:'u1',name:'Suresh',role:'buyer',primaryPhone:'+91 9000000001',alternatePhones:[]}},properties:{p1:{id:'p1',intent:'sale',propertyType:'land',locality:'Erode',price:2200000},p2:{id:'p2',intent:'rent',propertyType:'house',locality:'Chennai',price:15000}},requirements:{r1:{id:'r1',personId:'u1'}},matches:{m1:{id:'m1',requirementId:'r1',propertyId:'p1',score:100,reasons:['Exact location: Erode']}}}};
+const snapshot={entities:{people:{u1:{id:'u1',name:'Suresh',role:'buyer',primaryPhone:'+91 9000000001',alternatePhones:[]},u2:{id:'u2',name:'Murugan',role:'owner',primaryPhone:'+91 9000000003',alternatePhones:[]}},properties:{p1:{id:'p1',intent:'sale',propertyType:'land',locality:'Erode',price:2200000},p2:{id:'p2',intent:'rent',propertyType:'house',locality:'Chennai',price:15000}},requirements:{r1:{id:'r1',personId:'u1'}},matches:{m1:{id:'m1',requirementId:'r1',propertyId:'p1',score:100,reasons:['Exact location: Erode']}}}};
 
 test('interprets natural property query with locality and budget',()=>{
  const q=interpret('show land in Erode under 25 lakh');
@@ -15,9 +15,25 @@ test('Tanglish/regional aliases normalize before query interpretation',()=>{
  assert.equal(q.location,'Coimbatore'); assert.equal(q.propertyType,'land');
 });
 
+test('Tamil-script property query uses the same structured contract',()=>{
+ const q=interpret('ஈரோடு நிலம் 25 லட்சத்துக்கு கீழ்');
+ assert.equal(q.location,'Erode'); assert.equal(q.propertyType,'land'); assert.equal(q.maxPrice,2500000);
+ const results=search(snapshot,q); assert.deepEqual(results.map(r=>r.id),['p1']);
+});
+
 test('offline local search returns actionable property and person results',()=>{
  const props=search(snapshot,interpret('land in Erode under 25 lakh')); assert.equal(props.length,1); assert.equal(props[0].id,'p1');
  const people=search(snapshot,interpret('find Suresh contact')); assert.equal(people.length,1); assert.equal(people[0].kind,'person');
+});
+
+test('property-specific filters do not leak unrelated people',()=>{
+ const results=search(snapshot,interpret('Erode under 25 lakh'));
+ assert.ok(results.every(r=>r.kind!=='person')); assert.ok(results.some(r=>r.id==='p1'));
+});
+
+test('phone lookup targets the matching person instead of all contacts',()=>{
+ const q=interpret('find phone 9000000003'); const results=search(snapshot,q);
+ assert.equal(q.phoneTerm,'9000000003'); assert.deepEqual(results.map(r=>r.id),['u2']);
 });
 
 test('match query returns persisted explained match',()=>{
