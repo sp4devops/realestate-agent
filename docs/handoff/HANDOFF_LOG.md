@@ -2,6 +2,25 @@
 
 Append-only session history. New entries go at the top beneath this introduction or at the end; do not rewrite historical facts.
 
+## 2026-08-21 19:20 IST — P1 application shell started
+
+**Branch:** `ai/p1-app-shell-navigation`
+
+**Status:** P1 in progress; fresh CI required before review/advance.
+
+**Completed in this slice:**
+
+- Reconciled repository state with live GitHub and confirmed PR #1 had already merged.
+- Verified final P0 PR HEAD `e26c9d142cf04487c0553b46e1e22f1b1f2213d3` had terminal-success Quality Gates run #28 (`32487958379`) before merge.
+- Started P1 on a new focused branch from merge commit `3650addb4e876c2e3a7bc1e723648c3cc91bbd66`.
+- Selected and documented a dependency-light shared web shell plus thin Android WebView host.
+- Added approved screen hierarchy/navigation placeholders without fake completed business logic.
+- Added English, Tamil and Tanglish display switching and a separate voice/typing language preference.
+- Added Playwright desktop/mobile shell tests and Node unit checks.
+- Added Android local-asset wrapper with no Internet permission and progressive CI activation.
+
+**Next mandatory action:** wait for Quality Gates on the exact pushed P1 HEAD. If any job fails, inspect exact logs, fix, push, and wait again before reviews or new feature work.
+
 ## 2026-08-21 19:08 IST — P0 final verification
 
 **Branch:** `ai/bootstrap-project-harness`

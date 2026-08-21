@@ -1,0 +1,19 @@
+plugins { id 'com.android.application' }
+
+android {
+  namespace 'ai.propertyassistant.app'
+  compileSdk 35
+  defaultConfig {
+    applicationId 'ai.propertyassistant.app'
+    minSdk 24
+    targetSdk 35
+    versionCode 1
+    versionName '0.1.0'
+  }
+}
+
+tasks.register('syncWebAssets', Copy) {
+  from rootProject.file('../web')
+  into project.file('src/main/assets')
+}
+preBuild.dependsOn syncWebAssets
