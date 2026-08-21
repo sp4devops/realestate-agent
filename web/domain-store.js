@@ -78,6 +78,7 @@
     nonEmpty(record.occurredAt, 'occurredAt');
     assert(Array.isArray(record.personIds || []), 'personIds must be an array');
     optionalString(record.summary, 'summary');
+    optionalString(record.phone, 'phone');
   }
 
   function validateFollowUp(record) {

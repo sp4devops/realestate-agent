@@ -2,38 +2,38 @@ schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
 status: ready_for_merge
-active_phase: P7
-active_phase_name: Poster capture and OCR lead flow
-last_verified_commit: 995b755ceb0cab8a571b0001364241846e8780e7
-last_updated: 2026-08-21T23:59:00+05:30
-active_pr: 8
-active_branch: ai/p7-poster-ocr-lead-flow
+active_phase: P8
+active_phase_name: After-call recap follow-ups and communication actions
+last_verified_commit: 6ef113936c0a05467107ed4f05274dcb6398ce51
+last_updated: 2026-08-22T00:24:00+05:30
+active_pr: 9
+active_branch: ai/p8-after-call-communication-actions
 
 ci_gate:
   status: green
-  verified_head_sha: 995b755ceb0cab8a571b0001364241846e8780e7
+  verified_head_sha: 6ef113936c0a05467107ed4f05274dcb6398ce51
   workflow_name: Quality Gates
-  workflow_run_id: 32513594778
-  workflow_run_number: 211
+  workflow_run_id: 32515460673
+  workflow_run_number: 233
   workflow_status: completed
   workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: P7 final functional/reviewer-repair HEAD is terminal green. This state/handoff documentation moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
+  note: P8 reviewer-repair functional HEAD is terminal green. State/handoff documentation moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
 
 review_gates:
   code_review:
     status: pass
     blocking_findings: 0
-    note: Final review covered phone-first extraction, OCR adapter/fallback, IndexedDB image asset storage, domain rollback/error handling, Poster Lead to follow-up referential integrity, Android FileProvider camera/gallery chooser, coarse one-shot geolocation, and permission/resource cleanup. Earlier Android file-input and localStorage image-quota blockers were repaired; no Critical/High finding remains.
+    note: Reviewed after-call state, interaction/follow-up persistence, URI construction, Android JavascriptInterface boundary, ACTION_DIAL/WhatsApp/share intents, broad-permission avoidance and fallback behavior. Stale call-return markers were repaired with bounded expiry and desktop WhatsApp now preserves the app. No Critical/High finding remains.
   qa_review:
     status: pass
     blocking_findings: 0
-    note: Phone extraction, locality parsing, typed fallback, OCR unavailable, editable review, image persistence, poster-location versus capture-GPS separation, GPS allowed/denied/absent states, dynamic poster-lead navigation, follow-up creation/reference protection, desktop/mobile Playwright, Android host contract, Android tests/build and APK upload are covered.
+    note: Recap save, linked-person lookup, optional phone/follow-up, invalid input, permitted/unavailable recent-number paths, follow-up done/cancel/reopen transitions, Call/WhatsApp/Share actions, return prompt, stale-marker expiry, desktop/mobile Playwright, Android static contract/build/tests and APK generation are covered.
   product_guardrail_review:
     status: pass
     blocking_findings: 0
-    note: Poster capture remains local-first, phone-first and review-before-save; original image bytes stay private in local IndexedDB, GPS is explicit one-shot coarse location, no cloud OCR/search or continuous tracking was introduced, and the flow produces an actionable local follow-up without CRM drift.
+    note: P8 never records calls or reads call logs, recent-number prefill exists only behind an explicitly provided permitted adapter, Call opens the dialer, WhatsApp/Share require explicit user action, and the workflow remains local-first without full WhatsApp automation or CRM expansion.
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -55,29 +55,29 @@ phases:
   P5: {name: Matching and action brain, status: done}
   P6: {name: Ask/search and operational result cards, status: done}
   P7: {name: Poster capture and OCR lead flow, status: done}
-  P8: {name: After-call recap follow-ups and communication actions, status: pending}
+  P8: {name: After-call recap follow-ups and communication actions, status: done}
   P9: {name: Backup restore settings language and privacy hardening, status: pending}
   P10: {name: Performance accessibility resilience and offline QA, status: pending}
   P11: {name: Android APK and desktop release candidates, status: pending}
   P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
-  - id: P7-T1
+  - id: P8-T1
     status: done
     owner: ai-agent
-    description: Implement camera/gallery poster capture, replaceable local OCR with typed fallback, phone-first extraction/review, durable local original-image storage, distinct poster location and one-shot GPS, Poster Lead persistence, linked follow-up creation, Android host bridges, and regression coverage.
-  - id: P7-T2
+    description: Implement technically permitted after-call recap, optional permitted recent-number adapter, local call interaction persistence, follow-up scheduling/lifecycle, Call/WhatsApp/Share actions, return prompt, Android host bridge and regression coverage.
+  - id: P8-T2
     status: ready_for_merge
     owner: ai-agent
-    description: Append P7 completion evidence, verify final documentation exact-head CI, and merge PR #8 only when explicit merge authorization is given.
+    description: Append P8 completion evidence, verify final documentation exact-head CI, and merge PR #9 only when explicit merge authorization is given.
+  - id: P7-T2
+    status: done
+    owner: ai-agent
+    description: PR #8 merged to main as b7506307af6967c134d515148bf0f2f2145b32e8 after exact-head Quality Gates #215 success and explicit user authorization.
   - id: P7-T3
     status: deferred
     owner: ai-agent
-    description: Select/package/benchmark the production local OCR engine on representative target hardware before pilot/release; P7 completes the replaceable local adapter and deterministic fallback contract without bundling a specific OCR model.
-  - id: P6-T2
-    status: done
-    owner: ai-agent
-    description: PR #7 merged to main as 121ebd04f0df0c68dceb873a9bad6ff9e0ba10f6 after exact-head Quality Gates #173 success and explicit user authorization.
+    description: Select/package/benchmark the production local OCR engine on representative target hardware before pilot/release.
   - id: P6-T3
     status: deferred
     owner: ai-agent
@@ -93,7 +93,7 @@ current_tasks:
   - id: P0-T2
     status: deferred
     owner: ai-agent
-    description: Add exact approved product-charter and visual-prototype source artifacts byte-for-byte when practical transfer is available; concise committed contracts remain authoritative meanwhile.
+    description: Add exact approved product-charter and visual-prototype source artifacts byte-for-byte when practical transfer is available.
 
 blockers: []
 
@@ -103,53 +103,43 @@ known_constraints:
   - Normal Android apps must not assume unrestricted cellular-call audio capture/transcription.
   - UI display language must remain independent from voice/input language.
   - P1 desktop is the loopback-served web-compatible shell; packaged desktop release infrastructure is scheduled for P11.
-  - P2 uses a versioned repository contract over localStorage as the first shared structured persistence adapter.
-  - P3 deterministic extraction intentionally covers a focused starter vocabulary/locality set.
   - P4 STT integration is a replaceable local adapter; production engine weights remain a P10/P11 packaging/benchmark concern.
   - P5 nearby-locality knowledge is a small deterministic starter dictionary and P5 does not invent negotiability.
-  - P6 deterministic query interpretation intentionally covers a starter real-estate vocabulary/locality/Tamil alias set; real pilot queries must drive expansion.
-  - P7 stores original poster image Blobs in local IndexedDB and only an opaque imageRef in the structured domain store to avoid localStorage quota failure.
-  - P7 Android camera capture uses an external camera intent plus app-private FileProvider cache URI; no CAMERA permission or Internet permission is requested.
-  - P7 location capture is optional ACCESS_COARSE_LOCATION requested through the WebView only when the Property Advisor taps the one-shot location action; no fine or continuous location tracking exists.
+  - P6 deterministic query interpretation intentionally covers a starter vocabulary/locality/Tamil alias set; real pilot queries must drive expansion.
   - P7 OCR integration is a replaceable local adapter; a specific production OCR model/runtime is not yet bundled and must be selected/benchmarked before pilot/release.
+  - P8 Android does not request READ_CALL_LOG, CALL_PHONE, READ_PHONE_STATE or SMS permissions; Call uses ACTION_DIAL and the recap prompt tracks only a Call action launched from Property Assistant.
+  - P8 recent-number prefill is unavailable by default and may be supplied only by a technically permitted explicit platform adapter.
+  - P8 pending call-return markers expire after two hours to avoid stale recap prompts.
+  - P8 desktop communication actions depend on installed/browser protocol handlers; Android uses explicit external intents and the system share sheet.
 
 last_checks:
-  - check: P6 merge
+  - check: P7 merge
     result: pass
-    evidence: PR #7 merged to main as 121ebd04f0df0c68dceb873a9bad6ff9e0ba10f6 after final exact-head Quality Gates #173 (32511847758) succeeded and explicit user authorization was given.
-  - check: P7 initial CI
+    evidence: PR #8 merged to main as b7506307af6967c134d515148bf0f2f2145b32e8 after final exact-head Quality Gates #215 succeeded and explicit user authorization was given.
+  - check: P8 initial CI
     result: fail_then_fixed
-    evidence: Quality Gates #181 (32512278788) failed JS poster locality parsing because generic location parsing was greedy and matched the at substring inside Coimbatore; known supported places now win before bounded generic parsing.
-  - check: P7 dynamic-route CI
-    result: fail_then_fixed
-    evidence: Quality Gates #183 (32512352531) passed JS/Android but Playwright exposed an inherited static-route assumption for poster-lead; navigation now creates a synthetic persisted lead and opens its ID-driven detail route.
-  - check: P7 functional baseline CI
+    evidence: Quality Gates #225 (32514945739) passed Harness, JS and Android but Playwright failed only because the test expected no-recording copy inside the return card while that privacy statement lived at page level; the test now verifies both actual privacy messages.
+  - check: P8 corrected functional CI
     result: pass
-    evidence: Quality Gates #185 (32512628085) completed successfully for a79660c712d816090e5f22b27eface3f63ee693a with required jobs green.
-  - check: P7 reviewer findings
-    result: fail_then_fixed
-    evidence: Reviewer found Android WebView lacked a real file chooser for camera/gallery input and image bytes were being stored as base64 in the localStorage domain record. Added secure FileProvider chooser/geolocation bridges and moved image Blobs to IndexedDB with opaque domain references.
-  - check: P7 AndroidX repair CI
-    result: fail_then_fixed
-    evidence: Quality Gates #203 (32513053683) passed JS/Playwright but Android failed because the new AndroidX FileProvider dependency required android.useAndroidX=true; the project property was added.
-  - check: P7 reviewer-repair CI
+    evidence: Quality Gates #227 (32515209631) completed successfully for 628ad708691a301bb1e4e35b9a01f49dfe07a71b with Detect, Harness, JS/unit/lint/type, Playwright, Android tests/build/APK upload and required summary green.
+  - check: P8 reviewer repair
     result: pass
-    evidence: Quality Gates #205 (32513202844) completed successfully after AndroidX repair with Harness, JS/unit/lint/type, Playwright, Android tests/build/APK upload and required summary green.
-  - check: P7 final integrity/QA repair
+    evidence: Review identified stale pending-call markers and desktop WhatsApp navigation as reliability/UX issues; bounded two-hour expiry, external desktop WhatsApp launch and explicit interaction-phone schema validation were added.
+  - check: P8 reviewer-repair CI
     result: pass
-    evidence: Added Poster Lead to follow-up reference validation/delete protection and explicit GPS-denial E2E coverage; Quality Gates #211 (32513594778) completed successfully for 995b755ceb0cab8a571b0001364241846e8780e7 with every required job green.
+    evidence: Quality Gates #233 (32515460673) completed successfully for 6ef113936c0a05467107ed4f05274dcb6398ce51 with every required job green.
   - check: code reviewer
     result: pass
-    evidence: No Critical/High finding remains across extraction, storage, reference integrity, Android chooser/FileProvider/geolocation, error handling and privacy/resource ownership.
+    evidence: No Critical/High finding remains across local persistence, lifecycle logic, URI sanitization, Android bridge/intents, permission surface, stale state and external-action fallbacks.
   - check: QA reviewer
     result: pass
-    evidence: P7 acceptance/failure paths are covered across deterministic unit tests, desktop/mobile Playwright, Android host contract tests, Android build/tests and APK artifact generation.
+    evidence: P8 acceptance and failure paths are covered by deterministic unit tests, desktop/mobile Playwright, Android host-contract tests, Android build/tests and APK generation.
   - check: product guardrail reviewer
     result: pass
-    evidence: P7 remains local/private, phone-first, reviewable, action-oriented and model-optional with no cloud OCR, continuous location, broad permissions or CRM/marketplace expansion.
+    evidence: P8 remains explicit-action, local-first and privacy-conservative with no call recording/log access, no broad call/SMS permissions, and no full WhatsApp automation.
 
 next_actions:
-  - Append P7 completion and reviewer-repair evidence to docs/handoff/HANDOFF_LOG.md.
+  - Append P8 completion, CI failure/repair and reviewer evidence to docs/handoff/HANDOFF_LOG.md.
   - Wait for Quality Gates on the exact final PR HEAD created by state/handoff documentation commits and inspect every required job.
-  - If terminal success, PR #8 is merge-ready; do not merge without explicit merge authorization.
-  - After authorized P7 merge, confirm main and begin P8 After-call recap, follow-ups and communication actions on a fresh focused branch/PR.
+  - If terminal success, PR #9 is merge-ready; do not merge without explicit merge authorization.
+  - After authorized P8 merge, confirm main and begin P9 Backup/restore/settings/language/privacy hardening on a fresh focused branch/PR.
