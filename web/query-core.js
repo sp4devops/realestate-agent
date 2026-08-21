@@ -1,6 +1,6 @@
 (function(root){
 'use strict';
-const PLACES=['Erode','Coimbatore','Chennai','Salem','Madurai','Trichy','Tiruppur'];
+const PLACES=['Erode','Perundurai','Bhavani','Chithode','Coimbatore','Pollachi','Mettupalayam','Chennai','Tambaram','Avadi','Salem','Omalur','Attur','Madurai','Trichy','Tiruppur'];
 const TAMIL_ALIASES=[
  ['ஈரோடு','Erode'],['கோயம்புத்தூர்','Coimbatore'],['கோவை','Coimbatore'],['சென்னை','Chennai'],['சேலம்','Salem'],['மதுரை','Madurai'],['திருச்சி','Trichy'],['திருப்பூர்','Tiruppur'],
  ['நிலம்','land'],['மனை','land'],['வீடு','house'],['பிளாட்','apartment'],['அபார்ட்மெண்ட்','apartment'],['வாடகை','rent'],['லட்சம்','lakh'],['லட்சத்துக்கு','lakh'],['கோடி','crore']
@@ -13,13 +13,13 @@ function normalizeQuery(value){
 }
 function money(text){
  const m=String(text).match(/(?:under|below|max|budget(?:\s+is)?|upto|up to|கீழ்)\s*(?:₹|rs\.?\s*)?([\d.]+)\s*(crore|cr|lakh|lac|lakhs)?/i)||String(text).match(/([\d.]+)\s*(crore|cr|lakh|lac|lakhs)\s*(?:under|below|கீழ்)/i); if(!m)return null;
- const n=Number(m[1]); if(!Number.isFinite(n))return null; const u=(m[2]||'').toLowerCase(); return n*(u.startsWith('cr')||u==='crore'?10000000:u.startsWith('la')?100000:1);
+ const n=Number(m[1]); if(!Number.isFinite(n)||n<0)return null; const u=(m[2]||'').toLowerCase(); return n*(u.startsWith('cr')||u==='crore'?10000000:u.startsWith('la')?100000:1);
 }
 function interpret(input){
  const raw=String(input||'').trim(); if(!raw) return {raw,terms:[],phoneTerm:null,location:null,propertyType:null,maxPrice:null,entity:'all',intent:null,personRole:null};
  const normalized=normalizeQuery(raw);
  const lower=normalized.toLowerCase();
- const location=PLACES.find(p=>lower.includes(p.toLowerCase()))||null;
+ const location=PLACES.find(p=>new RegExp(`\\b${p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`,'i').test(normalized))||null;
  const pair=TYPE_PATTERNS.find(([,re])=>re.test(lower));
  const phoneMatch=lower.match(/\d[\d\s()+-]{3,}\d/); const phoneTerm=phoneMatch?phoneMatch[0].replace(/\D/g,''):null;
  const personRole=/\bowners?\b/i.test(lower)?'owner':/\bsellers?\b/i.test(lower)?'seller':/\btenants?\b/i.test(lower)?'tenant':/\bbuyers?\b/i.test(lower)?'buyer':null;
@@ -31,7 +31,7 @@ function interpret(input){
 }
 function includesTerms(values,terms){const hay=values.filter(Boolean).join(' ').toLowerCase();return terms.every(t=>hay.includes(t));}
 function digits(value){return String(value||'').replace(/\D/g,'');}
-function samePlace(value,location){return String(value||'').toLowerCase()===String(location||'').toLowerCase();}
+function samePlace(value,location){return String(value||'').trim().toLowerCase()===String(location||'').trim().toLowerCase();}
 function intentMatchesRequirement(intent,requirementIntent){
  if(!intent)return true;
  if(intent==='sale')return requirementIntent==='sell';
@@ -59,7 +59,7 @@ function requirementMatches(r,q){
 function propertyMatches(p,q){
  if(q.location&&!samePlace(p.locality,q.location))return false;
  if(q.propertyType&&p.propertyType!==q.propertyType)return false;
- if(q.maxPrice!=null&&p.price!=null&&p.price>q.maxPrice)return false;
+ if(q.maxPrice!=null){if(p.price==null||!Number.isFinite(Number(p.price))||Number(p.price)>q.maxPrice)return false;}
  if(!intentMatchesProperty(q.intent,p.intent))return false;
  return true;
 }
