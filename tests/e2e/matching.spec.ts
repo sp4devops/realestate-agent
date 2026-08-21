@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('Suresh and Murugan seed records produce an explained match and follow-up action', async ({ page }) => {
+test('Suresh and Murugan seed records produce an explained match and idempotent follow-up action', async ({ page }) => {
   await page.goto('/#/matches');
   const card=page.getByTestId('match-card').filter({hasText:'Suresh (Demo)'});
   await expect(card).toContainText('land in Erode');
@@ -11,7 +11,9 @@ test('Suresh and Murugan seed records produce an explained match and follow-up a
   await expect(page.getByTestId('match-reasons')).toContainText('Within stated budget');
   await page.getByRole('button',{name:'Follow up'}).click();
   await expect(page.getByTestId('match-action-status')).toContainText('saved locally');
-  const count=await page.evaluate(()=>window.__PA_REPOSITORY__.list('followUps').filter(item=>item.personId==='person-suresh' && item.propertyId==='property-murugan').length);
+  await page.getByRole('button',{name:'Follow up'}).click();
+  await expect(page.getByTestId('match-action-status')).toContainText('already exists');
+  const count=await page.evaluate(()=>window.__PA_REPOSITORY__.list('followUps').filter(item=>item.personId==='person-suresh' && item.propertyId==='property-murugan' && item.status==='open').length);
   expect(count).toBe(1);
 });
 
