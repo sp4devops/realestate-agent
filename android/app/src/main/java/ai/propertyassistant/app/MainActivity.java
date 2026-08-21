@@ -33,12 +33,15 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 public final class MainActivity extends Activity {
   private static final int AUDIO_PERMISSION_REQUEST = 42;
   private static final int LOCATION_PERMISSION_REQUEST = 43;
   private static final int FILE_CHOOSER_REQUEST = 44;
+  private static final int BACKUP_EXPORT_REQUEST = 45;
   private static final String APP_HOST = "appassets.androidplatform.net";
   private static final String APP_ORIGIN = "https://" + APP_HOST;
   private static final String APP_PATH_PREFIX = "/assets/";
@@ -53,6 +56,7 @@ public final class MainActivity extends Activity {
   private String pendingGeolocationOrigin;
   private ValueCallback<Uri[]> pendingFileChooser;
   private Uri pendingCameraImageUri;
+  private String pendingBackupText;
   private WebView web;
   private SpeechRecognizer speechRecognizer;
 
@@ -172,6 +176,10 @@ public final class MainActivity extends Activity {
         if (speechRecognizer != null) speechRecognizer.stopListening();
       });
     }
+
+    @JavascriptInterface public void exportBackup(String fileName, String encryptedText) {
+      runOnUiThread(() -> launchBackupExport(fileName, encryptedText));
+    }
   }
 
   private boolean handleNavigation(Uri uri) {
@@ -238,9 +246,7 @@ public final class MainActivity extends Activity {
       @Override public void onRmsChanged(float rmsdB) { }
       @Override public void onBufferReceived(byte[] buffer) { }
       @Override public void onEndOfSpeech() { sendSpeechStatus(callbackTarget, "Processing locally…"); }
-      @Override public void onError(int error) {
-        sendSpeechResult(callbackTarget, false, null, speechErrorMessage(error));
-      }
+      @Override public void onError(int error) { sendSpeechResult(callbackTarget, false, null, speechErrorMessage(error)); }
       @Override public void onResults(Bundle results) {
         ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         if (matches == null || matches.isEmpty() || matches.get(0).trim().isEmpty()) {
@@ -284,6 +290,57 @@ public final class MainActivity extends Activity {
     String callback = SPEECH_QUERY.equals(target) ? "__PA_ON_DEVICE_QUERY_STT_RESULT__" : "__PA_ON_DEVICE_STT_RESULT__";
     String payload = "{ok:" + ok + ",transcript:" + (transcript == null ? "null" : JSONObject.quote(transcript)) + ",error:" + (error == null ? "null" : JSONObject.quote(error)) + "}";
     web.evaluateJavascript("window." + callback + " && window." + callback + "(" + payload + ")", null);
+  }
+
+  private void launchBackupExport(String fileName, String encryptedText) {
+    if (pendingBackupText != null) {
+      sendBackupExportResult(false, "Another backup export is already open.");
+      return;
+    }
+    if (encryptedText == null || encryptedText.isEmpty()) {
+      sendBackupExportResult(false, "Backup content is empty.");
+      return;
+    }
+    pendingBackupText = encryptedText;
+    Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+    intent.addCategory(Intent.CATEGORY_OPENABLE);
+    intent.setType("application/json");
+    String safeName = fileName == null ? "property-assistant.pabackup" : fileName.replaceAll("[^A-Za-z0-9._-]", "-");
+    if (!safeName.endsWith(".pabackup")) safeName += ".pabackup";
+    intent.putExtra(Intent.EXTRA_TITLE, safeName);
+    try {
+      startActivityForResult(intent, BACKUP_EXPORT_REQUEST);
+    } catch (ActivityNotFoundException error) {
+      pendingBackupText = null;
+      sendBackupExportResult(false, "No local file picker is available for backup export.");
+    }
+  }
+
+  private void finishBackupExport(int resultCode, Intent data) {
+    String text = pendingBackupText;
+    pendingBackupText = null;
+    if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+      sendBackupExportResult(false, "Backup export was cancelled.");
+      return;
+    }
+    if (text == null) {
+      sendBackupExportResult(false, "Backup export expired. Create the backup again.");
+      return;
+    }
+    try (OutputStream output = getContentResolver().openOutputStream(data.getData(), "w")) {
+      if (output == null) throw new IOException("Could not open the selected file");
+      output.write(text.getBytes(StandardCharsets.UTF_8));
+      output.flush();
+      sendBackupExportResult(true, "Encrypted backup saved locally.");
+    } catch (IOException error) {
+      sendBackupExportResult(false, "Backup file could not be written.");
+    }
+  }
+
+  private void sendBackupExportResult(boolean ok, String message) {
+    if (web == null) return;
+    String payload = "{ok:" + ok + ",message:" + JSONObject.quote(message) + "}";
+    web.evaluateJavascript("window.__PA_BACKUP_EXPORT_RESULT__ && window.__PA_BACKUP_EXPORT_RESULT__(" + payload + ")", null);
   }
 
   private String digitsOnly(String value) {
@@ -334,9 +391,7 @@ public final class MainActivity extends Activity {
       callback.invoke(origin, true, false);
       return;
     }
-    if (pendingGeolocationCallback != null) {
-      pendingGeolocationCallback.invoke(pendingGeolocationOrigin, false, false);
-    }
+    if (pendingGeolocationCallback != null) pendingGeolocationCallback.invoke(pendingGeolocationOrigin, false, false);
     pendingGeolocationCallback = callback;
     pendingGeolocationOrigin = origin;
     requestPermissions(new String[] { Manifest.permission.ACCESS_COARSE_LOCATION }, LOCATION_PERMISSION_REQUEST);
@@ -359,12 +414,10 @@ public final class MainActivity extends Activity {
     Intent chooser = new Intent(Intent.ACTION_CHOOSER);
     chooser.putExtra(Intent.EXTRA_INTENT, contentIntent);
     chooser.putExtra(Intent.EXTRA_TITLE, "Choose poster image");
-
     if (acceptsImages(params)) {
       Intent cameraIntent = createCameraIntent();
       if (cameraIntent != null) chooser.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] { cameraIntent });
     }
-
     try {
       startActivityForResult(chooser, FILE_CHOOSER_REQUEST);
       return true;
@@ -403,14 +456,15 @@ public final class MainActivity extends Activity {
 
   @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
+    if (requestCode == BACKUP_EXPORT_REQUEST) {
+      finishBackupExport(resultCode, data);
+      return;
+    }
     if (requestCode != FILE_CHOOSER_REQUEST || pendingFileChooser == null) return;
     Uri[] results = null;
     if (resultCode == RESULT_OK) {
-      if ((data == null || data.getData() == null) && pendingCameraImageUri != null) {
-        results = new Uri[] { pendingCameraImageUri };
-      } else {
-        results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
-      }
+      if ((data == null || data.getData() == null) && pendingCameraImageUri != null) results = new Uri[] { pendingCameraImageUri };
+      else results = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
     }
     pendingFileChooser.onReceiveValue(results);
     pendingFileChooser = null;
@@ -454,6 +508,7 @@ public final class MainActivity extends Activity {
     pendingFileChooser = null;
     pendingGeolocationCallback = null;
     pendingGeolocationOrigin = null;
+    pendingBackupText = null;
     if (web != null) {
       web.removeJavascriptInterface("PropertyAssistantHost");
       web.destroy();
