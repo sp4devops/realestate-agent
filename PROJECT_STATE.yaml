@@ -2,38 +2,38 @@ schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
 status: ready_for_merge
-active_phase: P2
-active_phase_name: Local domain model and persistence
-last_verified_commit: 4464ae7c5a8d1b7e6124b1b002c37f3aaf406bd3
-last_updated: 2026-08-21T20:51:51+05:30
-active_pr: 3
-active_branch: ai/p2-local-domain-persistence
+active_phase: P3
+active_phase_name: Type capture and structured extraction
+last_verified_commit: 77f026862a10b79c042681502054ee7a82995d9d
+last_updated: 2026-08-21T21:46:54+05:30
+active_pr: 4
+active_branch: ai/p3-type-capture-extraction
 
 ci_gate:
   status: green
-  verified_head_sha: 4464ae7c5a8d1b7e6124b1b002c37f3aaf406bd3
+  verified_head_sha: 77f026862a10b79c042681502054ee7a82995d9d
   workflow_name: Quality Gates
-  workflow_run_id: 32496985833
-  workflow_run_number: 55
+  workflow_run_id: 32501936498
+  workflow_run_number: 88
   workflow_status: completed
   workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: P2 reviewer-repair HEAD is terminal green. This state/handoff update moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
+  note: P3 final functional/reviewer-repair HEAD is terminal green. This state/handoff documentation moves PR HEAD, so one final live exact-HEAD Quality Gates verification remains mandatory before merge.
 
 review_gates:
   code_review:
     status: pass
     blocking_findings: 0
-    note: Initial review found dangling foreign-key relationships could be created. Referential integrity and referenced-record delete protection were added in 4464ae7c; no Critical/High correctness, security, architecture, or maintainability finding remains.
+    note: Review found non-atomic buyer save, missing model-adapter boundary, and property-supply owner contact loss; all were repaired with regression coverage. No Critical/High correctness, architecture, security/privacy, or maintainability finding remains.
   qa_review:
     status: pass
     blocking_findings: 0
-    note: CRUD/reload, primary and alternate phones, migration, malformed storage, relationship integrity, display-language isolation, dynamic detail routes, Playwright desktop/mobile, and Android packaging are covered; no Critical/High finding remains.
+    note: English/Tamil/Tanglish parser fixtures, no-model/model-fallback behavior, correction-before-save, empty/invalid input, rollback safety, buyer/property persistence, owner phone linkage, desktop/mobile Playwright, and Android packaging are covered; no Critical/High finding remains.
   product_guardrail_review:
     status: pass
     blocking_findings: 0
-    note: P2 remains local-first and model-independent, uses language-neutral records, keeps poster vs capture location distinct, preserves simple People/property memory UI, and does not pull matching, OCR, voice, or extraction behavior forward.
+    note: Type & Save remains equal to voice capture, local-first/model-optional, uses friendly uncertainty prompts, preserves first-class contact data, and does not pull voice or matching behavior forward. No Critical/High finding remains.
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -50,7 +50,7 @@ phases:
   P0: {name: Harness and source-of-truth bootstrap, status: done}
   P1: {name: Application skeleton and navigation, status: done}
   P2: {name: Local domain model and persistence, status: done}
-  P3: {name: Type capture and structured extraction, status: pending}
+  P3: {name: Type capture and structured extraction, status: done}
   P4: {name: Voice capture and multilingual understanding, status: pending}
   P5: {name: Matching and action brain, status: pending}
   P6: {name: Ask/search and operational result cards, status: pending}
@@ -62,18 +62,18 @@ phases:
   P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
-  - id: P2-T1
+  - id: P3-T1
     status: done
     owner: ai-agent
-    description: Implement language-neutral domain collections, versioned local repository CRUD/migration, synthetic seed data, UI integration, and persistence/reload tests.
-  - id: P2-T2
+    description: Implement local multilingual Type & Save parsing, replaceable model adapter/fallback, uncertainty review/correction, and buyer/property persistence with owner contact preservation.
+  - id: P3-T2
     status: ready_for_merge
     owner: ai-agent
-    description: Verify final state/handoff exact-head CI and merge PR #3 only when explicit merge authorization is given.
-  - id: P1-T3
+    description: Verify final state/handoff exact-head CI and merge PR #4 only when explicit merge authorization is given.
+  - id: P2-T2
     status: done
     owner: ai-agent
-    description: PR #2 merged to main as 0c9b63af083db4adbd8942883ca002ee8fdaf59f after exact-head Quality Gates #38 success and explicit user authorization.
+    description: PR #3 merged to main as 7372766204d0a4e95f13df99cb17e2ba2d80cda7 after exact-head Quality Gates #59 success and explicit user authorization.
   - id: P0-T2
     status: deferred
     owner: ai-agent
@@ -87,37 +87,37 @@ known_constraints:
   - Normal Android apps must not assume unrestricted cellular-call audio capture/transcription.
   - UI display language must remain independent from voice/input language.
   - P1 desktop is the loopback-served web-compatible shell; packaged desktop release infrastructure is scheduled for P11.
-  - P2 uses a versioned repository contract over localStorage as the first shared persistence adapter; a future native database adapter may replace the backend without changing domain schemas when justified by scale, encryption, backup, or query needs.
-  - Encrypted backup/restore remains explicitly owned by P9 and is not claimed by P2.
+  - P2 uses a versioned repository contract over localStorage as the first shared persistence adapter; a future native database adapter may replace the backend without changing domain schemas when justified.
+  - P3 deterministic extraction intentionally covers a focused starter vocabulary/locality set; a replaceable local model adapter can improve understanding later while deterministic fallback remains mandatory.
+  - Voice/STT remains owned by P4; deterministic matching remains owned by P5.
 
 last_checks:
-  - check: P1 merge
+  - check: P2 merge
     result: pass
-    evidence: PR #2 merged to main as 0c9b63af083db4adbd8942883ca002ee8fdaf59f after final exact-head Quality Gates run 32490226859 (#38) succeeded.
-  - check: P2 first PR CI
+    evidence: PR #3 merged to main as 7372766204d0a4e95f13df99cb17e2ba2d80cda7 after final exact-head Quality Gates run 32497272687 (#59) succeeded.
+  - check: P3 initial PR CI
     result: fail_then_fixed
-    evidence: Quality Gates run 32496543931 (#49) failed only because the old P1 route test expected placeholder Person detail headings after P2 introduced real persisted detail screens; test coverage was updated to assert dynamic seeded records.
-  - check: P2 dynamic-route repair CI
+    evidence: Quality Gates run 32501008768 (#68) failed Playwright because P3 replaced the canonical Type & Save heading and the inherited route test treated Review as static despite its draft prerequisite; canonical title and dynamic-route tests were repaired.
+  - check: P3 route-repair CI
     result: pass
-    evidence: Quality Gates run 32496720063 (#51) completed successfully for 25530be9c59b7a650ff68c8233c509b4f4a29104 with Harness, JS, Playwright, Android and Required gate summary all green.
-  - check: P2 code-review repair
+    evidence: Quality Gates run 32501210163 (#72) completed successfully for bd4e599c12b6a0879b8bc0ef74eb4a97c19d65d5 with all required jobs green.
+  - check: P3 reviewer repairs
     result: pass
-    evidence: Added database-wide structural validation, referential integrity for relationships, delete protection for referenced records, and regression tests in 4464ae7c5a8d1b7e6124b1b002c37f3aaf406bd3.
-  - check: P2 post-review CI
+    evidence: Added replaceable extractor adapter/fallback, rollback-safe buyer persistence, friendly uncertainty labels, and supply-owner contact preservation with regression tests through 77f026862a10b79c042681502054ee7a82995d9d.
+  - check: P3 post-review CI
     result: pass
-    evidence: Quality Gates run 32496985833 (#55) completed successfully for 4464ae7c5a8d1b7e6124b1b002c37f3aaf406bd3; Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
+    evidence: Quality Gates run 32501936498 (#88) completed successfully for 77f026862a10b79c042681502054ee7a82995d9d; Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
   - check: code reviewer
     result: pass
-    evidence: Referential-integrity finding fixed; no Critical/High finding remains.
+    evidence: Atomicity, adapter-boundary, and owner-contact findings closed; no Critical/High finding remains.
   - check: QA reviewer
     result: pass
-    evidence: P2 acceptance and regression/failure paths reviewed; no Critical/High finding remains.
+    evidence: P3 acceptance, failure paths, correction, rollback, persistence, multilingual fixtures, and cross-platform regression coverage reviewed; no Critical/High finding remains.
   - check: product guardrail reviewer
     result: pass
-    evidence: Local-first/model-optional architecture, language neutrality, scope control, simplicity, and privacy boundaries preserved.
+    evidence: Local-first/model-optional behavior, first-class phone preservation, simple review UX, scope control, and Type & Save prominence are preserved.
 
 next_actions:
-  - Append P2 completion evidence to docs/handoff/HANDOFF_LOG.md.
-  - Wait for Quality Gates on the exact final PR HEAD created by state/handoff documentation commits and inspect all required jobs.
-  - If terminal success, mark PR #3 ready for review; do not merge without explicit merge authorization.
-  - After authorized P2 merge, confirm main and start P3 Type capture and structured extraction on a new focused branch/PR.
+  - Wait for Quality Gates on the exact final PR HEAD created by this state/handoff documentation update and inspect every required job.
+  - If terminal success, mark PR #4 ready for review; do not merge without explicit merge authorization.
+  - After authorized P3 merge, confirm main and start P4 Voice capture and multilingual understanding on a fresh focused branch/PR.
