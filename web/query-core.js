@@ -49,9 +49,9 @@ function requirementMatches(r,q){
  if(q.location&&!(r.locations||[]).some(location=>samePlace(location,q.location)))return false;
  if(q.propertyType&&r.propertyType!==q.propertyType)return false;
  if(q.maxPrice!=null){
-   const low=r.budgetMin==null?null:Number(r.budgetMin),high=r.budgetMax==null?null:Number(r.budgetMax);
-   if(low!=null&&Number.isFinite(low)){if(low>q.maxPrice)return false;}
-   else if(high!=null&&Number.isFinite(high)){if(high>q.maxPrice)return false;}
+   const high=r.budgetMax==null?null:Number(r.budgetMax),low=r.budgetMin==null?null:Number(r.budgetMin);
+   if(high!=null&&Number.isFinite(high)){if(high>q.maxPrice)return false;}
+   else if(low!=null&&Number.isFinite(low)){if(low>q.maxPrice)return false;}
    else return false;
  }
  return true;
