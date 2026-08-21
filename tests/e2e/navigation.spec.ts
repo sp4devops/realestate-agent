@@ -17,11 +17,15 @@ test('primary shell navigation is wired with no dead primary controls', async ({
 test('display language and input language are independent', async ({ page }) => {
   await page.goto('/#/language');
   const before = await page.evaluate(() => JSON.stringify(window.__PA_SEED__));
-  await page.getByRole('button', { name: /தமிழ்/ }).click();
+  const displayOptions = page.getByTestId('display-language-options');
+  const inputOptions = page.getByTestId('input-language-options');
+
+  await displayOptions.getByRole('button', { name: /^தமிழ்/ }).click();
   await expect(page.getByTestId('nav-home')).toContainText('முகப்பு');
-  await page.getByRole('button', { name: /^Tanglish/ }).click();
+  await displayOptions.getByRole('button', { name: /^Tanglish/ }).click();
   await expect(page.getByTestId('nav-ask')).toContainText('Kelu');
-  await page.getByRole('button', { name: /^TamilSpeech and typed/ }).click();
+  await inputOptions.getByRole('button', { name: /^Tamil/ }).click();
+
   const after = await page.evaluate(() => JSON.stringify(window.__PA_SEED__));
   expect(after).toBe(before);
   expect(await page.evaluate(() => localStorage.getItem('pa.displayLanguage'))).toBe('tg');
