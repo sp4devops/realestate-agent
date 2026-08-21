@@ -2,38 +2,38 @@ schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
 status: ready_for_merge
-active_phase: P8
-active_phase_name: After-call recap follow-ups and communication actions
-last_verified_commit: 6ef113936c0a05467107ed4f05274dcb6398ce51
-last_updated: 2026-08-22T00:24:00+05:30
-active_pr: 9
-active_branch: ai/p8-after-call-communication-actions
+active_phase: P9
+active_phase_name: Backup restore settings language and privacy hardening
+last_verified_commit: 1323863aeebf9f2908eb34ee73803444843ef997
+last_updated: 2026-08-22T00:47:00+05:30
+active_pr: 10
+active_branch: ai/p9-backup-settings-privacy
 
 ci_gate:
   status: green
-  verified_head_sha: 6ef113936c0a05467107ed4f05274dcb6398ce51
+  verified_head_sha: 1323863aeebf9f2908eb34ee73803444843ef997
   workflow_name: Quality Gates
-  workflow_run_id: 32515460673
-  workflow_run_number: 233
+  workflow_run_id: 32517515955
+  workflow_run_number: 247
   workflow_status: completed
   workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: P8 reviewer-repair functional HEAD is terminal green. State/handoff documentation moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
+  note: P9 implementation and reviewer-repair HEAD is terminal green. Documentation commits move PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
 
 review_gates:
   code_review:
     status: pass
     blocking_findings: 0
-    note: Reviewed after-call state, interaction/follow-up persistence, URI construction, Android JavascriptInterface boundary, ACTION_DIAL/WhatsApp/share intents, broad-permission avoidance and fallback behavior. Stale call-return markers were repaired with bounded expiry and desktop WhatsApp now preserves the app. No Critical/High finding remains.
+    note: Reviewed WebCrypto envelope/versioning, PBKDF2/AES-GCM usage, validation-before-restore, structured-store/image-store rollback, local-only boundaries and settings integration. Password confirmation and rollback hardening were added. No Critical/High finding remains.
   qa_review:
     status: pass
     blocking_findings: 0
-    note: Recap save, linked-person lookup, optional phone/follow-up, invalid input, permitted/unavailable recent-number paths, follow-up done/cancel/reopen transitions, Call/WhatsApp/Share actions, return prompt, stale-marker expiry, desktop/mobile Playwright, Android static contract/build/tests and APK generation are covered.
+    note: Produced encrypted backup round-trip, real file-upload restore success, wrong password, corrupt/unrelated payloads, image-byte restore, restore rollback, password mismatch, backup status, language switching without structured-data mutation, desktop/mobile Playwright, Android build/tests/APK and harness are covered.
   product_guardrail_review:
     status: pass
     blocking_findings: 0
-    note: P8 never records calls or reads call logs, recent-number prefill exists only behind an explicitly provided permitted adapter, Call opens the dialer, WhatsApp/Share require explicit user action, and the workflow remains local-first without full WhatsApp automation or CRM expansion.
+    note: Backup/export is explicit, encrypted and local; no cloud sync or paid service was introduced. Display language remains separate from voice/input language and privacy disclosures explain local-first behavior and unrecoverable backup passwords.
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -56,24 +56,24 @@ phases:
   P6: {name: Ask/search and operational result cards, status: done}
   P7: {name: Poster capture and OCR lead flow, status: done}
   P8: {name: After-call recap follow-ups and communication actions, status: done}
-  P9: {name: Backup restore settings language and privacy hardening, status: pending}
+  P9: {name: Backup restore settings language and privacy hardening, status: done}
   P10: {name: Performance accessibility resilience and offline QA, status: pending}
   P11: {name: Android APK and desktop release candidates, status: pending}
   P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
-  - id: P8-T1
+  - id: P9-T1
     status: done
     owner: ai-agent
-    description: Implement technically permitted after-call recap, optional permitted recent-number adapter, local call interaction persistence, follow-up scheduling/lifecycle, Call/WhatsApp/Share actions, return prompt, Android host bridge and regression coverage.
-  - id: P8-T2
+    description: Implement encrypted local backup/export, tested restore of structured memory/settings/poster images, backup status, settings/privacy UI and display-language separation with safe failure paths.
+  - id: P9-T2
     status: ready_for_merge
     owner: ai-agent
-    description: Append P8 completion evidence, verify final documentation exact-head CI, and merge PR #9 only when explicit merge authorization is given.
-  - id: P7-T2
+    description: Finalize P9 evidence, run exact documentation-head Quality Gates, and merge PR #10 only after explicit user authorization.
+  - id: P8-T2
     status: done
     owner: ai-agent
-    description: PR #8 merged to main as b7506307af6967c134d515148bf0f2f2145b32e8 after exact-head Quality Gates #215 success and explicit user authorization.
+    description: PR #9 merged to main as d25f7bf91b10e760941406e6a4976d116eb82c9e after final exact-head Quality Gates #237 success and explicit user authorization.
   - id: P7-T3
     status: deferred
     owner: ai-agent
@@ -107,39 +107,45 @@ known_constraints:
   - P5 nearby-locality knowledge is a small deterministic starter dictionary and P5 does not invent negotiability.
   - P6 deterministic query interpretation intentionally covers a starter vocabulary/locality/Tamil alias set; real pilot queries must drive expansion.
   - P7 OCR integration is a replaceable local adapter; a specific production OCR model/runtime is not yet bundled and must be selected/benchmarked before pilot/release.
-  - P8 Android does not request READ_CALL_LOG, CALL_PHONE, READ_PHONE_STATE or SMS permissions; Call uses ACTION_DIAL and the recap prompt tracks only a Call action launched from Property Assistant.
-  - P8 recent-number prefill is unavailable by default and may be supplied only by a technically permitted explicit platform adapter.
-  - P8 pending call-return markers expire after two hours to avoid stale recap prompts.
-  - P8 desktop communication actions depend on installed/browser protocol handlers; Android uses explicit external intents and the system share sheet.
+  - P8 Android avoids broad call-log/call/SMS permissions and uses ACTION_DIAL plus explicit external communication actions.
+  - P9 backup passwords are intentionally unrecoverable; users must retain the password to restore an encrypted backup.
+  - P9 backup/export temporarily materializes poster-image bytes into the encrypted payload; very large image-heavy datasets require target-device memory/performance validation in P10.
+  - P9 uses browser/WebView file export and import surfaces; packaged desktop-native file handling remains a P11 release concern.
 
 last_checks:
-  - check: P7 merge
+  - check: P8 merge
     result: pass
-    evidence: PR #8 merged to main as b7506307af6967c134d515148bf0f2f2145b32e8 after final exact-head Quality Gates #215 succeeded and explicit user authorization was given.
-  - check: P8 initial CI
+    evidence: PR #9 merged to main as d25f7bf91b10e760941406e6a4976d116eb82c9e after exact-head Quality Gates #237 succeeded and explicit user authorization was given.
+  - check: P9 initial CI
     result: fail_then_fixed
-    evidence: Quality Gates #225 (32514945739) passed Harness, JS and Android but Playwright failed only because the test expected no-recording copy inside the return card while that privacy statement lived at page level; the test now verifies both actual privacy messages.
-  - check: P8 corrected functional CI
+    evidence: Quality Gates #241 (32516905764) failed one new unit test because the corrupt-domain fixture was actually migratable valid input; the fixture was corrected to a true record-id inconsistency without weakening production validation.
+  - check: P9 corrected CI
     result: pass
-    evidence: Quality Gates #227 (32515209631) completed successfully for 628ad708691a301bb1e4e35b9a01f49dfe07a71b with Detect, Harness, JS/unit/lint/type, Playwright, Android tests/build/APK upload and required summary green.
-  - check: P8 reviewer repair
+    evidence: Quality Gates #243 (32517000376) completed successfully for ca1a43a93db6eebc9a934d1d2109847597568047 with Harness, JS/unit/lint/type, Playwright, Android tests/build/APK and required summary green.
+  - check: P9 reviewer repair
     result: pass
-    evidence: Review identified stale pending-call markers and desktop WhatsApp navigation as reliability/UX issues; bounded two-hour expiry, external desktop WhatsApp launch and explicit interaction-phone schema validation were added.
-  - check: P8 reviewer-repair CI
+    evidence: Added backup-password confirmation, poster-image byte round-trip coverage, and structured-setting rollback when image-store restore fails.
+  - check: P9 reviewer-repair CI
     result: pass
-    evidence: Quality Gates #233 (32515460673) completed successfully for 6ef113936c0a05467107ed4f05274dcb6398ce51 with every required job green.
+    evidence: Quality Gates #245 (32517282814) completed successfully for d062f01fe275f703b35fada20dde75967b4600b0 with every required job green.
+  - check: P9 QA completion repair
+    result: pass
+    evidence: Added Playwright coverage that restores a produced encrypted backup through the actual file-upload UI and verifies temporary post-backup records/settings are replaced.
+  - check: P9 final functional CI
+    result: pass
+    evidence: Quality Gates #247 (32517515955) completed successfully for 1323863aeebf9f2908eb34ee73803444843ef997; Detect, Harness, JS/unit/lint/type, Playwright, Android tests/build/APK upload and Required gate summary all passed.
   - check: code reviewer
     result: pass
-    evidence: No Critical/High finding remains across local persistence, lifecycle logic, URI sanitization, Android bridge/intents, permission surface, stale state and external-action fallbacks.
+    evidence: No Critical/High finding remains across encryption, versioning, validation, restore rollback, IndexedDB image handling and local-first boundaries.
   - check: QA reviewer
     result: pass
-    evidence: P8 acceptance and failure paths are covered by deterministic unit tests, desktop/mobile Playwright, Android host-contract tests, Android build/tests and APK generation.
+    evidence: P9 happy paths and failure paths are covered at unit, desktop/mobile E2E and Android packaging levels.
   - check: product guardrail reviewer
     result: pass
-    evidence: P8 remains explicit-action, local-first and privacy-conservative with no call recording/log access, no broad call/SMS permissions, and no full WhatsApp automation.
+    evidence: P9 remains explicit-export, encrypted, local-first and language-separated without cloud sync, account expansion or unrelated CRM scope.
 
 next_actions:
-  - Append P8 completion, CI failure/repair and reviewer evidence to docs/handoff/HANDOFF_LOG.md.
-  - Wait for Quality Gates on the exact final PR HEAD created by state/handoff documentation commits and inspect every required job.
-  - If terminal success, PR #9 is merge-ready; do not merge without explicit merge authorization.
-  - After authorized P8 merge, confirm main and begin P9 Backup/restore/settings/language/privacy hardening on a fresh focused branch/PR.
+  - Record P9 completion evidence in docs/handoff/P9_HANDOFF.md while preserving the append-only historical HANDOFF_LOG.md unchanged.
+  - Run Quality Gates on the exact final PR HEAD created by documentation commits and inspect every required job.
+  - If terminal success, PR #10 is merge-ready; do not merge without explicit user authorization.
+  - After authorized P9 merge, confirm main and begin P10 Performance/accessibility/resilience/offline QA on a fresh focused branch/PR.
