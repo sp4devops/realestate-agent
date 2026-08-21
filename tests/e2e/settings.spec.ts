@@ -23,6 +23,28 @@ test('backup creation rejects mismatched password confirmation', async ({ page }
   await expect(page.getByTestId('backup-status')).toHaveText('No backup created yet.');
 });
 
+test('a produced encrypted backup restores through the file-upload UI', async ({ page }) => {
+  await page.goto('/#/settings');
+  const encrypted=await page.evaluate(async()=>{
+    const core=(window as any).PropertyAssistantBackup;
+    const payload=await core.createPayload({repository:(window as any).__PA_REPOSITORY__,imageStore:(window as any).PropertyAssistantPosterImages,storage:localStorage});
+    return core.encryptPayload(payload,'restore-safe-123');
+  });
+  await page.evaluate(()=>{
+    localStorage.setItem('pa.displayLanguage','ta');
+    (window as any).__PA_REPOSITORY__.create('people',{id:'person-temporary',name:'Temporary',role:'buyer',primaryPhone:'+91 90000 00009',alternatePhones:[]});
+  });
+  await page.getByTestId('restore-file').setInputFiles({name:'produced.pabackup',mimeType:'application/json',buffer:Buffer.from(encrypted)});
+  await page.getByTestId('restore-password').fill('restore-safe-123');
+  const loadPromise=page.waitForEvent('load');
+  await page.getByTestId('restore-backup').click();
+  await loadPromise;
+  await expect(page.getByRole('heading',{name:'Settings & Backup',exact:true})).toBeVisible();
+  const restored=await page.evaluate(()=>({display:localStorage.getItem('pa.displayLanguage'),temporary:(window as any).__PA_REPOSITORY__.get('people','person-temporary')}));
+  expect(restored.display).toBe('en');
+  expect(restored.temporary).toBeNull();
+});
+
 test('wrong restore password fails safely without changing local records', async ({ page }) => {
   await page.goto('/#/settings');
   const encrypted=await page.evaluate(async()=>{
