@@ -22,7 +22,7 @@ test('local person CRUD survives page reload without a model or network', async 
   await page.reload();
   await expect(page.getByTestId('people-list')).toContainText('Kavitha Buyer (Demo)');
 
-  await page.getByRole('button', { name: 'Open' }).last().click();
+  await page.getByTestId('person-card').filter({ hasText: 'Kavitha Buyer (Demo)' }).getByRole('button', { name: 'Open' }).click();
   await expect(page.getByTestId('primary-phone')).toHaveText('+91 90000 00201');
   await expect(page.getByText('+91 90000 00202')).toBeVisible();
 
