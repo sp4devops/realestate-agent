@@ -23,38 +23,59 @@
     document.querySelector('[data-testid="analyze-capture"]').addEventListener('click',async()=>{
       const button=document.querySelector('[data-testid="analyze-capture"]');
       const text=document.querySelector('[data-testid="capture-text"]').value;
+      const error=document.querySelector('[data-testid="capture-error"]');
+      error.hidden=true;
       button.disabled=true;
       try {
         const parsed=await extractor.extract(text);
-        if(!parsed.ok){ const error=document.querySelector('[data-testid="capture-error"]'); error.hidden=false; error.textContent=parsed.error; return; }
+        if(!parsed.ok){ error.hidden=false; error.textContent=parsed.error; return; }
         sessionStorage.setItem(DRAFT_KEY, JSON.stringify(parsed));
         location.hash='#/review';
+      } catch (cause) {
+        error.hidden=false;
+        error.textContent=cause?.message || 'The note could not be reviewed safely.';
       } finally { button.disabled=false; }
     });
   }
 
   function reviewBody(parsed){
-    const labels=parsed.uncertain.map(key=>uncertaintyLabels[key] || key);
+    const labels=(parsed.uncertain || []).map(key=>uncertaintyLabels[key] || key);
     const uncertain = labels.length ? `<div class="placeholder-card"><strong>Please check these details</strong><p data-testid="uncertain-fields">${esc(labels.join(', '))}</p></div>` : `<div class="placeholder-card"><strong>Looks complete</strong><p>No low-confidence fields were detected by the local rules.</p></div>`;
     if(parsed.kind==='property'){
-      return `${uncertain}<form data-testid="review-form">${field('Owner name','name',parsed.person?.name || '')}${field('Primary phone','primaryPhone',parsed.person?.primaryPhone || '')}${field('Property type','propertyType',parsed.property.propertyType)}${sizeFields(parsed.property.size)}${field('Locality','locality',parsed.property.locality)}${field('Intent','intent',parsed.property.intent)}${field('Price','price',money(parsed.property.price),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save property</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
+      return `${uncertain}<form data-testid="review-form">${field('Owner name','name',parsed.person?.name || '')}${field('Primary phone','primaryPhone',parsed.person?.primaryPhone || '')}${field('Property type','propertyType',parsed.property?.propertyType || '')}${sizeFields(parsed.property?.size)}${field('Locality','locality',parsed.property?.locality || '')}${field('Intent','intent',parsed.property?.intent || 'sale')}${field('Price','price',money(parsed.property?.price),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save property</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
     }
-    return `${uncertain}<form data-testid="review-form">${field('Name','name',parsed.person.name)}${field('Primary phone','primaryPhone',parsed.person.primaryPhone)}${field('Property type','propertyType',parsed.requirement.propertyType)}${sizeFields(parsed.requirement.size)}${field('Locality','locality',parsed.requirement.locations[0] || '')}${field('Intent','intent',parsed.requirement.intent)}${field('Budget up to','budgetMax',money(parsed.requirement.budgetMax),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save buyer</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
+    return `${uncertain}<form data-testid="review-form">${field('Name','name',parsed.person?.name || '')}${field('Primary phone','primaryPhone',parsed.person?.primaryPhone || '')}${field('Property type','propertyType',parsed.requirement?.propertyType || '')}${sizeFields(parsed.requirement?.size)}${field('Locality','locality',parsed.requirement?.locations?.[0] || '')}${field('Intent','intent',parsed.requirement?.intent || 'buy')}${field('Budget up to','budgetMax',money(parsed.requirement?.budgetMax),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save buyer</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
   }
 
   function renderReview(){
     const raw=sessionStorage.getItem(DRAFT_KEY);
     if(!raw){ location.hash='#/type'; return; }
-    const parsed=JSON.parse(raw);
+    let parsed;
+    try {
+      parsed=JSON.parse(raw);
+      if(!parsed || !['property','requirement'].includes(parsed.kind)) throw new Error('invalid draft');
+    } catch (_) {
+      sessionStorage.removeItem(DRAFT_KEY);
+      location.hash='#/type';
+      return;
+    }
     app.innerHTML=shell(`<section class="page"><p class="eyebrow">REVIEW BEFORE SAVE</p><h1>Check what I understood</h1><p class="lead">Correct anything before it becomes part of your local business memory.</p>${reviewBody(parsed)}<p class="capture-error" data-testid="review-error" hidden></p></section>`, '');
     bindRouteButtons();
     document.querySelector('[data-testid="review-form"]').addEventListener('submit',(event)=>{
       event.preventDefault();
-      const form=new FormData(event.currentTarget);
+      const saveButton=document.querySelector('[data-testid="save-capture"]');
+      const errorEl=document.querySelector('[data-testid="review-error"]');
+      saveButton.disabled=true;
+      errorEl.hidden=true;
       try {
+        const form=new FormData(event.currentTarget);
         if(parsed.kind==='property') saveProperty(form);
         else saveRequirement(form);
-      } catch(error){ const el=document.querySelector('[data-testid="review-error"]'); el.hidden=false; el.textContent=error.message; }
+      } catch(error){
+        errorEl.hidden=false;
+        errorEl.textContent=error.message || 'Could not save these details.';
+        saveButton.disabled=false;
+      }
     });
   }
 
@@ -66,34 +87,29 @@
 
   function saveRequirement(form){
     const repo=window.__PA_REPOSITORY__;
-    const person=repo.create('people',{ name:String(form.get('name')||'').trim(), role:'buyer', primaryPhone:String(form.get('primaryPhone')||'').trim(), alternatePhones:[] });
-    try {
-      repo.create('requirements',{ personId:person.id, intent:String(form.get('intent')||'buy'), propertyType:String(form.get('propertyType')||'').trim(), locations:[String(form.get('locality')||'').trim()].filter(Boolean), budgetMin:null, budgetMax:numberOrNull(form.get('budgetMax')), size:sizeFromForm(form) });
-    } catch(error) {
-      repo.remove('people', person.id);
-      throw error;
-    }
+    const result=repo.transact((tx)=>{
+      const person=tx.create('people',{ name:String(form.get('name')||'').trim(), role:'buyer', primaryPhone:String(form.get('primaryPhone')||'').trim(), alternatePhones:[] });
+      const requirement=tx.create('requirements',{ personId:person.id, intent:String(form.get('intent')||'buy'), propertyType:String(form.get('propertyType')||'').trim(), locations:[String(form.get('locality')||'').trim()].filter(Boolean), budgetMin:null, budgetMax:numberOrNull(form.get('budgetMax')), size:sizeFromForm(form) });
+      return {person,requirement};
+    });
     sessionStorage.removeItem(DRAFT_KEY);
-    location.hash=`#/person?id=${encodeURIComponent(person.id)}`;
+    location.hash=`#/person?id=${encodeURIComponent(result.person.id)}`;
   }
 
   function saveProperty(form){
     const repo=window.__PA_REPOSITORY__;
-    const ownerName=String(form.get('name')||'').trim();
-    const ownerPhone=String(form.get('primaryPhone')||'').trim();
-    let owner=null;
-    if(ownerName && ownerPhone) owner=repo.create('people',{ name:ownerName, role:'owner', primaryPhone:ownerPhone, alternatePhones:[] });
-    try {
-      const property=repo.create('properties',{ ownerPersonId:owner?.id || null, intent:String(form.get('intent')||'sale'), propertyType:String(form.get('propertyType')||'').trim(), locality:String(form.get('locality')||'').trim(), price:numberOrNull(form.get('price')), size:sizeFromForm(form) });
-      sessionStorage.removeItem(DRAFT_KEY);
-      location.hash=`#/property?id=${encodeURIComponent(property.id)}`;
-    } catch(error) {
-      if(owner) repo.remove('people', owner.id);
-      throw error;
-    }
+    const result=repo.transact((tx)=>{
+      const ownerName=String(form.get('name')||'').trim();
+      const ownerPhone=String(form.get('primaryPhone')||'').trim();
+      const owner=ownerName && ownerPhone ? tx.create('people',{ name:ownerName, role:'owner', primaryPhone:ownerPhone, alternatePhones:[] }) : null;
+      const property=tx.create('properties',{ ownerPersonId:owner?.id || null, intent:String(form.get('intent')||'sale'), propertyType:String(form.get('propertyType')||'').trim(), locality:String(form.get('locality')||'').trim(), price:numberOrNull(form.get('price')), size:sizeFromForm(form) });
+      return {owner,property};
+    });
+    sessionStorage.removeItem(DRAFT_KEY);
+    location.hash=`#/property?id=${encodeURIComponent(result.property.id)}`;
   }
 
-  function numberOrNull(value){ const text=String(value ?? '').trim(); return text==='' ? null : Number(text); }
+  function numberOrNull(value){ const text=String(value ?? '').trim(); if(text==='') return null; const number=Number(text); if(!Number.isFinite(number)) throw new Error('Enter a valid number'); return number; }
   function bindRouteButtons(){ document.querySelectorAll('[data-route]').forEach(el=>el.addEventListener('click',()=>{ location.hash=`#/${el.dataset.route}`; })); }
   function renderOwnedRoute(){ const route=currentRoute(); if(route==='type') renderType(); else if(route==='review') renderReview(); }
 
