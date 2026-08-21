@@ -54,26 +54,36 @@ test('P10 critical screens have names, focusable controls, visual baselines and 
 
     const audit = await page.evaluate(() => {
       const buttons = [...document.querySelectorAll('button:not([hidden])')] as HTMLButtonElement[];
+      const inputs = [...document.querySelectorAll('input:not([hidden]),textarea:not([hidden])')] as (HTMLInputElement|HTMLTextAreaElement)[];
       const unnamed = buttons.filter((button) => {
         const name = button.getAttribute('aria-label') || button.textContent || button.title;
         return !name.trim();
       }).length;
+      const unlabeledInputs = inputs.filter((input) => !input.labels?.length && !input.getAttribute('aria-label') && !input.getAttribute('aria-labelledby')).length;
       const doc = document.documentElement;
       const primaryTargets = [...document.querySelectorAll('.button,.nav-item,.language-chip,.brand,.text-button,.choice,.capture')] as HTMLElement[];
       const undersized = primaryTargets.filter((el) => {
         const rect = el.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0 && (rect.width < 44 || rect.height < 44);
       }).length;
+      const undersizedInputs = inputs.filter((el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && (rect.width < 120 || rect.height < 44);
+      }).length;
       return {
         unnamed,
+        unlabeledInputs,
         undersized,
+        undersizedInputs,
         overflowPx: Math.max(0, doc.scrollWidth - doc.clientWidth),
         lang: document.documentElement.lang,
       };
     });
 
     expect(audit.unnamed, `${route}: unnamed buttons`).toBe(0);
+    expect(audit.unlabeledInputs, `${route}: unlabeled form controls`).toBe(0);
     expect(audit.undersized, `${route}: undersized primary touch targets`).toBe(0);
+    expect(audit.undersizedInputs, `${route}: undersized form controls`).toBe(0);
     expect(audit.overflowPx, `${route}: horizontal overflow`).toBeLessThanOrEqual(1);
     expect(audit.lang).toMatch(/^(en|ta)$/);
 
