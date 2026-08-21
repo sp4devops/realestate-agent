@@ -33,7 +33,7 @@
     const labels=parsed.uncertain.map(key=>uncertaintyLabels[key] || key);
     const uncertain = labels.length ? `<div class="placeholder-card"><strong>Please check these details</strong><p data-testid="uncertain-fields">${esc(labels.join(', '))}</p></div>` : `<div class="placeholder-card"><strong>Looks complete</strong><p>No low-confidence fields were detected by the local rules.</p></div>`;
     if(parsed.kind==='property'){
-      return `${uncertain}<form data-testid="review-form">${field('Property type','propertyType',parsed.property.propertyType)}${field('Locality','locality',parsed.property.locality)}${field('Intent','intent',parsed.property.intent)}${field('Price','price',money(parsed.property.price),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save property</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
+      return `${uncertain}<form data-testid="review-form">${field('Owner name','name',parsed.person?.name || '')}${field('Primary phone','primaryPhone',parsed.person?.primaryPhone || '')}${field('Property type','propertyType',parsed.property.propertyType)}${field('Locality','locality',parsed.property.locality)}${field('Intent','intent',parsed.property.intent)}${field('Price','price',money(parsed.property.price),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save property</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
     }
     return `${uncertain}<form data-testid="review-form">${field('Name','name',parsed.person.name)}${field('Primary phone','primaryPhone',parsed.person.primaryPhone)}${field('Property type','propertyType',parsed.requirement.propertyType)}${field('Locality','locality',parsed.requirement.locations[0] || '')}${field('Intent','intent',parsed.requirement.intent)}${field('Budget up to','budgetMax',money(parsed.requirement.budgetMax),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save buyer</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
   }
@@ -69,9 +69,18 @@
 
   function saveProperty(form){
     const repo=window.__PA_REPOSITORY__;
-    const property=repo.create('properties',{ ownerPersonId:null, intent:String(form.get('intent')||'sale'), propertyType:String(form.get('propertyType')||'').trim(), locality:String(form.get('locality')||'').trim(), price:numberOrNull(form.get('price')) });
-    sessionStorage.removeItem(DRAFT_KEY);
-    location.hash=`#/property?id=${encodeURIComponent(property.id)}`;
+    const ownerName=String(form.get('name')||'').trim();
+    const ownerPhone=String(form.get('primaryPhone')||'').trim();
+    let owner=null;
+    if(ownerName || ownerPhone) owner=repo.create('people',{ name:ownerName, role:'owner', primaryPhone:ownerPhone, alternatePhones:[] });
+    try {
+      const property=repo.create('properties',{ ownerPersonId:owner?.id || null, intent:String(form.get('intent')||'sale'), propertyType:String(form.get('propertyType')||'').trim(), locality:String(form.get('locality')||'').trim(), price:numberOrNull(form.get('price')) });
+      sessionStorage.removeItem(DRAFT_KEY);
+      location.hash=`#/property?id=${encodeURIComponent(property.id)}`;
+    } catch(error) {
+      if(owner) repo.remove('people', owner.id);
+      throw error;
+    }
   }
 
   function numberOrNull(value){ const text=String(value ?? '').trim(); return text==='' ? null : Number(text); }
