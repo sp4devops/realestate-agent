@@ -1,0 +1,108 @@
+import { test, expect } from '@playwright/test';
+
+const criticalRoutes = ['home','type','ask','matches','people','followups','poster','language','settings'];
+
+test('P10 captures startup, heap and local-storage measurements', async ({ page }, testInfo) => {
+  await page.goto('/#/home');
+  await expect(page.getByRole('heading')).toBeVisible();
+
+  const metrics = await page.evaluate(async () => {
+    const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
+    const perfMemory = (performance as any).memory;
+    const storage = navigator.storage?.estimate ? await navigator.storage.estimate() : {};
+    return {
+      domContentLoadedMs: nav ? nav.domContentLoadedEventEnd - nav.startTime : null,
+      loadEventMs: nav ? nav.loadEventEnd - nav.startTime : null,
+      encodedResourceBytes: resources.reduce((sum, item) => sum + (item.encodedBodySize || 0), 0),
+      resourceCount: resources.length,
+      usedJsHeapBytes: perfMemory?.usedJSHeapSize ?? null,
+      jsHeapLimitBytes: perfMemory?.jsHeapSizeLimit ?? null,
+      storageUsageBytes: storage.usage ?? null,
+      storageQuotaBytes: storage.quota ?? null,
+    };
+  });
+
+  await testInfo.attach('p10-runtime-metrics.json', {
+    body: Buffer.from(JSON.stringify(metrics, null, 2)),
+    contentType: 'application/json',
+  });
+
+  expect(metrics.domContentLoadedMs ?? 0).toBeLessThan(3000);
+  expect(metrics.encodedResourceBytes).toBeLessThan(2 * 1024 * 1024);
+  if (metrics.usedJsHeapBytes != null) expect(metrics.usedJsHeapBytes).toBeLessThan(128 * 1024 * 1024);
+  if (metrics.storageUsageBytes != null) expect(metrics.storageUsageBytes).toBeLessThan(20 * 1024 * 1024);
+});
+
+test('P10 critical screens have names, focusable controls and no horizontal overflow', async ({ page }) => {
+  for (const route of criticalRoutes) {
+    await page.goto(`/#/${route}`);
+    await expect(page.getByRole('heading').first()).toBeVisible();
+
+    const audit = await page.evaluate(() => {
+      const buttons = [...document.querySelectorAll('button:not([hidden])')] as HTMLButtonElement[];
+      const unnamed = buttons.filter((button) => {
+        const name = button.getAttribute('aria-label') || button.textContent || button.title;
+        return !name.trim();
+      }).length;
+      const doc = document.documentElement;
+      const primaryTargets = [...document.querySelectorAll('.button,.nav-item,.language-chip,.brand,.text-button,.choice,.capture')] as HTMLElement[];
+      const undersized = primaryTargets.filter((el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && (rect.width < 44 || rect.height < 44);
+      }).length;
+      return {
+        unnamed,
+        undersized,
+        overflowPx: Math.max(0, doc.scrollWidth - doc.clientWidth),
+        lang: document.documentElement.lang,
+      };
+    });
+
+    expect(audit.unnamed, `${route}: unnamed buttons`).toBe(0);
+    expect(audit.undersized, `${route}: undersized primary touch targets`).toBe(0);
+    expect(audit.overflowPx, `${route}: horizontal overflow`).toBeLessThanOrEqual(1);
+    expect(audit.lang).toMatch(/^(en|ta)$/);
+  }
+
+  await page.goto('/#/home');
+  await page.keyboard.press('Tab');
+  const focused = page.locator(':focus');
+  await expect(focused).toBeVisible();
+  const outline = await focused.evaluate((el) => getComputedStyle(el).outlineStyle);
+  expect(outline).not.toBe('none');
+});
+
+test('P10 core local workflow remains usable after network is lost', async ({ page, context }) => {
+  await page.goto('/#/home');
+  await expect(page.getByRole('heading')).toBeVisible();
+  await context.setOffline(true);
+
+  await page.getByTestId('type-save').click();
+  await expect(page.getByRole('heading', { name: 'Type & Save' })).toBeVisible();
+  await page.getByTestId('capture-text').fill('Offline Ravi wants land in Erode budget 25 lakh phone 98765 43219');
+  await page.getByTestId('analyze-capture').click();
+  await expect(page.getByRole('heading', { name: 'Check what I understood' })).toBeVisible();
+  await page.getByTestId('save-capture').click();
+  await expect(page.getByTestId('person-name')).toContainText('Offline Ravi');
+
+  await page.goto('/#/people');
+  await expect(page.getByText('Offline Ravi')).toBeVisible();
+  await page.goto('/#/matches');
+  await expect(page.getByRole('heading').first()).toBeVisible();
+});
+
+test('P10 model/STT absence does not block typed capture or local navigation', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
+    (window as any).__PA_LOCAL_MODEL_UNAVAILABLE__ = true;
+  });
+  await page.goto('/#/type');
+  await page.getByTestId('capture-text').fill('Fallback Meena wants 2BHK in Erode budget 30 lakh phone 98765 43218');
+  await page.getByTestId('analyze-capture').click();
+  await expect(page.getByRole('heading', { name: 'Check what I understood' })).toBeVisible();
+  await page.getByTestId('save-capture').click();
+  await expect(page.getByTestId('person-name')).toContainText('Fallback Meena');
+  await page.getByTestId('nav-home').click();
+  await expect(page.getByRole('heading')).toBeVisible();
+});
