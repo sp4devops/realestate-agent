@@ -16,9 +16,11 @@ async function readPoster(){
  if(!file){status.textContent='Choose or capture a poster image first.';return;}
  draft.imageBlob=file;draft.imageName=file.name||'poster-image';draft.capturedAt=new Date().toISOString();
  status.textContent='Reading poster locally…';
- const result=await window.PropertyAssistantPoster.createOcrService().recognize(file);
- if(!result.ok){status.textContent=result.error;return;}
- draft.ocrText=result.text;draft.phone=result.primaryPhone;draft.posterLocation=result.posterLocation;location.hash='#/poster-review';
+ try{
+  const result=await window.PropertyAssistantPoster.createOcrService().recognize(file);
+  if(!result.ok){status.textContent=result.error;return;}
+  draft.ocrText=result.text;draft.phone=result.primaryPhone;draft.posterLocation=result.posterLocation;location.hash='#/poster-review';
+ }catch(error){status.textContent=error?.message||'Poster could not be read locally. Use the typed poster text fallback.';}
 }
 function useTypedText(){
  const status=document.querySelector('[data-testid="poster-status"]'); const text=document.querySelector('[data-testid="poster-text"]').value;
@@ -39,20 +41,22 @@ function captureGpsOnce(){
 }
 async function saveLead(){
  const status=document.querySelector('[data-testid="poster-review-status"]'); const phone=document.querySelector('[data-testid="poster-phone"]').value.replace(/\D/g,'');
- if(phone.length!==10){status.textContent='Enter a valid 10-digit phone number before saving.';return;}
+ if(phone.length!==10||!/^[6-9]/.test(phone)){status.textContent='Enter a valid Indian 10-digit mobile number before saving.';return;}
  const posterLocation=document.querySelector('[data-testid="poster-location"]').value.trim()||null;
  const text=document.querySelector('[data-testid="poster-review-text"]').value.trim();
  const button=document.querySelector('[data-testid="save-poster-lead"]');button.disabled=true;status.textContent='Saving locally…';
- let imageRef=null,lead=null;
+ let imageRef=null;
  try{
   if(draft.imageBlob){
    imageRef=await window.PropertyAssistantPosterImages.save(draft.imageBlob,{name:draft.imageName,createdAt:draft.capturedAt||new Date().toISOString()});
   }
-  lead=repo.create('posterLeads',{phone,imageRef,posterLocation,captureLocation:draft.captureLocation,capturedAt:draft.capturedAt||new Date().toISOString(),ocrText:text});
-  repo.create('followUps',{dueAt:new Date().toISOString(),status:'open',title:`Review poster lead ${phone}`,posterLeadId:lead.id});
-  draft={...draft,leadId:lead.id,phone,posterLocation,ocrText:text,imageRef};location.hash=`#/poster-lead?id=${encodeURIComponent(lead.id)}`;
+  const saved=repo.transact((tx)=>{
+   const lead=tx.create('posterLeads',{phone,imageRef,posterLocation,captureLocation:draft.captureLocation,capturedAt:draft.capturedAt||new Date().toISOString(),ocrText:text});
+   const followUp=tx.create('followUps',{dueAt:new Date().toISOString(),status:'open',title:`Review poster lead ${phone}`,posterLeadId:lead.id});
+   return {lead,followUp};
+  });
+  draft={...draft,leadId:saved.lead.id,phone,posterLocation,ocrText:text,imageRef};location.hash=`#/poster-lead?id=${encodeURIComponent(saved.lead.id)}`;
  }catch(error){
-  if(lead){try{repo.remove('posterLeads',lead.id);}catch(_){} }
   if(imageRef){try{await window.PropertyAssistantPosterImages.remove(imageRef);}catch(_){} }
   status.textContent=error.message||'Poster lead could not be saved.';button.disabled=false;
  }
