@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const requiredRoutes = [
+const requiredStaticRoutes = [
   ['splash','Property Assistant'],
   ['onboarding','Welcome'],
   ['speak','Speak & Save'],
@@ -9,8 +9,6 @@ const requiredRoutes = [
   ['after-call','After-call recap'],
   ['ask','Ask'],
   ['people','People'],
-  ['person','Person detail'],
-  ['property','Property detail'],
   ['matches','Matches'],
   ['match','Match detail'],
   ['poster','Scan Poster'],
@@ -21,13 +19,18 @@ const requiredRoutes = [
   ['settings','Settings & Backup']
 ];
 
-test('all approved P1 shell routes render', async ({ page }) => {
+test('all approved shell routes render, including persisted detail routes', async ({ page }) => {
   await page.goto('/#/home');
   await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
-  for (const [route, heading] of requiredRoutes) {
+  for (const [route, heading] of requiredStaticRoutes) {
     await page.goto(`/#/${route}`);
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
   }
+
+  await page.goto('/#/person?id=person-suresh');
+  await expect(page.getByTestId('person-name')).toHaveText('Suresh (Demo)');
+  await page.goto('/#/property?id=property-murugan');
+  await expect(page.getByTestId('property-title')).toContainText('land in Erode');
 });
 
 test('primary shell navigation is wired with no dead primary controls', async ({ page }) => {
