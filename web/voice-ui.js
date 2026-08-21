@@ -49,6 +49,7 @@
       const languageHint=window.PropertyAssistantVoice.languageHint(inputLanguage);
       nativeListening=true;
       nativeStartedAt=performance.now();
+      window.__PA_VOICE_METRICS__ = {};
       const button=document.querySelector('[data-testid="voice-toggle"]');
       button.textContent='Stop & review';
       button.dataset.recording='true';
@@ -85,7 +86,14 @@
   async function acceptTranscript(transcript, source='native'){
     if(abandonRecording || currentRoute()!=='speak') return;
     const normalized=window.PropertyAssistantVoice.normalizeTranscript(transcript);
-    window.__PA_VOICE_METRICS__ = { source, sttLatencyMs:Math.round(performance.now()-nativeStartedAt), measuredAt:new Date().toISOString() };
+    window.__PA_VOICE_METRICS__ = {
+      ...window.__PA_VOICE_METRICS__,
+      source,
+      sttLatencyMs:Number.isFinite(window.__PA_VOICE_METRICS__.sttLatencyMs)
+        ? window.__PA_VOICE_METRICS__.sttLatencyMs
+        : Math.round(performance.now()-nativeStartedAt),
+      measuredAt:new Date().toISOString()
+    };
     setStatus(`Heard: ${transcript}`);
     const button=document.querySelector('[data-testid="voice-toggle"]');
     if(button){ button.disabled=true; button.textContent='Reviewing details…'; }
