@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 await import('../../web/voice-core.js');
 await import('../../web/query-core.js');
 const {interpret,search}=globalThis.PropertyAssistantQuery;
-const snapshot={entities:{people:{u1:{id:'u1',name:'Suresh',role:'buyer',primaryPhone:'+91 9000000001',alternatePhones:[]},u2:{id:'u2',name:'Murugan',role:'owner',primaryPhone:'+91 9000000003',alternatePhones:[]}},properties:{p1:{id:'p1',ownerPersonId:'u2',intent:'sale',propertyType:'land',locality:'Erode',price:2200000},p2:{id:'p2',ownerPersonId:'u2',intent:'rent',propertyType:'house',locality:'Chennai',price:15000}},requirements:{r1:{id:'r1',personId:'u1',intent:'buy',propertyType:'land',locations:['Erode'],budgetMin:1800000,budgetMax:2500000}},matches:{m1:{id:'m1',requirementId:'r1',propertyId:'p1',score:100,reasons:['Exact location: Erode']}}}};
+const snapshot={entities:{people:{u1:{id:'u1',name:'Suresh',role:'buyer',primaryPhone:'+91 9000000001',alternatePhones:[]},u2:{id:'u2',name:'Murugan',role:'owner',primaryPhone:'+91 9000000003',alternatePhones:[]},u3:{id:'u3',name:'Kumar',role:'buyer',primaryPhone:'+91 9000000004',alternatePhones:[]}},properties:{p1:{id:'p1',ownerPersonId:'u2',intent:'sale',propertyType:'land',locality:'Erode',price:2200000},p2:{id:'p2',ownerPersonId:'u2',intent:'rent',propertyType:'house',locality:'Chennai',price:15000}},requirements:{r1:{id:'r1',personId:'u1',intent:'buy',propertyType:'land',locations:['Erode'],budgetMin:1800000,budgetMax:2500000}},matches:{m1:{id:'m1',requirementId:'r1',propertyId:'p1',score:100,reasons:['Exact location: Erode']}}}};
 
 test('interprets natural property query with locality and budget',()=>{
  const q=interpret('show land in Erode under 25 lakh');
@@ -29,6 +29,15 @@ test('offline local search returns actionable property and person results',()=>{
 test('property-specific filters do not leak unrelated people',()=>{
  const results=search(snapshot,interpret('Erode under 25 lakh'));
  assert.ok(results.every(r=>r.kind!=='person')); assert.ok(results.some(r=>r.id==='p1'));
+});
+
+test('role-only people queries do not invent transaction filters',()=>{
+ const buyers=interpret('find buyers');
+ assert.equal(buyers.personRole,'buyer'); assert.equal(buyers.intent,null);
+ assert.deepEqual(search(snapshot,buyers).map(r=>r.id),['u1','u3']);
+ const owners=interpret('find owners');
+ assert.equal(owners.personRole,'owner'); assert.equal(owners.intent,null);
+ assert.deepEqual(search(snapshot,owners).map(r=>r.id),['u2']);
 });
 
 test('explicit buyer queries filter through linked requirements',()=>{
