@@ -62,10 +62,12 @@ async function restorePayload(payload,{imageStore,storage}){
  assert(['auto','en','ta','tg'].includes(input),'Backup input language is invalid');
  const persistence=root.PropertyAssistantPersistence;
  const validated=validateDomainSnapshot(payload.domain);
- const imageRecords=(payload.posterImages||[]).map(item=>{assert(item&&typeof item.id==='string'&&item.id,'Backup poster image is invalid');return {...item,blob:base64ToBlob(item.data,item.type)};});
+ const posterImages=payload.posterImages||[];assert(Array.isArray(posterImages),'Backup poster images are invalid');
+ const imageRecords=posterImages.map(item=>{assert(item&&typeof item.id==='string'&&item.id&&typeof item.data==='string','Backup poster image is invalid');const blob=base64ToBlob(item.data,item.type);assert(blob.size>0,'Backup poster image is empty');return {...item,blob};});
+ const canReplaceImages=Boolean(imageStore&&typeof imageStore.replaceAll==='function');
+ if(imageRecords.length>0)assert(canReplaceImages,'Poster image storage is unavailable; restore was not started');
  const domainKey=persistence.STORAGE_KEY;
  const previous={domain:storage.getItem(domainKey),display:storage.getItem('pa.displayLanguage'),input:storage.getItem('pa.inputLanguage')};
- const canReplaceImages=Boolean(imageStore&&typeof imageStore.replaceAll==='function');
  const previousImages=canReplaceImages&&typeof imageStore.list==='function'?await imageStore.list():null;
  try{
   storage.setItem(domainKey,JSON.stringify(validated));
