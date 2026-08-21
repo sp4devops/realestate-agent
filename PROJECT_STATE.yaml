@@ -1,39 +1,39 @@
 schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
-status: bootstrap
-active_phase: P0
-active_phase_name: Harness and source-of-truth bootstrap
-last_verified_commit: ffabbf48a9b6447af40441e6c366936620b00c96
-last_updated: 2026-08-21T19:08:00+05:30
-active_pr: 1
-active_branch: ai/bootstrap-project-harness
+status: ready_for_merge
+active_phase: P1
+active_phase_name: Application skeleton and navigation
+last_verified_commit: 955e9cbb3310b277111d6de0755c9721dedd0784
+last_updated: 2026-08-21T19:33:51+05:30
+active_pr: 2
+active_branch: ai/p1-app-shell-navigation
 
 ci_gate:
   status: green
-  verified_head_sha: ffabbf48a9b6447af40441e6c366936620b00c96
+  verified_head_sha: 955e9cbb3310b277111d6de0755c9721dedd0784
   workflow_name: Quality Gates
-  workflow_run_id: 32487168029
-  workflow_run_number: 22
+  workflow_run_id: 32489999794
+  workflow_run_number: 36
   workflow_status: completed
   workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: Live CI for the exact final PR HEAD must be rechecked immediately before merge because state/handoff documentation commits can move HEAD after this recorded green run.
+  note: P1 implementation/reviewer-repair HEAD is terminal green. This state/handoff commit is expected to move PR HEAD and therefore requires one final live CI verification before merge; live exact-HEAD CI is authoritative.
 
 review_gates:
   code_review:
     status: pass
     blocking_findings: 0
-    note: Harness architecture, CI loop, validator, watcher, and Git discipline reviewed; no Critical/High correctness or security defect remains.
+    note: Reviewed architecture, WebView boundary, navigation, state preferences, security/privacy, resource use, CI and tests. No Critical/High finding remains.
   qa_review:
     status: pass
     blocking_findings: 0
-    note: P0 acceptance, failure handling, workflow gating, resumability, and progressive test activation reviewed; app E2E/Android jobs are correctly skipped until P1 introduces those stacks.
+    note: Initial review found the missing After-call recap route/full route E2E coverage; fixed in 955e9cbb and revalidated. Required shell routes, primary flows, language separation, mobile overflow and Android build now pass.
   product_guardrail_review:
     status: pass
     blocking_findings: 0
-    note: Harness preserves the locked Property Assistant scope, terminology, local-first requirement, language priorities, and visual/product contracts.
+    note: Shell preserves Capture -> Understand -> Remember -> Match -> Act, Property Advisor terminology, local-first/no-Internet Android baseline, approved visual direction and scope control without CRM drift.
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -47,17 +47,8 @@ product_contract:
   target_android_ram_gb: 4
 
 phases:
-  P0:
-    name: Harness and source-of-truth bootstrap
-    status: in_progress
-    acceptance:
-      - AGENTS.md defines session, testing, review, handoff, privacy, Git, and CI completion-loop rules
-      - machine-readable state exists
-      - delivery phases and quality gates exist
-      - CI validates harness integrity
-      - product guardrails are represented in-repo
-      - approved prototype is represented as the visual acceptance contract
-  P1: {name: Application skeleton and navigation, status: pending}
+  P0: {name: Harness and source-of-truth bootstrap, status: done}
+  P1: {name: Application skeleton and navigation, status: done}
   P2: {name: Local domain model and persistence, status: pending}
   P3: {name: Type capture and structured extraction, status: pending}
   P4: {name: Voice capture and multilingual understanding, status: pending}
@@ -71,60 +62,63 @@ phases:
   P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
-  - id: P0-T1
+  - id: P1-T1
     status: done
     owner: ai-agent
-    description: Install repository AI harness and progressive CI quality gates.
+    description: Implement dependency-light shared application shell, approved screen hierarchy, navigation, language-setting separation, Playwright smoke coverage, and thin Android local-asset host.
+  - id: P1-T2
+    status: done
+    owner: ai-agent
+    description: Obtain terminal green CI for exact P1 implementation HEAD, inspect Android APK evidence, perform three reviewer gates, repair findings, and revalidate.
+  - id: P1-T3
+    status: ready_for_merge
+    owner: ai-agent
+    description: Verify Quality Gates on the final state/handoff PR HEAD and merge PR #2 only when explicit merge authorization is given.
   - id: P0-T2
-    status: pending
+    status: deferred
     owner: ai-agent
-    description: Add exact approved product-charter and visual-prototype source artifacts byte-for-byte when the active repository interface supports practical transfer.
-  - id: P0-T3
-    status: in_progress
-    owner: ai-agent
-    description: Verify final PR HEAD remains terminal green after state/handoff updates, then merge P0 bootstrap to main.
+    description: Add exact approved product-charter and visual-prototype source artifacts byte-for-byte when practical transfer is available; concise committed contracts remain authoritative meanwhile.
 
-blockers:
-  - id: P0-B1
-    severity: medium
-    description: Exact uploaded product-charter and visual-prototype source files are not yet copied byte-for-byte; concise locked guardrails and visual acceptance contract are committed and sufficient for P0 operation.
+blockers: []
 
 known_constraints:
   - Cash build-cost target is zero until product validation/revenue threshold.
   - No paid AI APIs or cloud dependency should be introduced merely for convenience.
   - Normal Android apps must not assume unrestricted cellular-call audio capture/transcription.
   - UI display language must remain independent from voice/input language.
+  - P1 desktop is the loopback-served web-compatible shell; packaged desktop release infrastructure is scheduled for P11.
+  - P1 proves display-language switching architecture; production multilingual copy/intelligence quality continues in later phases.
 
 last_checks:
-  - check: repository access
+  - check: P0 merge
     result: pass
-    evidence: GitHub connector has admin/push access to private repository.
-  - check: draft pull request
-    result: pass
-    evidence: PR #1 is open and mergeable.
-  - check: CI failure diagnosis
+    evidence: PR #1 merged to main as 3650addb4e876c2e3a7bc1e723648c3cc91bbd66 after final P0 PR HEAD CI success.
+  - check: P1 first implementation CI
     result: fail_then_fixed
-    evidence: scripts/harness_check.py originally used a formatting-brittle literal semantic check; validator now normalizes Markdown/punctuation.
-  - check: agent control loop
+    evidence: Quality Gates run 32489477773 (#32) failed only in Playwright because a Tanglish locator matched both display and input choices; test selectors were scoped to their independent language sections.
+  - check: P1 repaired CI
     result: pass
-    evidence: AGENTS.md and docs/engineering/AGENT_EXECUTION_LOOP.md require push -> discover -> poll -> completed -> inspect -> fix -> repeat and prohibit advancement without green CI.
-  - check: blocking watcher
+    evidence: Quality Gates run 32489748413 (#34) completed successfully for 5c547a99fc31bd2dc756b332ef38d09cd1f6b3ff; JS, Playwright, Android and gate summary all passed.
+  - check: P1 reviewer repair
     result: pass
-    evidence: scripts/ci_wait.sh blocks with gh run watch --exit-status and emits failed logs.
-  - check: quality gates run 22
+    evidence: Added missing After-call recap shell and comprehensive required-route E2E coverage in 955e9cbb3310b277111d6de0755c9721dedd0784.
+  - check: P1 post-review CI
     result: pass
-    evidence: workflow run 32487168029 completed successfully for ffabbf48a9b6447af40441e6c366936620b00c96; Detect, Harness integrity, and Required gate summary succeeded; JS, Playwright, and Android were skipped because those stacks are not present in P0.
+    evidence: Quality Gates run 32489999794 (#36) completed successfully for 955e9cbb3310b277111d6de0755c9721dedd0784; Harness, JS, Playwright, Android build/tests and Required gate summary all succeeded.
+  - check: Android APK evidence
+    result: pass
+    evidence: Final green run #36 completed Android assembleDebug and uploaded android-debug-apk artifact.
   - check: code reviewer
     result: pass
-    evidence: no Critical/High findings.
+    evidence: No Critical/High findings remain after reviewer repair.
   - check: QA reviewer
     result: pass
-    evidence: no Critical/High findings.
+    evidence: Missing After-call shell/full route E2E finding was fixed; no Critical/High findings remain.
   - check: product guardrail reviewer
     result: pass
-    evidence: no Critical/High findings.
+    evidence: No Critical/High scope, privacy, terminology or visual-contract deviation remains.
 
 next_actions:
-  - Poll Quality Gates for the exact current PR HEAD after these final documentation commits.
-  - If terminal success, merge PR #1 to main.
-  - After merge, confirm main contains the harness and begin P1 on a new focused branch/PR.
+  - Wait for Quality Gates on the exact final PR HEAD created by this state/handoff update and inspect all required jobs.
+  - If terminal success, PR #2 is eligible for merge; do not merge without explicit merge authorization.
+  - After PR #2 merges, confirm main and start P2 Local domain model and persistence on a new focused branch/PR.

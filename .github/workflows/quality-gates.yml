@@ -29,11 +29,7 @@ jobs:
         shell: bash
         run: |
           if [ -f package.json ]; then echo "node=true" >> "$GITHUB_OUTPUT"; else echo "node=false" >> "$GITHUB_OUTPUT"; fi
-          if [ -f playwright.config.ts ] || [ -f playwright.config.js ] || [ -f playwright.config.mjs ] || [ -f playwright.config.cjs ]; then
-            echo "playwright=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "playwright=false" >> "$GITHUB_OUTPUT"
-          fi
+          if [ -f playwright.config.ts ] || [ -f playwright.config.js ] || [ -f playwright.config.mjs ] || [ -f playwright.config.cjs ]; then echo "playwright=true" >> "$GITHUB_OUTPUT"; else echo "playwright=false" >> "$GITHUB_OUTPUT"; fi
           if [ -f gradlew ]; then echo "android=true" >> "$GITHUB_OUTPUT"; else echo "android=false" >> "$GITHUB_OUTPUT"; fi
 
   harness:
@@ -41,10 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Python syntax
-        run: python3 -m py_compile scripts/harness_check.py
-      - name: Validate resumable harness
-        run: python3 scripts/harness_check.py
+      - run: python3 -m py_compile scripts/harness_check.py
+      - run: python3 scripts/harness_check.py
 
   javascript:
     name: JS unit/lint/type checks
@@ -54,17 +48,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
+        with: { node-version: '22' }
       - name: Install
-        run: npm ci
-      - name: Lint when configured
-        run: npm run lint --if-present
-      - name: Typecheck when configured
-        run: npm run typecheck --if-present
-      - name: Unit/integration tests when configured
-        run: npm test --if-present
+        run: if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+      - run: npm run lint --if-present
+      - run: npm run typecheck --if-present
+      - run: npm test --if-present
 
   playwright:
     name: Playwright E2E
@@ -74,16 +63,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-      - run: npm ci
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-      - name: Run E2E
-        run: npx playwright test
-      - name: Upload Playwright evidence
-        if: always()
+        with: { node-version: '22' }
+      - run: if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
@@ -105,14 +89,12 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      - name: Make Gradle wrapper executable
-        run: chmod +x gradlew
+      - run: chmod +x gradlew
       - name: Unit tests
         run: ./gradlew test --stacktrace
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
-      - name: Upload APK evidence
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: android-debug-apk
           path: '**/build/outputs/apk/debug/*.apk'
@@ -141,8 +123,5 @@ jobs:
           test "$DETECT" = "success"
           test "$HARNESS" = "success"
           for result in "$JAVASCRIPT" "$PLAYWRIGHT" "$ANDROID"; do
-            case "$result" in
-              success|skipped) ;;
-              *) echo "A progressive quality gate failed: $result"; exit 1 ;;
-            esac
+            case "$result" in success|skipped) ;; *) echo "A progressive quality gate failed: $result"; exit 1 ;; esac
           done
