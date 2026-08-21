@@ -2,9 +2,10 @@ import { test, expect } from '@playwright/test';
 
 const installFakeRecorder = async (page, transcript = 'Name is Ravi, erodu la site venum, budget 20 lakh, phone 91234 56789') => {
   await page.addInitScript(({ transcript }) => {
+    window.__PA_TRACK_STOPS__ = 0;
     Object.defineProperty(navigator, 'mediaDevices', {
       configurable: true,
-      value: { getUserMedia: async () => ({ getTracks: () => [{ stop() {} }] }) }
+      value: { getUserMedia: async () => ({ getTracks: () => [{ stop() { window.__PA_TRACK_STOPS__ += 1; } }] }) }
     });
     class FakeMediaRecorder extends EventTarget {
       state = 'inactive';
@@ -35,10 +36,28 @@ test('Speak & Save records, normalizes Tanglish, and hands off to shared review'
   await expect(page.getByTestId('field-name')).toHaveValue('Ravi');
   await expect(page.getByTestId('field-locality')).toHaveValue('Erode');
   await expect(page.getByTestId('field-propertyType')).toHaveValue('land');
-  const draft = await page.evaluate(() => JSON.parse(sessionStorage.getItem('pa.captureDraft') || '{}'));
-  expect(draft.sourceChannel).toBe('voice');
-  expect(draft.rawTranscript).toContain('erodu');
-  expect(draft.normalizedTranscript).toContain('Erode');
+  const evidence = await page.evaluate(() => ({
+    draft: JSON.parse(sessionStorage.getItem('pa.captureDraft') || '{}'),
+    metrics: window.__PA_VOICE_METRICS__,
+    stops: window.__PA_TRACK_STOPS__
+  }));
+  expect(evidence.draft.sourceChannel).toBe('voice');
+  expect(evidence.draft.rawTranscript).toContain('erodu');
+  expect(evidence.draft.normalizedTranscript).toContain('Erode');
+  expect(evidence.metrics.audioBytes).toBeGreaterThan(0);
+  expect(evidence.metrics.sttLatencyMs).toBeGreaterThanOrEqual(0);
+  expect(evidence.stops).toBe(1);
+});
+
+test('leaving Speak & Save stops an active microphone stream without creating a draft', async ({ page }) => {
+  await installFakeRecorder(page);
+  await page.goto('/#/speak');
+  await page.getByTestId('voice-toggle').click();
+  await expect(page.getByTestId('voice-status')).toContainText('Recording');
+  await page.getByRole('button', { name: 'Use Type & Save instead' }).click();
+  await expect(page.getByRole('heading', { name: 'Type & Save' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__PA_TRACK_STOPS__)).toBe(1);
+  expect(await page.evaluate(() => sessionStorage.getItem('pa.captureDraft'))).toBeNull();
 });
 
 test('microphone permission denial is explicit and Type & Save remains usable', async ({ page }) => {
