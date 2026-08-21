@@ -39,6 +39,7 @@ function render(){
  bind();
 }
 function bind(){
+ document.querySelectorAll('[data-route]').forEach(el=>el.addEventListener('click',()=>{location.hash=`#/${el.dataset.route}`;}));
  document.querySelector('[data-testid="run-query"]')?.addEventListener('click',()=>runQuery(document.querySelector('[data-testid="query-input"]').value));
  document.querySelector('[data-testid="query-input"]')?.addEventListener('keydown',e=>{if(e.key==='Enter')runQuery(e.currentTarget.value);});
  document.querySelector('[data-testid="start-query-voice"]')?.addEventListener('click',voiceQuery);
