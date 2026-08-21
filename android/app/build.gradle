@@ -1,5 +1,15 @@
 plugins { id 'com.android.application' }
 
+def versionFile = rootProject.file('../VERSION')
+def releaseVersionName = versionFile.exists() ? versionFile.text.trim() : '0.11.0-rc.1'
+def releaseVersionCode = (System.getenv('PA_VERSION_CODE') ?: '11') as Integer
+
+def releaseStore = System.getenv('PA_RELEASE_STORE_FILE') ?: (project.findProperty('paReleaseStoreFile') ?: '')
+def releaseStorePassword = System.getenv('PA_RELEASE_STORE_PASSWORD') ?: (project.findProperty('paReleaseStorePassword') ?: '')
+def releaseKeyAlias = System.getenv('PA_RELEASE_KEY_ALIAS') ?: (project.findProperty('paReleaseKeyAlias') ?: '')
+def releaseKeyPassword = System.getenv('PA_RELEASE_KEY_PASSWORD') ?: (project.findProperty('paReleaseKeyPassword') ?: '')
+def hasReleaseSigning = [releaseStore, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it != null && !it.toString().isBlank() }
+
 android {
   namespace 'ai.propertyassistant.app'
   compileSdk 35
@@ -7,8 +17,26 @@ android {
     applicationId 'ai.propertyassistant.app'
     minSdk 24
     targetSdk 35
-    versionCode 1
-    versionName '0.1.0'
+    versionCode releaseVersionCode
+    versionName releaseVersionName
+  }
+
+  signingConfigs {
+    release {
+      if (hasReleaseSigning) {
+        storeFile file(releaseStore)
+        storePassword releaseStorePassword
+        keyAlias releaseKeyAlias
+        keyPassword releaseKeyPassword
+      }
+    }
+  }
+
+  buildTypes {
+    release {
+      minifyEnabled false
+      if (hasReleaseSigning) signingConfig signingConfigs.release
+    }
   }
 }
 
