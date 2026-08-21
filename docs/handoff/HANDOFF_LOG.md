@@ -2,6 +2,39 @@
 
 Append-only session history. New entries go at the top beneath this introduction or at the end; do not rewrite historical facts.
 
+## 2026-08-21 23:36 IST — P6 late reviewer repair complete
+
+**Branch:** `ai/p6-ask-search-results`
+
+**PR:** #7 — P6: Ask/Search and operational result cards
+
+**Late review finding and repair:**
+
+- Final code review found a blocking relevance gap: explicit people queries such as `find buyers looking for land in Erode under 25 lakh` selected people but did not apply the linked requirement/property filters, so unrelated people could be returned.
+- Added structured role-aware people filtering: buyer/tenant searches evaluate linked requirements; owner/seller searches evaluate owned property supply.
+- Separated person role cues from transaction intent so role-only queries such as `find buyers` remain broad and do not invent a buy requirement.
+- Added correct demand/supply intent semantics so `buy` queries search sale inventory while buyer requirements remain `buy`.
+- Added plural role cues (`buyers`, `owners`, `sellers`, `tenants`) and removed grammatical cue `who` from residual free-text matching.
+- Added regression fixtures/tests for role-only people lookup, linked buyer requirement filtering, linked owner inventory filtering, and buy-to-sale inventory behavior.
+
+**CI/failure loop:**
+
+- Exact-head Quality Gates #165 (`32511282598`) correctly failed the newly added unit tests because plural role cues were not normalized and `who` leaked into residual terms. Harness and Android were green; the failure was diagnosed from the JS/unit logs rather than blindly rerun.
+- Fixed the grammar normalization defects and pushed functional repair HEAD `5919b67dd983940552ccfc42350697b18e681061`.
+- Quality Gates #167 (`32511450726`) completed successfully for that exact functional HEAD: Detect, Harness, JS/unit/lint/type checks, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
+
+**Reviewer gates after late repair:**
+
+- Senior Code Reviewer: PASS — linked filtering, role/intent separation, buy-to-sale semantics, query relevance, escaping, route/event ownership, and microphone lifecycle reviewed; no Critical/High finding remains.
+- Senior QA Reviewer: PASS — role-only lookup, linked buyer/owner filtering, budget/location/type/intent regressions, English/Tanglish/starter Tamil queries, typed/voice parity, STT fallback, desktop/mobile E2E, and Android packaging covered.
+- Product/UX Guardrail Reviewer: PASS — Ask remains local-first, deterministic, private, action-card oriented, and within P6 scope without cloud search, CRM expansion, or premature P8 communication behavior.
+
+**State:** P6 functional/reviewer repair is green on `5919b67dd983940552ccfc42350697b18e681061`. The state/handoff documentation commits move PR HEAD, so one final exact-HEAD Quality Gates run remains mandatory before merge.
+
+**Merge rule:** PR #7 must not be merged without explicit user authorization.
+
+**Next after authorized merge:** verify `main`, then begin P7 — Poster capture and OCR lead flow — on a fresh focused branch/PR.
+
 ## 2026-08-21 22:36 IST — P6 Ask/Search and operational result cards complete
 
 **Branch:** `ai/p6-ask-search-results`
