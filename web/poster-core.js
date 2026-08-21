@@ -1,5 +1,6 @@
 (function(root){
 'use strict';
+const KNOWN_PLACES=['Erode','Coimbatore','Chennai','Salem','Madurai','Trichy','Tiruppur'];
 function normalizeText(value){return String(value||'').replace(/\r/g,'').replace(/[ \t]+/g,' ').trim();}
 function extractPhones(text){
  const matches=normalizeText(text).match(/(?:\+?91[\s-]?)?[6-9]\d(?:[\s-]?\d){8}/g)||[];
@@ -8,10 +9,10 @@ function extractPhones(text){
 }
 function extractPosterLocation(text){
  const cleaned=normalizeText(text);
- const explicit=cleaned.match(/(?:location|area|place|at|near)\s*[:\-]?\s*([A-Za-z][A-Za-z .-]{2,40})/i);
- if(explicit)return explicit[1].trim().replace(/[.,;]+$/,'');
- const known=['Erode','Coimbatore','Chennai','Salem','Madurai','Trichy','Tiruppur'];
- return known.find(place=>new RegExp(`\\b${place}\\b`,'i').test(cleaned))||null;
+ const known=KNOWN_PLACES.find(place=>new RegExp(`\\b${place}\\b`,'i').test(cleaned));
+ if(known)return known;
+ const explicit=cleaned.match(/\b(?:location|area|place|at|near)\b\s*[:\-]?\s*([A-Za-z][A-Za-z -]{2,40}?)(?=[.,;\n]|\b(?:call|contact|phone|mobile|whatsapp)\b|$)/i);
+ return explicit?explicit[1].trim():null;
 }
 function extract(text){
  const normalized=normalizeText(text),phones=extractPhones(normalized);
