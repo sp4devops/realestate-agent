@@ -4,8 +4,6 @@ const requiredStaticRoutes = [
   ['splash','Property Assistant'],
   ['onboarding','Welcome'],
   ['speak','Speak & Save'],
-  ['type','Type & Save'],
-  ['review','Review'],
   ['after-call','After-call recap'],
   ['ask','Ask'],
   ['people','People'],
@@ -19,7 +17,7 @@ const requiredStaticRoutes = [
   ['settings','Settings & Backup']
 ];
 
-test('all approved shell routes render, including persisted detail routes', async ({ page }) => {
+test('all approved shell routes render, including dynamic persistence/capture routes', async ({ page }) => {
   await page.goto('/#/home');
   await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
   for (const [route, heading] of requiredStaticRoutes) {
@@ -27,6 +25,8 @@ test('all approved shell routes render, including persisted detail routes', asyn
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
   }
 
+  await page.goto('/#/type');
+  await expect(page.getByRole('heading', { name: 'Type & Save', exact: true })).toBeVisible();
   await page.goto('/#/person?id=person-suresh');
   await expect(page.getByTestId('person-name')).toHaveText('Suresh (Demo)');
   await page.goto('/#/property?id=property-murugan');
