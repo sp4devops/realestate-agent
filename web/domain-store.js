@@ -114,6 +114,33 @@
     posterLeads: validatePosterLead
   };
 
+  function validateReferences(database, type, record) {
+    const has = (entityType, id) => id == null || Boolean(database.entities[entityType][id]);
+    if (type === 'contacts' || type === 'requirements') assert(has('people', record.personId), `${type} personId does not exist`);
+    if (type === 'properties') assert(has('people', record.ownerPersonId), 'property ownerPersonId does not exist');
+    if (type === 'interactions') for (const id of record.personIds || []) assert(has('people', id), 'interaction personId does not exist');
+    if (type === 'followUps') {
+      assert(has('people', record.personId), 'follow-up personId does not exist');
+      assert(has('properties', record.propertyId), 'follow-up propertyId does not exist');
+    }
+    if (type === 'matches') {
+      assert(has('requirements', record.requirementId), 'match requirementId does not exist');
+      assert(has('properties', record.propertyId), 'match propertyId does not exist');
+    }
+  }
+
+  function validateDatabase(database) {
+    for (const type of ENTITY_TYPES) {
+      for (const [id, record] of Object.entries(database.entities[type])) {
+        assert(record && record.id === id, `${type} record id is inconsistent`);
+        validators[type](record);
+      }
+    }
+    for (const type of ENTITY_TYPES) {
+      for (const record of Object.values(database.entities[type])) validateReferences(database, type, record);
+    }
+  }
+
   function migrate(raw) {
     if (!raw || typeof raw !== 'object') return freshDatabase();
     if ((raw.schemaVersion || 0) > CURRENT_SCHEMA_VERSION) throw new Error('Stored data is from a newer Property Assistant version');
@@ -141,7 +168,9 @@
       const serialized = storage.getItem(STORAGE_KEY);
       if (!serialized) return freshDatabase();
       try {
-        return migrate(JSON.parse(serialized));
+        const database = migrate(JSON.parse(serialized));
+        validateDatabase(database);
+        return database;
       } catch (error) {
         if (error instanceof SyntaxError) throw new Error('Local Property Assistant data is corrupted');
         throw error;
@@ -156,9 +185,10 @@
       assert(ENTITY_TYPES.includes(type), `Unknown entity type: ${type}`);
     }
 
-    function validate(type, record) {
+    function validate(type, record, database) {
       ensureType(type);
       validators[type](record);
+      validateReferences(database, type, record);
     }
 
     function create(type, values) {
@@ -172,7 +202,7 @@
         updatedAt: timestamp
       };
       assert(!database.entities[type][record.id], `${type} record already exists`);
-      validate(type, record);
+      validate(type, record, database);
       database.entities[type][record.id] = record;
       save(database);
       return clone(record);
@@ -196,16 +226,33 @@
       const current = database.entities[type][id];
       assert(current, `${type} record not found`);
       const record = { ...current, ...clone(patch), id: current.id, createdAt: current.createdAt, updatedAt: now() };
-      validate(type, record);
+      validate(type, record, database);
       database.entities[type][id] = record;
       save(database);
       return clone(record);
+    }
+
+    function isReferenced(database, type, id) {
+      if (type === 'people') {
+        if (Object.values(database.entities.contacts).some((r) => r.personId === id)) return true;
+        if (Object.values(database.entities.requirements).some((r) => r.personId === id)) return true;
+        if (Object.values(database.entities.properties).some((r) => r.ownerPersonId === id)) return true;
+        if (Object.values(database.entities.interactions).some((r) => (r.personIds || []).includes(id))) return true;
+        if (Object.values(database.entities.followUps).some((r) => r.personId === id)) return true;
+      }
+      if (type === 'requirements' && Object.values(database.entities.matches).some((r) => r.requirementId === id)) return true;
+      if (type === 'properties') {
+        if (Object.values(database.entities.matches).some((r) => r.propertyId === id)) return true;
+        if (Object.values(database.entities.followUps).some((r) => r.propertyId === id)) return true;
+      }
+      return false;
     }
 
     function remove(type, id) {
       const database = load();
       ensureType(type);
       if (!database.entities[type][id]) return false;
+      assert(!isReferenced(database, type, id), `${type} record is still referenced`);
       delete database.entities[type][id];
       save(database);
       return true;
@@ -233,7 +280,7 @@
       database.entities.properties['property-murugan'] = {
         id:'property-murugan', ownerPersonId:'person-murugan', intent:'sale', propertyType:'land', locality:'Erode', price:2200000, size:{value:1200,unit:'sqft'}, createdAt:timestamp, updatedAt:timestamp
       };
-      for (const type of ENTITY_TYPES) for (const record of Object.values(database.entities[type])) validate(type, record);
+      validateDatabase(database);
       save(database);
       return true;
     }
