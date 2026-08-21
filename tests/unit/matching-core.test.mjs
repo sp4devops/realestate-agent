@@ -28,6 +28,12 @@ test('nearby locality and modest over-budget price remain explainable preference
   assert.ok(result.reasons.some(r=>r.includes('above budget')));
 });
 
+test('nearby locality relation works in both directions',()=>{
+  const reverse=evaluate({...req,locations:['Perundurai']},{...prop,locality:'Erode'});
+  assert.equal(reverse.eligible,true);
+  assert.ok(reverse.reasons.some(r=>r.includes('Nearby Perundurai')));
+});
+
 test('far location or price beyond tolerance is excluded',()=>{
   assert.equal(evaluate(req,{...prop,locality:'Chennai'}).eligible,false);
   assert.equal(evaluate(req,{...prop,price:3000000}).eligible,false);
