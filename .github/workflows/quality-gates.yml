@@ -74,6 +74,7 @@ jobs:
           path: |
             playwright-report/
             test-results/
+            p10-artifacts/
           if-no-files-found: ignore
           retention-days: 14
 
