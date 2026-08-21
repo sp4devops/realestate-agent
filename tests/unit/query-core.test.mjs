@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 await import('../../web/voice-core.js');
 await import('../../web/query-core.js');
 const {interpret,search}=globalThis.PropertyAssistantQuery;
-const snapshot={entities:{people:{u1:{id:'u1',name:'Suresh',role:'buyer',primaryPhone:'+91 9000000001',alternatePhones:[]},u2:{id:'u2',name:'Murugan',role:'owner',primaryPhone:'+91 9000000003',alternatePhones:[]}},properties:{p1:{id:'p1',intent:'sale',propertyType:'land',locality:'Erode',price:2200000},p2:{id:'p2',intent:'rent',propertyType:'house',locality:'Chennai',price:15000}},requirements:{r1:{id:'r1',personId:'u1'}},matches:{m1:{id:'m1',requirementId:'r1',propertyId:'p1',score:100,reasons:['Exact location: Erode']}}}};
+const snapshot={entities:{people:{u1:{id:'u1',name:'Suresh',role:'buyer',primaryPhone:'+91 9000000001',alternatePhones:[]},u2:{id:'u2',name:'Murugan',role:'owner',primaryPhone:'+91 9000000003',alternatePhones:[]}},properties:{p1:{id:'p1',ownerPersonId:'u2',intent:'sale',propertyType:'land',locality:'Erode',price:2200000},p2:{id:'p2',ownerPersonId:'u2',intent:'rent',propertyType:'house',locality:'Chennai',price:15000}},requirements:{r1:{id:'r1',personId:'u1',intent:'buy',propertyType:'land',locations:['Erode'],budgetMin:1800000,budgetMax:2500000}},matches:{m1:{id:'m1',requirementId:'r1',propertyId:'p1',score:100,reasons:['Exact location: Erode']}}}};
 
 test('interprets natural property query with locality and budget',()=>{
  const q=interpret('show land in Erode under 25 lakh');
@@ -29,6 +29,24 @@ test('offline local search returns actionable property and person results',()=>{
 test('property-specific filters do not leak unrelated people',()=>{
  const results=search(snapshot,interpret('Erode under 25 lakh'));
  assert.ok(results.every(r=>r.kind!=='person')); assert.ok(results.some(r=>r.id==='p1'));
+});
+
+test('explicit buyer queries filter through linked requirements',()=>{
+ const q=interpret('find buyers looking for land in Erode under 25 lakh');
+ assert.equal(q.entity,'people'); assert.equal(q.personRole,'buyer');
+ assert.deepEqual(search(snapshot,q).map(r=>r.id),['u1']);
+ assert.deepEqual(search(snapshot,interpret('find buyers looking for house in Chennai under 20000')).map(r=>r.id),[]);
+});
+
+test('explicit owner queries filter through owned property supply',()=>{
+ const q=interpret('find owners with land in Erode under 25 lakh');
+ assert.equal(q.personRole,'owner'); assert.deepEqual(search(snapshot,q).map(r=>r.id),['u2']);
+ assert.deepEqual(search(snapshot,interpret('find owners with land in Chennai under 25 lakh')).map(r=>r.id),[]);
+});
+
+test('buy intent finds sale inventory while buyer requirements stay buy',()=>{
+ assert.deepEqual(search(snapshot,interpret('land in Erode to buy under 25 lakh')).map(r=>r.id),['p1']);
+ assert.deepEqual(search(snapshot,interpret('find buyers who want land in Erode under 25 lakh')).map(r=>r.id),['u1']);
 });
 
 test('phone lookup targets the matching person instead of all contacts',()=>{
