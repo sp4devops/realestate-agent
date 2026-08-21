@@ -86,6 +86,7 @@
     nonEmpty(record.title, 'title');
     optionalString(record.personId, 'personId');
     optionalString(record.propertyId, 'propertyId');
+    optionalString(record.posterLeadId, 'posterLeadId');
   }
 
   function validateMatch(record) {
@@ -122,6 +123,7 @@
     if (type === 'followUps') {
       assert(has('people', record.personId), 'follow-up personId does not exist');
       assert(has('properties', record.propertyId), 'follow-up propertyId does not exist');
+      assert(has('posterLeads', record.posterLeadId), 'follow-up posterLeadId does not exist');
     }
     if (type === 'matches') {
       assert(has('requirements', record.requirementId), 'match requirementId does not exist');
@@ -245,6 +247,7 @@
         if (Object.values(database.entities.matches).some((r) => r.propertyId === id)) return true;
         if (Object.values(database.entities.followUps).some((r) => r.propertyId === id)) return true;
       }
+      if (type === 'posterLeads' && Object.values(database.entities.followUps).some((r) => r.posterLeadId === id)) return true;
       return false;
     }
 
