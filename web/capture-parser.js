@@ -83,5 +83,25 @@
     };
   }
 
-  root.PropertyAssistantCapture = { parse, cleanPhone, parseMoney };
+  function isExtraction(value) {
+    return Boolean(value && value.ok === true && ['requirement','property'].includes(value.kind) && Array.isArray(value.uncertain));
+  }
+
+  function createExtractor(modelAdapter = null) {
+    return {
+      async extract(text) {
+        if (modelAdapter && typeof modelAdapter.extract === 'function') {
+          try {
+            const candidate = await modelAdapter.extract(String(text || ''));
+            if (isExtraction(candidate)) return candidate;
+          } catch (_) {
+            // Local deterministic fallback is mandatory and intentionally silent here.
+          }
+        }
+        return parse(text);
+      }
+    };
+  }
+
+  root.PropertyAssistantCapture = { parse, cleanPhone, parseMoney, createExtractor };
 })(globalThis);
