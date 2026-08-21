@@ -4,8 +4,10 @@ repository: sp4devops/realestate-agent
 status: bootstrap
 active_phase: P0
 active_phase_name: Harness and source-of-truth bootstrap
-last_verified_commit: UNCOMMITTED
-last_updated: 2026-08-21T18:43:00+05:30
+last_verified_commit: UNVERIFIED-CI
+last_updated: 2026-08-21T18:50:00+05:30
+active_pr: 1
+active_branch: ai/bootstrap-project-harness
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -28,59 +30,41 @@ phases:
       - delivery phases and quality gates exist
       - CI validates harness integrity
       - product guardrails are represented in-repo
-      - approved prototype is referenced as the visual acceptance contract
-  P1:
-    name: Application skeleton and navigation
-    status: pending
-  P2:
-    name: Local domain model and persistence
-    status: pending
-  P3:
-    name: Type capture and structured extraction
-    status: pending
-  P4:
-    name: Voice capture and multilingual understanding
-    status: pending
-  P5:
-    name: Matching and action brain
-    status: pending
-  P6:
-    name: Ask/search and operational result cards
-    status: pending
-  P7:
-    name: Poster capture and OCR lead flow
-    status: pending
-  P8:
-    name: After-call recap, follow-ups, communication actions
-    status: pending
-  P9:
-    name: Backup, restore, settings, language, privacy hardening
-    status: pending
-  P10:
-    name: Performance, accessibility, resilience and offline QA
-    status: pending
-  P11:
-    name: Android release candidate APK and desktop release candidate
-    status: pending
-  P12:
-    name: Broker pilot readiness
-    status: pending
+      - approved prototype is represented as the visual acceptance contract
+  P1: {name: Application skeleton and navigation, status: pending}
+  P2: {name: Local domain model and persistence, status: pending}
+  P3: {name: Type capture and structured extraction, status: pending}
+  P4: {name: Voice capture and multilingual understanding, status: pending}
+  P5: {name: Matching and action brain, status: pending}
+  P6: {name: Ask/search and operational result cards, status: pending}
+  P7: {name: Poster capture and OCR lead flow, status: pending}
+  P8: {name: After-call recap follow-ups and communication actions, status: pending}
+  P9: {name: Backup restore settings language and privacy hardening, status: pending}
+  P10: {name: Performance accessibility resilience and offline QA, status: pending}
+  P11: {name: Android APK and desktop release candidates, status: pending}
+  P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
   - id: P0-T1
-    status: in_progress
+    status: done
     owner: ai-agent
-    description: Install the repository AI harness and CI quality gates.
+    description: Install repository AI harness and progressive CI quality gates.
   - id: P0-T2
     status: pending
     owner: ai-agent
-    description: Add exact approved product-charter and visual-prototype source artifacts to the repository when practical through the active repository interface.
+    description: Add exact approved product-charter and visual-prototype source artifacts byte-for-byte when the active repository interface supports practical transfer.
   - id: P0-T3
-    status: pending
+    status: in_progress
     owner: ai-agent
-    description: Run harness CI and close bootstrap findings before advancing to P1.
+    description: Verify harness workflow and close bootstrap reviewer findings before advancing to P1.
 
-blockers: []
+blockers:
+  - id: P0-B1
+    severity: medium
+    description: The connector can create UTF-8 repository files but does not provide direct upload of the two attached source files; concise locked guardrails and visual acceptance contract are committed instead.
+  - id: P0-B2
+    severity: medium
+    description: The available workflow-run lookup only exposes pull-request-triggered runs; the new workflow did not return a PR run while it exists only on the feature branch, so CI is not yet claimed green.
 
 known_constraints:
   - Cash build-cost target is zero until product validation/revenue threshold.
@@ -94,10 +78,20 @@ last_checks:
     evidence: GitHub connector has admin/push access to private repository.
   - check: repository baseline
     result: pass
-    evidence: main contained only README.md and .gitignore before harness bootstrap.
+    evidence: main contained only README.md and .gitignore before bootstrap.
+  - check: draft pull request
+    result: pass
+    evidence: PR #1 is open and mergeable from ai/bootstrap-project-harness to main.
+  - check: workflow design review
+    result: pass
+    evidence: Progressive stack detection was corrected to run after checkout before conditionally enabling JS Playwright and Android jobs.
+  - check: workflow execution
+    result: pending
+    evidence: No PR-triggered workflow run is visible yet through the current connector; do not claim CI success.
 
 next_actions:
-  - Finish P0 harness files and workflow.
-  - Open a draft PR from ai/bootstrap-project-harness to main.
-  - Inspect workflow results and fix any harness failures.
-  - When P0 is green, mark P0 complete and begin P1 application skeleton.
+  - Perform final code/QA/product review of PR #1.
+  - Merge bootstrap only after acceptable review disposition.
+  - Verify Quality Gates on main or the next PR where the workflow is available to the PR event.
+  - Mark P0 complete only after harness validation is observed passing.
+  - Begin P1 application skeleton after P0 gate is satisfied.
