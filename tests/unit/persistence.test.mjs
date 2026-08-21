@@ -79,6 +79,20 @@ test('relationships must reference existing local records and referenced records
   assert.throws(() => repo.remove('properties', property.id), /still referenced/);
 });
 
+test('poster follow-ups reference an existing lead and protect it from dangling deletion', () => {
+  const repo = deterministicRepo(memoryStorage());
+  assert.throws(() => repo.create('followUps', {
+    id:'bad-poster-followup', dueAt:'2026-08-21T12:00:00.000Z', status:'open', title:'Bad poster follow-up', posterLeadId:'missing-poster'
+  }), /posterLeadId does not exist/);
+  const lead = repo.create('posterLeads', {
+    id:'poster-demo', phone:'9876543210', imageRef:'poster-image-demo', posterLocation:'Erode', captureLocation:null, capturedAt:'2026-08-21T12:00:00.000Z'
+  });
+  repo.create('followUps', {
+    id:'poster-followup', dueAt:'2026-08-21T12:00:00.000Z', status:'open', title:'Review poster lead', posterLeadId:lead.id
+  });
+  assert.throws(() => repo.remove('posterLeads', lead.id), /still referenced/);
+});
+
 test('migration upgrades legacy array collections to schema version 1', () => {
   const migrated = migrate({
     people: [{ id:'legacy-person', name:'Legacy Demo', role:'buyer', primaryPhone:'+91 90000 00999', alternatePhones:[] }],
