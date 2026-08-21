@@ -10,7 +10,6 @@ const requiredStaticRoutes = [
   ['matches','Matches'],
   ['poster','Scan Poster'],
   ['poster-review','Poster review'],
-  ['poster-lead','Poster lead'],
   ['followups','Follow-ups'],
   ['language','Language'],
   ['settings','Settings & Backup']
@@ -32,6 +31,22 @@ test('all approved shell routes render, including dynamic persistence/capture/ma
   await expect(page.getByTestId('property-title')).toContainText('land in Erode');
   await page.goto('/#/match?id=match-requirement-suresh-property-murugan');
   await expect(page.getByTestId('match-title')).toContainText('Suresh (Demo)');
+
+  await page.goto('/#/home');
+  const posterLeadId = await page.evaluate(() => {
+    const repository = (window as any).__PA_REPOSITORY__;
+    return repository.create('posterLeads', {
+      id: 'poster-nav-demo',
+      phone: '9876543210',
+      imageRef: 'text:navigation fixture',
+      posterLocation: 'Erode',
+      captureLocation: null,
+      capturedAt: '2026-08-21T00:00:00.000Z'
+    }).id;
+  });
+  await page.goto(`/#/poster-lead?id=${posterLeadId}`);
+  await expect(page.getByRole('heading', { name: 'Poster lead', exact: true })).toBeVisible();
+  await expect(page.getByTestId('saved-poster-phone')).toHaveText('9876543210');
 });
 
 test('primary shell navigation is wired with no dead primary controls', async ({ page }) => {
@@ -59,7 +74,7 @@ test('capture shortcuts reach poster and after-call shells', async ({ page }) =>
 
 test('display language and input language are independent', async ({ page }) => {
   await page.goto('/#/language');
-  const before = await page.evaluate(() => JSON.stringify(window.__PA_SEED__));
+  const before = await page.evaluate(() => JSON.stringify((window as any).__PA_SEED__));
   const displayOptions = page.getByTestId('display-language-options');
   const inputOptions = page.getByTestId('input-language-options');
 
@@ -69,7 +84,7 @@ test('display language and input language are independent', async ({ page }) => 
   await expect(page.getByTestId('nav-ask')).toContainText('Kelu');
   await inputOptions.getByRole('button', { name: /^Tamil/ }).click();
 
-  const after = await page.evaluate(() => JSON.stringify(window.__PA_SEED__));
+  const after = await page.evaluate(() => JSON.stringify((window as any).__PA_SEED__));
   expect(after).toBe(before);
   expect(await page.evaluate(() => localStorage.getItem('pa.displayLanguage'))).toBe('tg');
   expect(await page.evaluate(() => localStorage.getItem('pa.inputLanguage'))).toBe('ta');
