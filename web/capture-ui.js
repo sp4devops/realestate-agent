@@ -12,7 +12,7 @@
   }
 
   function renderType(){
-    app.innerHTML = shell(`<section class="page"><p class="eyebrow">TYPE & SAVE</p><h1>Tell Property Assistant naturally</h1><p class="lead">Type one buyer, tenant, owner, or property note. Parsing works locally without a model.</p><label class="capture-field"><span>Business note</span><textarea data-testid="capture-text" rows="7" placeholder="Example: Arun wants land in Erode, budget 25 lakh, phone 98765 43210"></textarea></label><div class="page-actions"><button type="button" class="button primary" data-testid="analyze-capture">Review details</button><button type="button" class="button" data-route="home">Cancel</button></div><p class="capture-error" data-testid="capture-error" hidden></p></section>`, '');
+    app.innerHTML = shell(`<section class="page"><p class="eyebrow">TYPE & SAVE</p><h1>Type & Save</h1><p class="lead">Tell Property Assistant naturally about one buyer, tenant, owner, or property. Parsing works locally without a model.</p><label class="capture-field"><span>Business note</span><textarea data-testid="capture-text" rows="7" placeholder="Example: Arun wants land in Erode, budget 25 lakh, phone 98765 43210"></textarea></label><div class="page-actions"><button type="button" class="button primary" data-testid="analyze-capture">Review details</button><button type="button" class="button" data-route="home">Cancel</button></div><p class="capture-error" data-testid="capture-error" hidden></p></section>`, '');
     bindRouteButtons();
     document.querySelector('[data-testid="analyze-capture"]').addEventListener('click',()=>{
       const text=document.querySelector('[data-testid="capture-text"]').value;
