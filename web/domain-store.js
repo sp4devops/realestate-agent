@@ -34,12 +34,31 @@
     assert(value == null || (typeof value === 'number' && Number.isFinite(value)), `${field} must be a finite number`);
   }
 
+  function optionalNonNegativeNumber(value, field) {
+    optionalNumber(value, field);
+    assert(value == null || value >= 0, `${field} cannot be negative`);
+  }
+
+  function validDate(value, field) {
+    nonEmpty(value, field);
+    assert(Number.isFinite(Date.parse(value)), `${field} must be a valid date`);
+  }
+
+  function validateSize(size) {
+    if (size == null) return;
+    assert(size && typeof size === 'object' && !Array.isArray(size), 'size must be an object');
+    optionalNonNegativeNumber(size.value, 'size.value');
+    assert(size.value != null && size.value > 0, 'size.value must be greater than zero');
+    nonEmpty(size.unit, 'size.unit');
+  }
+
   function validatePerson(record) {
     nonEmpty(record.name, 'name');
     assert(PERSON_ROLES.has(record.role), 'role is invalid');
     nonEmpty(record.primaryPhone, 'primaryPhone');
     assert(Array.isArray(record.alternatePhones || []), 'alternatePhones must be an array');
     const alternates = record.alternatePhones || [];
+    for (const phone of alternates) nonEmpty(phone, 'alternatePhone');
     assert(new Set(alternates).size === alternates.length, 'alternatePhones must be unique');
     assert(!alternates.includes(record.primaryPhone), 'primaryPhone cannot also be alternate');
   }
@@ -55,10 +74,12 @@
     nonEmpty(record.personId, 'personId');
     assert(['buy','rent','lease','sell'].includes(record.intent), 'requirement intent is invalid');
     assert(Array.isArray(record.locations || []), 'locations must be an array');
+    for (const location of record.locations || []) nonEmpty(location, 'location');
     optionalString(record.propertyType, 'propertyType');
-    optionalNumber(record.budgetMin, 'budgetMin');
-    optionalNumber(record.budgetMax, 'budgetMax');
+    optionalNonNegativeNumber(record.budgetMin, 'budgetMin');
+    optionalNonNegativeNumber(record.budgetMax, 'budgetMax');
     if (record.budgetMin != null && record.budgetMax != null) assert(record.budgetMin <= record.budgetMax, 'budgetMin cannot exceed budgetMax');
+    validateSize(record.size);
   }
 
   function validateProperty(record) {
@@ -66,23 +87,20 @@
     nonEmpty(record.propertyType, 'propertyType');
     nonEmpty(record.locality, 'locality');
     optionalString(record.ownerPersonId, 'ownerPersonId');
-    optionalNumber(record.price, 'price');
-    if (record.size != null) {
-      optionalNumber(record.size.value, 'size.value');
-      nonEmpty(record.size.unit, 'size.unit');
-    }
+    optionalNonNegativeNumber(record.price, 'price');
+    validateSize(record.size);
   }
 
   function validateInteraction(record) {
     assert(['call','message','meeting','site_visit','note','other'].includes(record.kind), 'interaction kind is invalid');
-    nonEmpty(record.occurredAt, 'occurredAt');
+    validDate(record.occurredAt, 'occurredAt');
     assert(Array.isArray(record.personIds || []), 'personIds must be an array');
     optionalString(record.summary, 'summary');
     optionalString(record.phone, 'phone');
   }
 
   function validateFollowUp(record) {
-    nonEmpty(record.dueAt, 'dueAt');
+    validDate(record.dueAt, 'dueAt');
     assert(['open','done','cancelled'].includes(record.status), 'follow-up status is invalid');
     nonEmpty(record.title, 'title');
     optionalString(record.personId, 'personId');
@@ -94,7 +112,9 @@
     nonEmpty(record.requirementId, 'requirementId');
     nonEmpty(record.propertyId, 'propertyId');
     optionalNumber(record.score, 'score');
+    assert(record.score == null || (record.score >= 0 && record.score <= 100), 'score must be between 0 and 100');
     assert(Array.isArray(record.reasons || []), 'reasons must be an array');
+    for (const reason of record.reasons || []) nonEmpty(reason, 'match reason');
   }
 
   function validatePosterLead(record) {
@@ -102,7 +122,8 @@
     optionalString(record.imageRef, 'imageRef');
     optionalString(record.posterLocation, 'posterLocation');
     optionalString(record.captureLocation, 'captureLocation');
-    nonEmpty(record.capturedAt, 'capturedAt');
+    optionalString(record.ocrText, 'ocrText');
+    validDate(record.capturedAt, 'capturedAt');
   }
 
   const validators = {
@@ -133,7 +154,9 @@
   }
 
   function validateDatabase(database) {
+    assert(database && database.entities && typeof database.entities === 'object', 'Local Property Assistant data is incomplete');
     for (const type of ENTITY_TYPES) {
+      assert(database.entities[type] && typeof database.entities[type] === 'object' && !Array.isArray(database.entities[type]), `${type} collection is invalid`);
       for (const [id, record] of Object.entries(database.entities[type])) {
         assert(record && record.id === id, `${type} record id is inconsistent`);
         validators[type](record);
@@ -181,6 +204,7 @@
     }
 
     function save(database) {
+      validateDatabase(database);
       storage.setItem(STORAGE_KEY, JSON.stringify(database));
     }
 
@@ -192,47 +216,6 @@
       ensureType(type);
       validators[type](record);
       validateReferences(database, type, record);
-    }
-
-    function create(type, values) {
-      const database = load();
-      ensureType(type);
-      const timestamp = now();
-      const record = {
-        ...clone(values),
-        id: values.id || makeId(type),
-        createdAt: values.createdAt || timestamp,
-        updatedAt: timestamp
-      };
-      assert(!database.entities[type][record.id], `${type} record already exists`);
-      validate(type, record, database);
-      database.entities[type][record.id] = record;
-      save(database);
-      return clone(record);
-    }
-
-    function get(type, id) {
-      const database = load();
-      ensureType(type);
-      return clone(database.entities[type][id] || null);
-    }
-
-    function list(type) {
-      const database = load();
-      ensureType(type);
-      return Object.values(database.entities[type]).map(clone);
-    }
-
-    function update(type, id, patch) {
-      const database = load();
-      ensureType(type);
-      const current = database.entities[type][id];
-      assert(current, `${type} record not found`);
-      const record = { ...current, ...clone(patch), id: current.id, createdAt: current.createdAt, updatedAt: now() };
-      validate(type, record, database);
-      database.entities[type][id] = record;
-      save(database);
-      return clone(record);
     }
 
     function isReferenced(database, type, id) {
@@ -252,15 +235,63 @@
       return false;
     }
 
-    function remove(type, id) {
-      const database = load();
-      ensureType(type);
-      if (!database.entities[type][id]) return false;
-      assert(!isReferenced(database, type, id), `${type} record is still referenced`);
-      delete database.entities[type][id];
-      save(database);
-      return true;
+    function transactionApi(database) {
+      return {
+        create(type, values) {
+          ensureType(type);
+          const timestamp = now();
+          const record = {
+            ...clone(values),
+            id: values.id || makeId(type),
+            createdAt: values.createdAt || timestamp,
+            updatedAt: timestamp
+          };
+          assert(!database.entities[type][record.id], `${type} record already exists`);
+          validate(type, record, database);
+          database.entities[type][record.id] = record;
+          return clone(record);
+        },
+        get(type, id) {
+          ensureType(type);
+          return clone(database.entities[type][id] || null);
+        },
+        list(type) {
+          ensureType(type);
+          return Object.values(database.entities[type]).map(clone);
+        },
+        update(type, id, patch) {
+          ensureType(type);
+          const current = database.entities[type][id];
+          assert(current, `${type} record not found`);
+          const record = { ...current, ...clone(patch), id: current.id, createdAt: current.createdAt, updatedAt: now() };
+          validate(type, record, database);
+          database.entities[type][id] = record;
+          return clone(record);
+        },
+        remove(type, id) {
+          ensureType(type);
+          if (!database.entities[type][id]) return false;
+          assert(!isReferenced(database, type, id), `${type} record is still referenced`);
+          delete database.entities[type][id];
+          return true;
+        }
+      };
     }
+
+    function transact(callback) {
+      assert(typeof callback === 'function', 'transaction callback is required');
+      const database = load();
+      const result = callback(transactionApi(database));
+      assert(!(result && typeof result.then === 'function'), 'repository transactions must be synchronous');
+      save(database);
+      return clone(result);
+    }
+
+    function create(type, values) { return transact((tx) => tx.create(type, values)); }
+    function get(type, id) { const database = load(); ensureType(type); return clone(database.entities[type][id] || null); }
+    function list(type) { const database = load(); ensureType(type); return Object.values(database.entities[type]).map(clone); }
+    function update(type, id, patch) { return transact((tx) => tx.update(type, id, patch)); }
+    function remove(type, id) { return transact((tx) => tx.remove(type, id)); }
 
     function migrateAndPersist() {
       const database = load();
@@ -284,12 +315,11 @@
       database.entities.properties['property-murugan'] = {
         id:'property-murugan', ownerPersonId:'person-murugan', intent:'sale', propertyType:'land', locality:'Erode', price:2200000, size:{value:1200,unit:'sqft'}, createdAt:timestamp, updatedAt:timestamp
       };
-      validateDatabase(database);
       save(database);
       return true;
     }
 
-    return { create, get, list, update, remove, migrateAndPersist, seedSynthetic, loadSnapshot: () => clone(load()) };
+    return { create, get, list, update, remove, transact, migrateAndPersist, seedSynthetic, loadSnapshot: () => clone(load()) };
   }
 
   root.PropertyAssistantPersistence = {
