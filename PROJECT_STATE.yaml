@@ -2,38 +2,38 @@ schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
 status: ready_for_merge
-active_phase: P6
-active_phase_name: Ask/search and operational result cards
-last_verified_commit: 5919b67dd983940552ccfc42350697b18e681061
-last_updated: 2026-08-21T23:39:00+05:30
-active_pr: 7
-active_branch: ai/p6-ask-search-results
+active_phase: P7
+active_phase_name: Poster capture and OCR lead flow
+last_verified_commit: 995b755ceb0cab8a571b0001364241846e8780e7
+last_updated: 2026-08-21T23:59:00+05:30
+active_pr: 8
+active_branch: ai/p7-poster-ocr-lead-flow
 
 ci_gate:
   status: green
-  verified_head_sha: 5919b67dd983940552ccfc42350697b18e681061
+  verified_head_sha: 995b755ceb0cab8a571b0001364241846e8780e7
   workflow_name: Quality Gates
-  workflow_run_id: 32511450726
-  workflow_run_number: 167
+  workflow_run_id: 32513594778
+  workflow_run_number: 211
   workflow_status: completed
   workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: P6 late-review functional repair HEAD is terminal green. State/handoff documentation is now current and moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
+  note: P7 final functional/reviewer-repair HEAD is terminal green. This state/handoff documentation moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
 
 review_gates:
   code_review:
     status: pass
     blocking_findings: 0
-    note: Final review found explicit people queries ignored linked requirement/property filters. Repair now separates role from intent, filters buyers/tenants through requirements and owners/sellers through owned inventory, maps buy demand to sale supply, and preserves role-only lookup. No Critical/High finding remains.
+    note: Final review covered phone-first extraction, OCR adapter/fallback, IndexedDB image asset storage, domain rollback/error handling, Poster Lead to follow-up referential integrity, Android FileProvider camera/gallery chooser, coarse one-shot geolocation, and permission/resource cleanup. Earlier Android file-input and localStorage image-quota blockers were repaired; no Critical/High finding remains.
   qa_review:
     status: pass
     blocking_findings: 0
-    note: English, Tanglish and starter Tamil-script queries, role-only people lookup, linked buyer/owner filters, budget/location/type/intent filters, phone lookup, people/property/match cards, typed/voice shared contract, STT fallback, route-exit microphone cleanup, desktop/mobile Playwright and Android packaging are covered.
+    note: Phone extraction, locality parsing, typed fallback, OCR unavailable, editable review, image persistence, poster-location versus capture-GPS separation, GPS allowed/denied/absent states, dynamic poster-lead navigation, follow-up creation/reference protection, desktop/mobile Playwright, Android host contract, Android tests/build and APK upload are covered.
   product_guardrail_review:
     status: pass
     blocking_findings: 0
-    note: Ask remains local/offline, deterministic and action-card oriented. The repair improves business-meaning correctness without cloud/search backend behavior, CRM expansion, or premature P8 communication actions.
+    note: Poster capture remains local-first, phone-first and review-before-save; original image bytes stay private in local IndexedDB, GPS is explicit one-shot coarse location, no cloud OCR/search or continuous tracking was introduced, and the flow produces an actionable local follow-up without CRM drift.
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -54,7 +54,7 @@ phases:
   P4: {name: Voice capture and multilingual understanding, status: done}
   P5: {name: Matching and action brain, status: done}
   P6: {name: Ask/search and operational result cards, status: done}
-  P7: {name: Poster capture and OCR lead flow, status: pending}
+  P7: {name: Poster capture and OCR lead flow, status: done}
   P8: {name: After-call recap follow-ups and communication actions, status: pending}
   P9: {name: Backup restore settings language and privacy hardening, status: pending}
   P10: {name: Performance accessibility resilience and offline QA, status: pending}
@@ -62,22 +62,26 @@ phases:
   P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
-  - id: P6-T1
+  - id: P7-T1
     status: done
     owner: ai-agent
-    description: Implement shared typed/voice natural-language query contract, deterministic local interpretation/search, operational result cards, linked people/property filters, phone lookup, starter Tamil/Tanglish aliases and offline fallback.
-  - id: P6-T2
+    description: Implement camera/gallery poster capture, replaceable local OCR with typed fallback, phone-first extraction/review, durable local original-image storage, distinct poster location and one-shot GPS, Poster Lead persistence, linked follow-up creation, Android host bridges, and regression coverage.
+  - id: P7-T2
     status: ready_for_merge
     owner: ai-agent
-    description: Verify final state/handoff exact-head CI and merge PR #7 only when explicit merge authorization is given.
+    description: Append P7 completion evidence, verify final documentation exact-head CI, and merge PR #8 only when explicit merge authorization is given.
+  - id: P7-T3
+    status: deferred
+    owner: ai-agent
+    description: Select/package/benchmark the production local OCR engine on representative target hardware before pilot/release; P7 completes the replaceable local adapter and deterministic fallback contract without bundling a specific OCR model.
+  - id: P6-T2
+    status: done
+    owner: ai-agent
+    description: PR #7 merged to main as 121ebd04f0df0c68dceb873a9bad6ff9e0ba10f6 after exact-head Quality Gates #173 success and explicit user authorization.
   - id: P6-T3
     status: deferred
     owner: ai-agent
-    description: Expand deterministic query vocabulary, Tamil morphology and locality coverage using real pilot queries; starter P6 coverage must not be marketed as unrestricted natural-language understanding.
-  - id: P5-T2
-    status: done
-    owner: ai-agent
-    description: PR #6 merged to main as bbbc11b37d6840f32e4bd2d29c82cde8e42a4d77 after exact-head Quality Gates #129 success and explicit user authorization.
+    description: Expand deterministic query vocabulary, Tamil morphology and locality coverage using real pilot queries.
   - id: P5-T3
     status: deferred
     owner: ai-agent
@@ -99,57 +103,53 @@ known_constraints:
   - Normal Android apps must not assume unrestricted cellular-call audio capture/transcription.
   - UI display language must remain independent from voice/input language.
   - P1 desktop is the loopback-served web-compatible shell; packaged desktop release infrastructure is scheduled for P11.
-  - P2 uses a versioned repository contract over localStorage as the first shared persistence adapter.
-  - P3 deterministic extraction intentionally covers a focused starter vocabulary/locality set; replaceable local models can improve understanding while fallback remains mandatory.
+  - P2 uses a versioned repository contract over localStorage as the first shared structured persistence adapter.
+  - P3 deterministic extraction intentionally covers a focused starter vocabulary/locality set.
   - P4 STT integration is a replaceable local adapter; production engine weights remain a P10/P11 packaging/benchmark concern.
   - P5 nearby-locality knowledge is a small deterministic starter dictionary and P5 does not invent negotiability.
-  - P5 persists recalculated matches when match routes render; repository-level event recalculation may replace that trigger later if scale warrants it.
-  - P6 deterministic query interpretation intentionally covers a starter real-estate vocabulary/locality/Tamil alias set. Real pilot queries must drive expansion; unsupported phrasing should return no/limited local results rather than fabricated answers.
-  - P6 people filtering links buyer/tenant queries to requirements and owner/seller queries to owned properties; role-only lookup does not invent transaction filters.
-  - P6 searches persisted matches; match freshness follows the P5 recalculation contract until a repository-level recalculation trigger is introduced.
+  - P6 deterministic query interpretation intentionally covers a starter real-estate vocabulary/locality/Tamil alias set; real pilot queries must drive expansion.
+  - P7 stores original poster image Blobs in local IndexedDB and only an opaque imageRef in the structured domain store to avoid localStorage quota failure.
+  - P7 Android camera capture uses an external camera intent plus app-private FileProvider cache URI; no CAMERA permission or Internet permission is requested.
+  - P7 location capture is optional ACCESS_COARSE_LOCATION requested through the WebView only when the Property Advisor taps the one-shot location action; no fine or continuous location tracking exists.
+  - P7 OCR integration is a replaceable local adapter; a specific production OCR model/runtime is not yet bundled and must be selected/benchmarked before pilot/release.
 
 last_checks:
-  - check: P5 merge
+  - check: P6 merge
     result: pass
-    evidence: PR #6 merged to main as bbbc11b37d6840f32e4bd2d29c82cde8e42a4d77 after final exact-head Quality Gates run 32504827723 (#129) succeeded and explicit user authorization was given.
-  - check: P6 initial PR CI
+    evidence: PR #7 merged to main as 121ebd04f0df0c68dceb873a9bad6ff9e0ba10f6 after final exact-head Quality Gates #173 (32511847758) succeeded and explicit user authorization was given.
+  - check: P7 initial CI
     result: fail_then_fixed
-    evidence: Quality Gates #137 (32505282381) failed JS unit search because parsed currency unit lakh leaked into residual text terms; currency units were removed from free-text terms.
-  - check: P6 microphone/privacy repair CI
+    evidence: Quality Gates #181 (32512278788) failed JS poster locality parsing because generic location parsing was greedy and matched the at substring inside Coimbatore; known supported places now win before bounded generic parsing.
+  - check: P7 dynamic-route CI
     result: fail_then_fixed
-    evidence: Quality Gates #143 (32505508097) exposed dead bottom-nav bindings after the dynamic Ask screen replaced the shell DOM; P6 now rebinds shell route controls while retaining route-exit microphone cleanup.
-  - check: P6 repaired baseline CI
+    evidence: Quality Gates #183 (32512352531) passed JS/Android but Playwright exposed an inherited static-route assumption for poster-lead; navigation now creates a synthetic persisted lead and opens its ID-driven detail route.
+  - check: P7 functional baseline CI
     result: pass
-    evidence: Quality Gates #145 (32505697792) completed successfully for 35396c340985acb80170bdeea0dbfca0257bbf44 with all required jobs green.
-  - check: P6 reviewer repairs
-    result: pass
-    evidence: Fixed property-filter relevance leakage, phone-number lookup, starter Tamil-script query normalization, duplicate event binding, and phone entity-cue filtering with regression tests through c98445da3dbcfa802d77a93be4b0b75918252579.
-  - check: P6 post-review CI
-    result: pass
-    evidence: Quality Gates #153 (32506163608) completed successfully for c98445da3dbcfa802d77a93be4b0b75918252579; Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
-  - check: P6 final exact-head pre-late-review CI
-    result: pass
-    evidence: Quality Gates #157 (32506521431) completed successfully for be46b2b68c01f02c93a3dee4fa2151fa47b0a2e0 with every required job green.
-  - check: P6 late code review
+    evidence: Quality Gates #185 (32512628085) completed successfully for a79660c712d816090e5f22b27eface3f63ee693a with required jobs green.
+  - check: P7 reviewer findings
     result: fail_then_fixed
-    evidence: Final reviewer found explicit people queries such as buyers looking for land in Erode ignored linked requirements/owned-property filters. Repair added structured role-aware filtering, buy-to-sale inventory semantics, plural role cues and role-only lookup regression coverage. Intermediate Quality Gates #165 (32511282598) correctly failed new unit tests on plural grammar cues; those normalization defects were fixed rather than rerun blindly.
-  - check: P6 late-review repair CI
+    evidence: Reviewer found Android WebView lacked a real file chooser for camera/gallery input and image bytes were being stored as base64 in the localStorage domain record. Added secure FileProvider chooser/geolocation bridges and moved image Blobs to IndexedDB with opaque domain references.
+  - check: P7 AndroidX repair CI
+    result: fail_then_fixed
+    evidence: Quality Gates #203 (32513053683) passed JS/Playwright but Android failed because the new AndroidX FileProvider dependency required android.useAndroidX=true; the project property was added.
+  - check: P7 reviewer-repair CI
     result: pass
-    evidence: Quality Gates #167 (32511450726) completed successfully for 5919b67dd983940552ccfc42350697b18e681061; Detect, Harness, JS/unit/lint/type, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
+    evidence: Quality Gates #205 (32513202844) completed successfully after AndroidX repair with Harness, JS/unit/lint/type, Playwright, Android tests/build/APK upload and required summary green.
+  - check: P7 final integrity/QA repair
+    result: pass
+    evidence: Added Poster Lead to follow-up reference validation/delete protection and explicit GPS-denial E2E coverage; Quality Gates #211 (32513594778) completed successfully for 995b755ceb0cab8a571b0001364241846e8780e7 with every required job green.
   - check: code reviewer
     result: pass
-    evidence: Final repaired query interpretation/search, linked requirement/property filtering, intent semantics, escaping, route binding, microphone lifecycle and event ownership reviewed; no Critical/High finding remains.
+    evidence: No Critical/High finding remains across extraction, storage, reference integrity, Android chooser/FileProvider/geolocation, error handling and privacy/resource ownership.
   - check: QA reviewer
     result: pass
-    evidence: P6 acceptance plus role/filter relevance regressions, native-language starter coverage, typed/voice parity, failure paths, desktop/mobile E2E and Android packaging are covered; no Critical/High finding remains.
+    evidence: P7 acceptance/failure paths are covered across deterministic unit tests, desktop/mobile Playwright, Android host contract tests, Android build/tests and APK artifact generation.
   - check: product guardrail reviewer
     result: pass
-    evidence: Local-first Ask, operational cards, linked business-memory filtering, typed/voice parity and starter Tamil/Tanglish support preserve the core product loop without cloud/chat-only/CRM drift.
-  - check: P6 late-review handoff
-    result: pass
-    evidence: docs/handoff/HANDOFF_LOG.md now records the blocking late-review relevance finding, repair semantics, Quality Gates #165 failure diagnosis, Quality Gates #167 success, and all three reviewer passes.
+    evidence: P7 remains local/private, phone-first, reviewable, action-oriented and model-optional with no cloud OCR, continuous location, broad permissions or CRM/marketplace expansion.
 
 next_actions:
-  - Wait for Quality Gates on the exact final PR HEAD created by the completed state/handoff documentation commits and inspect every required job.
-  - If terminal success, PR #7 is merge-ready; do not merge without explicit merge authorization.
-  - After authorized P6 merge, confirm main and begin P7 Poster capture and OCR lead flow on a fresh focused branch/PR.
+  - Append P7 completion and reviewer-repair evidence to docs/handoff/HANDOFF_LOG.md.
+  - Wait for Quality Gates on the exact final PR HEAD created by state/handoff documentation commits and inspect every required job.
+  - If terminal success, PR #8 is merge-ready; do not merge without explicit merge authorization.
+  - After authorized P7 merge, confirm main and begin P8 After-call recap, follow-ups and communication actions on a fresh focused branch/PR.
