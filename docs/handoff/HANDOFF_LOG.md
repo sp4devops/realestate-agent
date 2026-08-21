@@ -2,6 +2,48 @@
 
 Append-only session history. New entries go at the top beneath this introduction or at the end; do not rewrite historical facts.
 
+## 2026-08-21 23:59 IST — P7 Poster capture and OCR lead flow complete
+
+**Branch:** `ai/p7-poster-ocr-lead-flow`
+
+**PR:** #8 — P7: Poster capture and OCR lead flow
+
+**Implementation evidence:**
+
+- Replaced poster placeholders with a real camera/gallery → local OCR/typed fallback → review → save workflow.
+- Added deterministic phone-first extraction and bounded locality parsing, with editable phone, poster location and recognized text before save.
+- Kept `Poster says location` separate from optional `Photo taken at` capture coordinates. GPS uses a one-shot request only and saving remains available when location is absent or denied.
+- Added replaceable local OCR adapter with explicit recoverable typed fallback when the OCR engine is missing or fails.
+- Preserved original poster image bytes privately in local IndexedDB and stores only a small opaque `imageRef` in the structured domain store, avoiding multi-megabyte base64 payloads in localStorage.
+- Added Poster Lead persistence plus automatic local follow-up creation. Follow-up `posterLeadId` now has repository-level reference validation and Poster Leads cannot be deleted while referenced.
+- Added Android WebView camera/gallery support through `onShowFileChooser`, an external camera intent and app-private FileProvider cache URI; no CAMERA or Internet permission was added.
+- Added optional Android coarse-location WebView permission bridge with retain=false; no fine or continuous location tracking exists.
+
+**CI/failure loop:**
+
+- Quality Gates #181 (`32512278788`) failed JS poster locality parsing because generic parsing greedily included trailing words and matched `at` inside `Coimbatore`; known supported places now win before bounded generic extraction.
+- Quality Gates #183 (`32512352531`) passed JS/Android but exposed an inherited Playwright assumption that `poster-lead` was static; navigation now creates a synthetic persisted lead and tests the ID-driven route.
+- Quality Gates #185 (`32512628085`) completed successfully for the repaired browser/domain baseline.
+- Reviewer pass found two blocking real-device/reliability gaps: Android WebView lacked a file chooser for `<input type=file>`, and selected image bytes were stored as base64 inside the localStorage-backed domain record. Both were repaired with native Android chooser/FileProvider support and a local IndexedDB image-asset store.
+- Quality Gates #203 (`32513053683`) passed JS/Playwright but Android caught the new AndroidX FileProvider dependency without `android.useAndroidX=true`; the project setting was added rather than bypassing the dependency.
+- Quality Gates #205 (`32513202844`) then completed successfully with Harness, JS/unit/lint/type, Playwright, Android tests/build/APK upload and required summary green.
+- Final reviewer pass found a Poster Lead → Follow-up integrity gap and requested explicit GPS-denial QA coverage. Added reference validation/delete protection plus a denied-permission E2E regression.
+- Final functional/reviewer-repair Quality Gates #211 (`32513594778`) completed successfully for `995b755ceb0cab8a571b0001364241846e8780e7`; every required job passed.
+
+**Reviewer gates after final repair:**
+
+- Senior Code Reviewer: PASS — phone/locality extraction, OCR fallback, IndexedDB image persistence, rollback/error handling, Poster Lead/follow-up integrity, Android FileProvider chooser, coarse one-shot geolocation and cleanup reviewed; no Critical/High finding remains.
+- Senior QA Reviewer: PASS — image and text flows, phone-first extraction, editable review, OCR unavailable, GPS allowed/denied/absent, dynamic poster-lead navigation, follow-up persistence/reference protection, desktop/mobile Playwright and Android packaging covered.
+- Product/UX Guardrail Reviewer: PASS — poster capture remains local/private, review-before-save, phone-first and action-oriented; no cloud OCR/search, continuous tracking, broad permissions, CRM expansion or marketplace behavior was introduced.
+
+**Nonblocking constraint:** P7 defines and tests the replaceable local OCR adapter and deterministic fallback contract, but a specific production OCR model/runtime is not yet bundled or benchmarked. That remains a pre-pilot/release task alongside target-device performance work.
+
+**State:** P7 acceptance is complete on functional/reviewer-repair HEAD `995b755ceb0cab8a571b0001364241846e8780e7`. State/handoff documentation now moves PR HEAD, so one final exact-HEAD Quality Gates run is mandatory before merge.
+
+**Merge rule:** PR #8 must not be merged without explicit user authorization.
+
+**Next after authorized merge:** verify `main`, then begin P8 — After-call recap, follow-ups and communication actions — on a fresh focused branch/PR.
+
 ## 2026-08-21 23:36 IST — P6 late reviewer repair complete
 
 **Branch:** `ai/p6-ask-search-results`
