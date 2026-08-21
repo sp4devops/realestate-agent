@@ -16,6 +16,7 @@ REQUIRED_FILES = [
     "docs/engineering/AGENT_EXECUTION_LOOP.md",
     "docs/qa/QUALITY_GATES.md",
     "docs/handoff/HANDOFF_LOG.md",
+    "scripts/ci_wait.sh",
 ]
 
 REQUIRED_AGENT_TERMS = [
@@ -50,7 +51,6 @@ def fail(message: str, errors: list[str]) -> None:
 
 
 def normalize(text: str) -> str:
-    """Normalize Markdown/punctuation so semantic checks are not formatting brittle."""
     text = text.lower()
     text = re.sub(r"[^a-z0-9]+", " ", text)
     return re.sub(r"\s+", " ", text).strip()
@@ -113,8 +113,13 @@ def main() -> int:
         if not contains_normalized(loop_doc, required):
             fail(f"agent execution loop missing concept: {required}", errors)
 
+    ci_wait = (ROOT / "scripts/ci_wait.sh").read_text(encoding="utf-8")
+    for required in ["gh run watch", "exit-status", "log-failed", "do not advance"]:
+        if not contains_normalized(ci_wait, required):
+            fail(f"CI watcher missing blocking/failure behavior: {required}", errors)
+
     forbidden_placeholders = ["TODO: define core product", "TBD product scope", "lorem ipsum"]
-    joined = "\n".join([agents, guardrails, state, phases, qa, loop_doc])
+    joined = "\n".join([agents, guardrails, state, phases, qa, loop_doc, ci_wait])
     for placeholder in forbidden_placeholders:
         if contains_normalized(joined, placeholder):
             fail(f"unresolved harness placeholder found: {placeholder}", errors)
@@ -126,7 +131,7 @@ def main() -> int:
         return 1
 
     print("Property Assistant harness check: PASS")
-    print(f"Validated {len(REQUIRED_FILES)} required files, state contract, phases, CI loop, and QA guardrails.")
+    print(f"Validated {len(REQUIRED_FILES)} required files, state contract, phases, blocking CI loop, and QA guardrails.")
     return 0
 
 
