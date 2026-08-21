@@ -1,9 +1,14 @@
 const STORAGE_KEYS = { display: 'pa.displayLanguage', input: 'pa.inputLanguage' };
 const app = document.getElementById('app');
 const repository = window.PropertyAssistantPersistence.createRepository(localStorage);
-repository.migrateAndPersist();
-repository.seedSynthetic();
+let bootError = null;
+try {
+  repository.migrateAndPersist();
+} catch (error) {
+  bootError = error instanceof Error ? error.message : 'Local data could not be opened safely.';
+}
 window.__PA_REPOSITORY__ = repository;
+window.__PA_BOOT_ERROR__ = bootError;
 
 const displayLanguages = {
   en: { label:'English', nav:{home:'Home',ask:'Ask',matches:'Matches',people:'People',more:'More'}, actions:{speak:'Speak & Save',type:'Type & Save',scan:'Scan Poster'}, today:"Today's opportunities", subtitle:'Capture quickly. Remember clearly. Match automatically.' },
@@ -77,8 +82,8 @@ function renderPeople(){
 }
 
 function renderPerson(){
-  const id=routeParams().get('id') || 'person-suresh';
-  const person=repository.get('people', id);
+  const id=routeParams().get('id') || '';
+  const person=id ? repository.get('people', id) : null;
   if(!person) return shell(`<section class="page"><h1>Person not found</h1><p class="lead">This local record no longer exists.</p>${button('Back to People','people')}</section>`, 'people');
   const alternates=(person.alternatePhones || []).map(phone=>`<li>${escapeHtml(phone)}</li>`).join('') || '<li>None</li>';
   const property=repository.list('properties').find(item=>item.ownerPersonId===person.id);
@@ -86,8 +91,8 @@ function renderPerson(){
 }
 
 function renderProperty(){
-  const id=routeParams().get('id') || 'property-murugan';
-  const property=repository.get('properties', id);
+  const id=routeParams().get('id') || '';
+  const property=id ? repository.get('properties', id) : null;
   if(!property) return shell(`<section class="page"><h1>Property not found</h1><p class="lead">This local record no longer exists.</p>${button('Back to Home','home')}</section>`, '');
   const size=property.size ? ` · ${escapeHtml(property.size.value)} ${escapeHtml(property.size.unit)}` : '';
   return shell(`<section class="page"><p class="eyebrow">LOCAL MEMORY</p><h1 data-testid="property-title">${escapeHtml(property.propertyType)} in ${escapeHtml(property.locality)}</h1><p class="lead">${escapeHtml(property.intent)}${size} · ${property.price == null ? 'Price not set' : `₹${Number(property.price).toLocaleString('en-IN')}`}</p><div class="placeholder-card"><strong>Stored locally</strong><p>This structured property record is independent of display language and AI availability.</p></div><div class="page-actions">${button('View Matches','matches')}</div></section>`, '');
@@ -113,9 +118,25 @@ function renderGeneric(id){
   return shell(content, primaryNav.some(([nav])=>nav===id)?id:'');
 }
 
+function renderRecovery(){
+  const message=escapeHtml(bootError || 'Local data could not be opened safely.');
+  return shell(`<section class="page"><p class="eyebrow">RECOVERY REQUIRED</p><h1>Local memory needs recovery</h1><p class="lead">Property Assistant stopped before changing your stored business data.</p><div class="placeholder-card"><strong>What happened</strong><p data-testid="boot-error">${message}</p><p>Restore a known-good encrypted backup from Settings. Do not clear app data unless you have already secured a backup.</p></div><div class="page-actions">${button('Open Settings & Backup','settings','button primary')}</div></section>`,'settings');
+}
+
 function render(){
   const id=route();
-  app.innerHTML = id==='home' ? renderHome() : id==='language' ? renderLanguage() : id==='people' ? renderPeople() : id==='person' ? renderPerson() : id==='property' ? renderProperty() : renderGeneric(id);
+  if(bootError && id!=='settings') {
+    app.innerHTML=renderRecovery();
+    bind();
+    return;
+  }
+  try {
+    app.innerHTML = id==='home' ? renderHome() : id==='language' ? renderLanguage() : id==='people' ? renderPeople() : id==='person' ? renderPerson() : id==='property' ? renderProperty() : renderGeneric(id);
+  } catch (error) {
+    bootError = error instanceof Error ? error.message : 'Local data could not be opened safely.';
+    window.__PA_BOOT_ERROR__ = bootError;
+    app.innerHTML=renderRecovery();
+  }
   document.documentElement.lang = getDisplayLanguage()==='ta'?'ta':'en';
   bind();
 }
