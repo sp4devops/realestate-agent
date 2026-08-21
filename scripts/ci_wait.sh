@@ -12,34 +12,39 @@ DISCOVERY_SLEEP_SECONDS="${CI_DISCOVERY_SLEEP_SECONDS:-10}"
 
 echo "CI gate: repository=$REPO commit=$SHA"
 
-discover_run() {
+discover_run_id() {
   gh run list \
     --repo "$REPO" \
     --commit "$SHA" \
     --limit 20 \
-    --json databaseId,status,conclusion,event,workflowName,headSha,createdAt \
-    --jq 'sort_by(.createdAt) | reverse | .[0] // empty'
+    --json databaseId,createdAt \
+    --jq 'sort_by(.createdAt) | reverse | .[0].databaseId // empty'
 }
 
-RUN_JSON=""
+RUN_ID=""
 for ((i=1; i<=MAX_DISCOVERY_ATTEMPTS; i++)); do
-  RUN_JSON="$(discover_run)"
-  if [[ -n "$RUN_JSON" ]]; then
+  RUN_ID="$(discover_run_id)"
+  if [[ -n "$RUN_ID" ]]; then
     break
   fi
   echo "CI gate: no run discovered yet for $SHA ($i/$MAX_DISCOVERY_ATTEMPTS)"
   sleep "$DISCOVERY_SLEEP_SECONDS"
 done
 
-if [[ -z "$RUN_JSON" ]]; then
+if [[ -z "$RUN_ID" ]]; then
   echo "CI gate: ERROR — no GitHub Actions run found for current commit $SHA" >&2
   echo "Do not advance the task or phase. Check workflow triggers/actions permissions." >&2
   exit 2
 fi
 
-RUN_ID="$(jq -r '.databaseId' <<<"$RUN_JSON")"
-WORKFLOW="$(jq -r '.workflowName' <<<"$RUN_JSON")"
-EVENT="$(jq -r '.event' <<<"$RUN_JSON")"
+WORKFLOW="$(gh run view "$RUN_ID" --repo "$REPO" --json workflowName --jq .workflowName)"
+EVENT="$(gh run view "$RUN_ID" --repo "$REPO" --json event --jq .event)"
+HEAD_SHA="$(gh run view "$RUN_ID" --repo "$REPO" --json headSha --jq .headSha)"
+
+if [[ "$HEAD_SHA" != "$SHA" ]]; then
+  echo "CI gate: ERROR — discovered run belongs to $HEAD_SHA, expected $SHA" >&2
+  exit 4
+fi
 
 echo "CI gate: watching run=$RUN_ID workflow=$WORKFLOW event=$EVENT"
 
