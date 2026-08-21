@@ -12,9 +12,13 @@
   function field(label,name,value,type='text'){
     return `<label class="capture-field"><span>${label}</span><input data-testid="field-${name}" name="${name}" type="${type}" value="${esc(value)}" /></label>`;
   }
+  function sizeFields(size){
+    if(!size) return '';
+    return `<div class="field-row">${field('Size','sizeValue',size.value,'number')}${field('Unit','sizeUnit',size.unit)}</div>`;
+  }
 
   function renderType(){
-    app.innerHTML = shell(`<section class="page"><p class="eyebrow">TYPE & SAVE</p><h1>Type & Save</h1><p class="lead">Tell Property Assistant naturally about one buyer, tenant, owner, or property. Parsing works locally without a model.</p><label class="capture-field"><span>Business note</span><textarea data-testid="capture-text" rows="7" placeholder="Example: Arun wants land in Erode, budget 25 lakh, phone 98765 43210"></textarea></label><div class="page-actions"><button type="button" class="button primary" data-testid="analyze-capture">Review details</button><button type="button" class="button" data-route="home">Cancel</button></div><p class="capture-error" data-testid="capture-error" hidden></p></section>`, '');
+    app.innerHTML = shell(`<section class="page"><p class="eyebrow">TYPE & SAVE</p><h1>Type & Save</h1><p class="lead">Tell Property Assistant naturally about one buyer, tenant, owner, or property. Parsing works locally without a model.</p><label class="capture-field"><span>Business note</span><textarea data-testid="capture-text" rows="7" placeholder="Example: Arun wants 5 acre land in Perundurai, budget 25 lakh, phone 98765 43210"></textarea></label><div class="page-actions"><button type="button" class="button primary" data-testid="analyze-capture">Review details</button><button type="button" class="button" data-route="home">Cancel</button></div><p class="capture-error" data-testid="capture-error" hidden></p></section>`, '');
     bindRouteButtons();
     document.querySelector('[data-testid="analyze-capture"]').addEventListener('click',async()=>{
       const button=document.querySelector('[data-testid="analyze-capture"]');
@@ -33,9 +37,9 @@
     const labels=parsed.uncertain.map(key=>uncertaintyLabels[key] || key);
     const uncertain = labels.length ? `<div class="placeholder-card"><strong>Please check these details</strong><p data-testid="uncertain-fields">${esc(labels.join(', '))}</p></div>` : `<div class="placeholder-card"><strong>Looks complete</strong><p>No low-confidence fields were detected by the local rules.</p></div>`;
     if(parsed.kind==='property'){
-      return `${uncertain}<form data-testid="review-form">${field('Owner name','name',parsed.person?.name || '')}${field('Primary phone','primaryPhone',parsed.person?.primaryPhone || '')}${field('Property type','propertyType',parsed.property.propertyType)}${field('Locality','locality',parsed.property.locality)}${field('Intent','intent',parsed.property.intent)}${field('Price','price',money(parsed.property.price),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save property</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
+      return `${uncertain}<form data-testid="review-form">${field('Owner name','name',parsed.person?.name || '')}${field('Primary phone','primaryPhone',parsed.person?.primaryPhone || '')}${field('Property type','propertyType',parsed.property.propertyType)}${sizeFields(parsed.property.size)}${field('Locality','locality',parsed.property.locality)}${field('Intent','intent',parsed.property.intent)}${field('Price','price',money(parsed.property.price),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save property</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
     }
-    return `${uncertain}<form data-testid="review-form">${field('Name','name',parsed.person.name)}${field('Primary phone','primaryPhone',parsed.person.primaryPhone)}${field('Property type','propertyType',parsed.requirement.propertyType)}${field('Locality','locality',parsed.requirement.locations[0] || '')}${field('Intent','intent',parsed.requirement.intent)}${field('Budget up to','budgetMax',money(parsed.requirement.budgetMax),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save buyer</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
+    return `${uncertain}<form data-testid="review-form">${field('Name','name',parsed.person.name)}${field('Primary phone','primaryPhone',parsed.person.primaryPhone)}${field('Property type','propertyType',parsed.requirement.propertyType)}${sizeFields(parsed.requirement.size)}${field('Locality','locality',parsed.requirement.locations[0] || '')}${field('Intent','intent',parsed.requirement.intent)}${field('Budget up to','budgetMax',money(parsed.requirement.budgetMax),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save buyer</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
   }
 
   function renderReview(){
@@ -54,11 +58,17 @@
     });
   }
 
+  function sizeFromForm(form){
+    const value=numberOrNull(form.get('sizeValue'));
+    const unit=String(form.get('sizeUnit') || '').trim();
+    return value == null || !unit ? null : { value, unit };
+  }
+
   function saveRequirement(form){
     const repo=window.__PA_REPOSITORY__;
     const person=repo.create('people',{ name:String(form.get('name')||'').trim(), role:'buyer', primaryPhone:String(form.get('primaryPhone')||'').trim(), alternatePhones:[] });
     try {
-      repo.create('requirements',{ personId:person.id, intent:String(form.get('intent')||'buy'), propertyType:String(form.get('propertyType')||'').trim(), locations:[String(form.get('locality')||'').trim()].filter(Boolean), budgetMin:null, budgetMax:numberOrNull(form.get('budgetMax')) });
+      repo.create('requirements',{ personId:person.id, intent:String(form.get('intent')||'buy'), propertyType:String(form.get('propertyType')||'').trim(), locations:[String(form.get('locality')||'').trim()].filter(Boolean), budgetMin:null, budgetMax:numberOrNull(form.get('budgetMax')), size:sizeFromForm(form) });
     } catch(error) {
       repo.remove('people', person.id);
       throw error;
@@ -72,9 +82,9 @@
     const ownerName=String(form.get('name')||'').trim();
     const ownerPhone=String(form.get('primaryPhone')||'').trim();
     let owner=null;
-    if(ownerName || ownerPhone) owner=repo.create('people',{ name:ownerName, role:'owner', primaryPhone:ownerPhone, alternatePhones:[] });
+    if(ownerName && ownerPhone) owner=repo.create('people',{ name:ownerName, role:'owner', primaryPhone:ownerPhone, alternatePhones:[] });
     try {
-      const property=repo.create('properties',{ ownerPersonId:owner?.id || null, intent:String(form.get('intent')||'sale'), propertyType:String(form.get('propertyType')||'').trim(), locality:String(form.get('locality')||'').trim(), price:numberOrNull(form.get('price')) });
+      const property=repo.create('properties',{ ownerPersonId:owner?.id || null, intent:String(form.get('intent')||'sale'), propertyType:String(form.get('propertyType')||'').trim(), locality:String(form.get('locality')||'').trim(), price:numberOrNull(form.get('price')), size:sizeFromForm(form) });
       sessionStorage.removeItem(DRAFT_KEY);
       location.hash=`#/property?id=${encodeURIComponent(property.id)}`;
     } catch(error) {
