@@ -41,6 +41,18 @@ test('local OCR adapter preserves original image outside domain storage and keep
  expect(result.image).toEqual({size:10,type:'image/png',name:'poster.png'});
 });
 
+test('GPS permission denial is recoverable and saving remains available',async({page,context})=>{
+ await context.clearPermissions();
+ await page.goto('/#/poster');
+ await page.getByTestId('poster-text').fill('Plot in Erode. Contact 9345678901');
+ await page.getByTestId('use-poster-text').click();
+ await page.getByTestId('get-capture-location').click();
+ await expect(page.getByTestId('poster-review-status')).toContainText('Location permission was not available');
+ await expect(page.getByTestId('save-poster-lead')).toBeEnabled();
+ await page.getByTestId('save-poster-lead').click();
+ await expect(page.getByRole('heading',{name:'Poster lead'})).toBeVisible();
+});
+
 test('OCR unavailable is a recoverable user-facing state',async({page})=>{
  await page.goto('/#/poster');
  await page.getByTestId('poster-image').setInputFiles({name:'poster.png',mimeType:'image/png',buffer:Buffer.from('fake-image')});
