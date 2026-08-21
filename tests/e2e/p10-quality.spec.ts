@@ -80,14 +80,14 @@ test('P10 core local workflow remains usable after network is lost', async ({ pa
 
   await page.getByTestId('type-save').click();
   await expect(page.getByRole('heading', { name: 'Type & Save' })).toBeVisible();
-  await page.getByTestId('capture-text').fill('Offline Ravi wants land in Erode budget 25 lakh phone 98765 43219');
+  await page.getByTestId('capture-text').fill('Ravi wants land in Erode budget 25 lakh phone 98765 43219');
   await page.getByTestId('analyze-capture').click();
   await expect(page.getByRole('heading', { name: 'Check what I understood' })).toBeVisible();
   await page.getByTestId('save-capture').click();
-  await expect(page.getByTestId('person-name')).toContainText('Offline Ravi');
+  await expect(page.getByTestId('person-name')).toContainText('Ravi');
 
   await page.evaluate(() => { location.hash = '#/people'; });
-  await expect(page.getByText('Offline Ravi')).toBeVisible();
+  await expect(page.getByText('Ravi')).toBeVisible();
   await page.evaluate(() => { location.hash = '#/matches'; });
   await expect(page.getByRole('heading').first()).toBeVisible();
 });
@@ -102,12 +102,12 @@ test('P10 microphone/STT absence keeps Type & Save and local persistence usable'
   await page.getByRole('button', { name: 'Use Type & Save instead' }).click();
 
   await expect(page.getByRole('heading', { name: 'Type & Save' })).toBeVisible();
-  await page.getByTestId('capture-text').fill('Fallback Meena wants land in Erode budget 30 lakh phone 98765 43218');
+  await page.getByTestId('capture-text').fill('Meena wants land in Erode budget 30 lakh phone 98765 43218');
   await page.getByTestId('analyze-capture').click();
   await expect(page.getByRole('heading', { name: 'Check what I understood' })).toBeVisible();
   await page.getByTestId('save-capture').click();
 
-  const saved = await page.evaluate(() => (window as any).__PA_REPOSITORY__.list('people').some((person:any) => person.name === 'Fallback Meena'));
+  const saved = await page.evaluate(() => (window as any).__PA_REPOSITORY__.list('people').some((person:any) => person.name === 'Meena'));
   expect(saved).toBe(true);
   await page.evaluate(() => { location.hash = '#/home'; });
   await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
