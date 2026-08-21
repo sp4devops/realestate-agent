@@ -48,6 +48,14 @@ jobs:
           chmod +x gradlew
           ./gradlew clean :app:assembleRelease --stacktrace
           test -f android/app/build/outputs/apk/release/app-release.apk
+      - name: Verify Android release candidate
+        shell: bash
+        run: |
+          apk="android/app/build/outputs/apk/release/app-release.apk"
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+          test -x "$apksigner"
+          "$apksigner" verify --verbose "$apk"
+          unzip -l "$apk" | grep -q 'assets/index.html'
       - name: Build desktop release candidate
         run: python3 scripts/build_desktop_rc.py --out dist
       - name: Smoke desktop packaged candidate
