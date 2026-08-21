@@ -1,27 +1,41 @@
 schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
-status: in_progress
+status: ready_for_merge
 active_phase: P12
 active_phase_name: Property Advisor pilot readiness
-last_verified_commit: 53f51001c64d797b2bafa2235b32191ddac6b493
+last_verified_commit: 8ce6186c5e6de00b16a801b842b68721adb972ca
 last_updated: 2026-08-22T03:07:00+05:30
-active_pr: null
+active_pr: 13
 active_branch: ai/p12-pilot-readiness
 
 ci_gate:
-  status: pending
-  verified_head_sha: 53f51001c64d797b2bafa2235b32191ddac6b493
+  status: green
+  verified_head_sha: 8ce6186c5e6de00b16a801b842b68721adb972ca
   workflow_name: Quality Gates + Release Candidates
-  workflow_status: pending
-  workflow_conclusion: null
+  quality_workflow_run_id: 32529572915
+  quality_workflow_run_number: 302
+  release_workflow_run_id: 32529572919
+  release_workflow_run_number: 21
+  workflow_status: completed
+  workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
+  note: P12 functional/reviewer HEAD is green. State/handoff commits move PR HEAD, so one final exact-head dual-workflow run remains mandatory before merge.
 
 review_gates:
-  code_review: {status: pending, blocking_findings: 0}
-  qa_review: {status: pending, blocking_findings: 0}
-  product_guardrail_review: {status: pending, blocking_findings: 0}
+  code_review:
+    status: pass
+    blocking_findings: 0
+    note: P12 runtime change is limited to deterministic unit validation of the pilot kit and synthetic dataset. No production runtime, dependency, networking, storage or privacy behavior changed; no Critical/High finding remains.
+  qa_review:
+    status: pass
+    blocking_findings: 0
+    note: Pilot runbook covers capture, review, people, matches, search, follow-ups, language independence, encrypted backup, feedback, recovery and blocking stop conditions. Quality Gates #302 and Release Candidates #21 are terminal green.
+  product_guardrail_review:
+    status: pass
+    blocking_findings: 0
+    note: P12 uses Property Advisor terminology, preserves local-first/private-by-default and Capture-Understand-Remember-Match-Act, and adds no CRM/cloud/paid-service scope.
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -47,17 +61,17 @@ phases:
   P9: {name: Backup restore settings language and privacy hardening, status: done}
   P10: {name: Performance accessibility resilience and offline QA, status: done}
   P11: {name: Android APK and desktop release candidates, status: done}
-  P12: {name: Property Advisor pilot readiness, status: in_progress}
+  P12: {name: Property Advisor pilot readiness, status: done}
 
 current_tasks:
   - id: P12-T1
-    status: in_progress
+    status: done
     owner: ai-agent
     description: Build self-service pilot checklist, synthetic demo dataset, privacy/backup onboarding, feedback template, known-limitations sheet and rollback/recovery guidance.
   - id: P12-T2
-    status: pending
+    status: ready_for_merge
     owner: ai-agent
-    description: Verify pilot-kit tests, exact-head CI and mandatory reviewer gates with zero Critical/High findings.
+    description: Complete exact-head CI, mandatory reviewer gates and P12 handoff; merge PR #13 only after explicit user authorization.
   - id: P4-T3
     status: deferred
     owner: ai-agent
@@ -75,14 +89,23 @@ known_constraints:
   - CI Android RC uses an ephemeral signing key; production distribution requires a persistent protected signing key.
   - Desktop RC requires Python 3.9+ and uses a loopback-only system-browser launcher.
   - Production local STT/OCR runtimes and approximately 4 GB Android physical-device benchmarking remain broader-release constraints.
+  - P12 makes the approximately five-Property-Advisor pilot operationally runnable but cannot substitute for real pilot feedback.
 
 last_checks:
   - check: P11 merge
     result: pass
     evidence: PR #12 merged to main as 53f51001c64d797b2bafa2235b32191ddac6b493 after exact-head Quality Gates #291 and Release Candidates #10 succeeded and explicit user authorization was given.
+  - check: P12 Quality Gates
+    result: pass
+    evidence: Quality Gates #302 (32529572915) completed successfully for 8ce6186c5e6de00b16a801b842b68721adb972ca including pilot-kit unit validation, Playwright, Android, Harness and required summary.
+  - check: P12 Release Candidates
+    result: pass
+    evidence: Release Candidates #21 (32529572919) completed successfully for 8ce6186c5e6de00b16a801b842b68721adb972ca with signed Android and packaged desktop RC verification.
+  - check: mandatory reviews
+    result: pass
+    evidence: Code, QA and Product/UX guardrail reviews passed with zero Critical/High findings.
 
 next_actions:
-  - Open P12 PR from ai/p12-pilot-readiness to main.
-  - Run unit, Playwright, Android, Harness and release-candidate workflows on exact P12 HEAD.
-  - Complete code, QA and product guardrail review.
-  - Record P12 handoff and run final exact documentation-head CI before merge authorization.
+  - Run Quality Gates and Release Candidates on exact final P12 documentation HEAD.
+  - If both terminal success, PR #13 is merge-ready; do not merge without explicit user authorization.
+  - After merge, begin real approximately five-Property-Advisor pilot execution and capture structured feedback.
