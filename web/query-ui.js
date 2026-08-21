@@ -9,10 +9,13 @@ function cleanupVoice(){
  try{if(activeVoice.recorder?.state!=='inactive')activeVoice.recorder.stop();}catch(_){}
  activeVoice.stream?.getTracks().forEach(t=>t.stop()); activeVoice=null;
 }
+function bindResultActions(){
+ document.querySelectorAll('[data-query-open-kind]').forEach(b=>b.addEventListener('click',()=>{const map={person:'person',property:'property',match:'match'};location.hash=`#/${map[b.dataset.queryOpenKind]}?id=${encodeURIComponent(b.dataset.queryOpenId)}`;}));
+}
 function renderResults(results){
  const box=document.querySelector('[data-testid="query-results"]'); if(!box)return;
  box.innerHTML=results.length?results.map(r=>`<article class="card opportunity" data-testid="query-result-card"><div><strong>${esc(r.title)}</strong><p>${esc(r.subtitle)}</p></div><button class="button primary" type="button" data-query-open-kind="${r.kind}" data-query-open-id="${esc(r.id)}">Open</button></article>`).join(''):'<div class="placeholder-card">No local results found. Try a name, place, property type, or budget.</div>';
- bind();
+ bindResultActions();
 }
 function runQuery(text){
  const q=window.PropertyAssistantQuery.interpret(text); const results=window.PropertyAssistantQuery.search(repo.loadSnapshot(),q); renderResults(results);
@@ -43,7 +46,7 @@ function bind(){
  document.querySelector('[data-testid="run-query"]')?.addEventListener('click',()=>runQuery(document.querySelector('[data-testid="query-input"]').value));
  document.querySelector('[data-testid="query-input"]')?.addEventListener('keydown',e=>{if(e.key==='Enter')runQuery(e.currentTarget.value);});
  document.querySelector('[data-testid="start-query-voice"]')?.addEventListener('click',voiceQuery);
- document.querySelectorAll('[data-query-open-kind]').forEach(b=>b.addEventListener('click',()=>{const map={person:'person',property:'property',match:'match'};location.hash=`#/${map[b.dataset.queryOpenKind]}?id=${encodeURIComponent(b.dataset.queryOpenId)}`;}));
+ bindResultActions();
 }
 function owned(){if(route()==='ask')render();else cleanupVoice();}
 window.__PA_RUN_QUERY__=runQuery;
