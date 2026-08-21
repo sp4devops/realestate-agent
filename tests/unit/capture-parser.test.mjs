@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 await import('../../web/capture-parser.js');
-const { parse } = globalThis.PropertyAssistantCapture;
+const { parse, createExtractor } = globalThis.PropertyAssistantCapture;
 
 test('English buyer note extracts structured requirement', () => {
   const result = parse('Arun wants land in Erode, budget 25 lakh, phone 98765 43210');
@@ -41,4 +41,28 @@ test('missing details are surfaced as uncertainty instead of invented', () => {
 
 test('empty capture is rejected', () => {
   assert.equal(parse('   ').ok, false);
+});
+
+test('extractor accepts a valid replaceable model adapter result', async () => {
+  const candidate = {
+    ok:true,
+    source:'model candidate',
+    kind:'property',
+    confidence:0.9,
+    uncertain:[],
+    person:null,
+    requirement:null,
+    property:{ intent:'sale', propertyType:'house', locality:'Chennai', price:5000000, ownerPersonId:null }
+  };
+  const extractor = createExtractor({ extract: async () => candidate });
+  assert.deepEqual(await extractor.extract('ignored by valid adapter'), candidate);
+});
+
+test('extractor falls back to deterministic rules when adapter throws or is invalid', async () => {
+  const note = 'Arun wants land in Erode, budget 25 lakh, phone 98765 43210';
+  const throwing = createExtractor({ extract: async () => { throw new Error('model unavailable'); } });
+  assert.equal((await throwing.extract(note)).requirement.budgetMax, 2500000);
+
+  const invalid = createExtractor({ extract: async () => ({ ok:true, kind:'unknown', uncertain:[] }) });
+  assert.equal((await invalid.extract(note)).person.name, 'Arun');
 });
