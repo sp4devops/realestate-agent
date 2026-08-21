@@ -33,12 +33,13 @@ test('follow-up lifecycle only permits explicit transitions',()=>{
  assert.throws(()=>core.transition('done','cancel'),/cannot cancel/i);
 });
 
-test('pending after-call marker stores only number launched by the app',()=>{
+test('pending after-call marker stores only number launched by the app and expires when stale',()=>{
  const values=new Map();
  const storage={setItem:(k,v)=>values.set(k,v),getItem:k=>values.get(k)||null,removeItem:k=>values.delete(k)};
  core.markPendingAfterCall(storage,{phone:'+91 90000 00001',personId:'person-suresh'},()=> '2026-08-22T00:00:00.000Z');
- assert.deepEqual(core.readPendingAfterCall(storage),{phone:'9000000001',personId:'person-suresh',launchedAt:'2026-08-22T00:00:00.000Z'});
- core.clearPendingAfterCall(storage);assert.equal(core.readPendingAfterCall(storage),null);
+ assert.deepEqual(core.readPendingAfterCall(storage,()=>Date.parse('2026-08-22T01:00:00.000Z')),{phone:'9000000001',personId:'person-suresh',launchedAt:'2026-08-22T00:00:00.000Z'});
+ assert.equal(core.readPendingAfterCall(storage,()=>Date.parse('2026-08-22T03:00:00.000Z')),null);
+ assert.equal(storage.getItem(core.PENDING_KEY),null);
 });
 
 test('recent-number lookup is unavailable unless a platform adapter explicitly provides it',async()=>{
