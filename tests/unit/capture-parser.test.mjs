@@ -14,6 +14,19 @@ test('English buyer note extracts structured requirement', () => {
   assert.equal(result.requirement.budgetMax, 2500000);
 });
 
+test('short advisor note does not parse Perundurai as the Tanglish name marker', () => {
+  const result = parse('Tsk wants 5 acre in perundurai');
+  assert.equal(result.kind, 'requirement');
+  assert.equal(result.person.name, 'Tsk');
+  assert.equal(result.requirement.propertyType, 'land');
+  assert.deepEqual(result.requirement.locations, ['Perundurai']);
+  assert.deepEqual(result.requirement.size, { value:5, unit:'acre' });
+  assert.ok(result.uncertain.includes('primaryPhone'));
+  assert.ok(result.uncertain.includes('budgetMax'));
+  assert.ok(!result.uncertain.includes('locality'));
+  assert.ok(!result.uncertain.includes('propertyType'));
+});
+
 test('Tanglish buyer note works without a model', () => {
   const result = parse('Name is Ravi, Erode la land venum, budget 20 lakh, phone 91234 56789');
   assert.equal(result.kind, 'requirement');
