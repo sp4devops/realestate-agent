@@ -1,0 +1,103 @@
+schema_version: 1
+project: Property Assistant
+repository: sp4devops/realestate-agent
+status: bootstrap
+active_phase: P0
+active_phase_name: Harness and source-of-truth bootstrap
+last_verified_commit: UNCOMMITTED
+last_updated: 2026-08-21T18:43:00+05:30
+
+product_contract:
+  core_loop: [capture, understand, remember, match, act]
+  primary_user_term: Property Advisor
+  internal_legal_term: Real Estate Agent
+  platforms_now: [android, desktop]
+  platforms_later: [ios]
+  launch_languages: [Tamil, English, Tanglish]
+  local_first: true
+  model_optional_for_core_workflows: true
+  target_android_ram_gb: 4
+
+phases:
+  P0:
+    name: Harness and source-of-truth bootstrap
+    status: in_progress
+    acceptance:
+      - AGENTS.md defines session, testing, review, handoff, privacy, and Git rules
+      - machine-readable state exists
+      - delivery phases and quality gates exist
+      - CI validates harness integrity
+      - product guardrails are represented in-repo
+      - approved prototype is referenced as the visual acceptance contract
+  P1:
+    name: Application skeleton and navigation
+    status: pending
+  P2:
+    name: Local domain model and persistence
+    status: pending
+  P3:
+    name: Type capture and structured extraction
+    status: pending
+  P4:
+    name: Voice capture and multilingual understanding
+    status: pending
+  P5:
+    name: Matching and action brain
+    status: pending
+  P6:
+    name: Ask/search and operational result cards
+    status: pending
+  P7:
+    name: Poster capture and OCR lead flow
+    status: pending
+  P8:
+    name: After-call recap, follow-ups, communication actions
+    status: pending
+  P9:
+    name: Backup, restore, settings, language, privacy hardening
+    status: pending
+  P10:
+    name: Performance, accessibility, resilience and offline QA
+    status: pending
+  P11:
+    name: Android release candidate APK and desktop release candidate
+    status: pending
+  P12:
+    name: Broker pilot readiness
+    status: pending
+
+current_tasks:
+  - id: P0-T1
+    status: in_progress
+    owner: ai-agent
+    description: Install the repository AI harness and CI quality gates.
+  - id: P0-T2
+    status: pending
+    owner: ai-agent
+    description: Add exact approved product-charter and visual-prototype source artifacts to the repository when practical through the active repository interface.
+  - id: P0-T3
+    status: pending
+    owner: ai-agent
+    description: Run harness CI and close bootstrap findings before advancing to P1.
+
+blockers: []
+
+known_constraints:
+  - Cash build-cost target is zero until product validation/revenue threshold.
+  - No paid AI APIs or cloud dependency should be introduced merely for convenience.
+  - Normal Android apps must not assume unrestricted cellular-call audio capture/transcription.
+  - UI display language must remain independent from voice/input language.
+
+last_checks:
+  - check: repository access
+    result: pass
+    evidence: GitHub connector has admin/push access to private repository.
+  - check: repository baseline
+    result: pass
+    evidence: main contained only README.md and .gitignore before harness bootstrap.
+
+next_actions:
+  - Finish P0 harness files and workflow.
+  - Open a draft PR from ai/bootstrap-project-harness to main.
+  - Inspect workflow results and fix any harness failures.
+  - When P0 is green, mark P0 complete and begin P1 application skeleton.
