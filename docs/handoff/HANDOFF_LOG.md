@@ -2,6 +2,43 @@
 
 Append-only session history. New entries go at the top beneath this introduction or at the end; do not rewrite historical facts.
 
+## 2026-08-21 21:46 IST — P3 Type & Save extraction complete
+
+**Branch:** `ai/p3-type-capture-extraction`
+
+**PR:** #4 — P3: typed capture and structured extraction
+
+**Implementation evidence:**
+
+- Added deterministic local typed-note extraction for English, Tamil, and Tanglish patterns covering role/intent, phone, locality, property type, and money values without requiring a model or network.
+- Added a replaceable asynchronous extraction adapter boundary; invalid/unavailable model adapters fall back to deterministic rules.
+- Replaced the Type & Save placeholder with a real natural-language input → review → correction → local-save flow while preserving the canonical Type & Save screen title.
+- Surfaced uncertain fields with friendly labels instead of inventing values; Property Advisors can correct extracted fields before save.
+- Added buyer + requirement save and property save flows over the P2 repository, including rollback safety when downstream validation fails.
+- Preserved first-class owner contact data for property-supply captures: owner name/primary phone are reviewed, persisted as an owner person, and linked through `ownerPersonId`.
+- Voice/STT remains unimplemented and owned by P4; matching remains owned by P5.
+
+**CI/failure loop:**
+
+- Initial P3 Quality Gates run #68 (`32501008768`) failed Playwright because the first implementation changed the canonical Type & Save heading and inherited navigation tests incorrectly treated Review as a static route despite its draft prerequisite. JS/unit and Android were green.
+- Restored the canonical title and changed route coverage to exercise Type/Review as dynamic capture routes; Quality Gates run #72 (`32501210163`) completed successfully for `bd4e599c12b6a0879b8bc0ef74eb4a97c19d65d5`.
+- Reviewer pass found two blocking completion gaps: buyer + requirement persistence was not rollback-safe, and the P3 deliverable lacked the required replaceable model-adapter boundary. Both were repaired with regression coverage.
+- Post-review Quality Gates run #80 (`32501613536`) completed successfully for `0503423045be8466b964131bacfe1ceae3a6b22d`.
+- Final product review then found a first-class data-loss risk: typed property-supply notes containing owner name/phone discarded that contact. Owner extraction/review/linkage and tests were added through `77f026862a10b79c042681502054ee7a82995d9d`.
+- Quality Gates run #88 (`32501936498`) completed successfully for that final functional HEAD: Detect, Harness, JS/unit, Playwright E2E, Android tests/build/APK upload, and Required gate summary all succeeded.
+
+**Reviewer gates after repair:**
+
+- Senior Code Reviewer: PASS — atomicity, adapter-boundary, validation/fallback, and owner-contact findings closed; no remaining Critical/High correctness, architecture, security/privacy, or maintainability finding.
+- Senior QA Reviewer: PASS — multilingual fixtures, no-model/model-failure fallback, correction-before-save, invalid/empty input, rollback safety, buyer/property persistence, owner linkage, desktop/mobile E2E, and Android packaging covered; no remaining Critical/High finding.
+- Product/UX Guardrail Reviewer: PASS — Type & Save remains prominent and simple, uncertainty is human-readable, first-class phone data is preserved, local-first/model-optional behavior remains intact, and P4/P5 scope boundaries are respected.
+
+**State:** P3 acceptance is complete on functional/reviewer-repair HEAD `77f026862a10b79c042681502054ee7a82995d9d`. The state/handoff documentation commits move PR HEAD, therefore one final exact-HEAD Quality Gates run is mandatory before merge.
+
+**Merge rule:** PR #4 must not be merged without explicit user authorization.
+
+**Next after authorized merge:** verify `main`, then begin P4 — Voice capture and multilingual understanding — on a fresh focused branch/PR.
+
 ## 2026-08-21 20:51 IST — P2 local domain model and persistence complete
 
 **Branch:** `ai/p2-local-domain-persistence`
