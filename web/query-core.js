@@ -24,7 +24,7 @@ function interpret(input){
  const phoneMatch=lower.match(/\d[\d\s()+-]{3,}\d/); const phoneTerm=phoneMatch?phoneMatch[0].replace(/\D/g,''):null;
  const entity=/\b(?:owner|buyer|tenant|person|people|contact|phone|number)\b/i.test(lower)?'people':/\b(?:match|matches|suitable|fit)\b/i.test(lower)?'matches':/\b(?:property|properties|land|plot|site|house|home|flat|apartment|veedu|manai|nilam)\b/i.test(lower)?'properties':'all';
  const intent=/\b(?:rent|rental|vaadagai|vadagai)\b/i.test(lower)?'rent':/\b(?:buy|buyer|purchase|want|need)\b/i.test(lower)?'buy':/\b(?:sale|sell|selling)\b/i.test(lower)?'sale':null;
- const stop=new Set(['show','find','me','all','the','in','at','for','under','below','max','budget','is','up','to','properties','property','people','person','contact','contacts','matches','match','owner','buyer','buyers','land','plot','site','house','home','flat','apartment','buy','sale','sell','rent','rental','lakh','lakhs','lac','crore','cr','rs']);
+ const stop=new Set(['show','find','me','all','the','in','at','for','under','below','max','budget','is','up','to','properties','property','people','person','contact','contacts','phone','number','owner','tenant','matches','match','buyer','buyers','land','plot','site','house','home','flat','apartment','buy','sale','sell','rent','rental','lakh','lakhs','lac','crore','cr','rs']);
  const terms=lower.replace(/[^a-z0-9+\s]/g,' ').split(/\s+/).filter(x=>x.length>1&&!stop.has(x)&&!PLACES.some(p=>p.toLowerCase()===x)&&!/^\d/.test(x));
  return {raw,normalized,terms,phoneTerm,location,propertyType:pair?pair[0]:null,maxPrice:money(normalized),entity,intent};
 }
