@@ -1,5 +1,9 @@
 const STORAGE_KEYS = { display: 'pa.displayLanguage', input: 'pa.inputLanguage' };
 const app = document.getElementById('app');
+const repository = window.PropertyAssistantPersistence.createRepository(localStorage);
+repository.migrateAndPersist();
+repository.seedSynthetic();
+window.__PA_REPOSITORY__ = repository;
 
 const displayLanguages = {
   en: { label:'English', nav:{home:'Home',ask:'Ask',matches:'Matches',people:'People',more:'More'}, actions:{speak:'Speak & Save',type:'Type & Save',scan:'Scan Poster'}, today:"Today's opportunities", subtitle:'Capture quickly. Remember clearly. Match automatically.' },
@@ -40,9 +44,11 @@ const primaryNav = [
 const seed = Object.freeze({ id:'synthetic-shell-record', phone:'+91 90000 00000', intent:'buy', location:'Erode' });
 window.__PA_SEED__ = seed;
 
+function escapeHtml(value){ return String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char])); }
 function getDisplayLanguage(){ return localStorage.getItem(STORAGE_KEYS.display) || 'en'; }
 function getInputLanguage(){ return localStorage.getItem(STORAGE_KEYS.input) || 'auto'; }
 function route(){ return (location.hash.replace(/^#\/?/,'') || 'splash').split('?')[0]; }
+function routeParams(){ const query=location.hash.split('?')[1] || ''; return new URLSearchParams(query); }
 function go(id){ location.hash = `#/${id}`; }
 function t(){ return displayLanguages[getDisplayLanguage()] || displayLanguages.en; }
 
@@ -61,7 +67,29 @@ function shell(content, active){
 
 function renderHome(){
   const text=t();
-  return shell(`<section class="hero"><p class="eyebrow">PROPERTY ASSISTANT</p><h1>${text.today}</h1><p>${text.subtitle}</p><div class="capture-grid"><button class="capture voice" data-route="speak" data-testid="speak-save"><span class="capture-icon">●</span><strong>${text.actions.speak}</strong><small>Voice-first capture</small></button><button class="capture type" data-route="type" data-testid="type-save"><span class="capture-icon">Aa</span><strong>${text.actions.type}</strong><small>Quick natural-language note</small></button></div></section><section><div class="section-heading"><h2>Needs attention</h2><button data-route="followups" class="text-button">View all</button></div><div class="card opportunity"><span class="status-dot"></span><div><strong>No saved opportunities yet</strong><p>Your useful matches and follow-ups will appear here after local records exist.</p></div></div><div class="quick-actions">${button(text.actions.scan,'poster')}${button('After-call recap','after-call')}${button('Follow-ups','followups')}</div></section>`, 'home');
+  return shell(`<section class="hero"><p class="eyebrow">PROPERTY ASSISTANT</p><h1>${text.today}</h1><p>${text.subtitle}</p><div class="capture-grid"><button class="capture voice" data-route="speak" data-testid="speak-save"><span class="capture-icon">●</span><strong>${text.actions.speak}</strong><small>Voice-first capture</small></button><button class="capture type" data-route="type" data-testid="type-save"><span class="capture-icon">Aa</span><strong>${text.actions.type}</strong><small>Quick natural-language note</small></button></div></section><section><div class="section-heading"><h2>Needs attention</h2><button data-route="followups" class="text-button">View all</button></div><div class="card opportunity"><span class="status-dot"></span><div><strong>Local memory is ready</strong><p>Your saved people and properties stay on this device and remain available without a model.</p></div></div><div class="quick-actions">${button(text.actions.scan,'poster')}${button('After-call recap','after-call')}${button('Follow-ups','followups')}</div></section>`, 'home');
+}
+
+function renderPeople(){
+  const people=repository.list('people').sort((a,b)=>a.name.localeCompare(b.name));
+  const cards=people.map(person=>`<article class="card person-card" data-testid="person-card"><div><strong>${escapeHtml(person.name)}</strong><p>${escapeHtml(person.role.replaceAll('_',' '))} · ${escapeHtml(person.primaryPhone)}</p></div><button type="button" class="button" data-person-id="${escapeHtml(person.id)}">Open</button></article>`).join('');
+  return shell(`<section class="page"><p class="eyebrow">LOCAL MEMORY</p><h1>People</h1><p class="lead">People and their contact numbers are stored locally in language-neutral records.</p><div class="choice-list" data-testid="people-list">${cards || '<div class="placeholder-card">No people saved yet.</div>'}</div></section>`, 'people');
+}
+
+function renderPerson(){
+  const id=routeParams().get('id') || 'person-suresh';
+  const person=repository.get('people', id);
+  if(!person) return shell(`<section class="page"><h1>Person not found</h1><p class="lead">This local record no longer exists.</p>${button('Back to People','people')}</section>`, 'people');
+  const alternates=(person.alternatePhones || []).map(phone=>`<li>${escapeHtml(phone)}</li>`).join('') || '<li>None</li>';
+  const property=repository.list('properties').find(item=>item.ownerPersonId===person.id);
+  return shell(`<section class="page"><p class="eyebrow">LOCAL MEMORY</p><h1 data-testid="person-name">${escapeHtml(person.name)}</h1><p class="lead">${escapeHtml(person.role.replaceAll('_',' '))}</p><div class="placeholder-card"><strong>Primary phone</strong><p data-testid="primary-phone">${escapeHtml(person.primaryPhone)}</p><strong>Alternate phones</strong><ul>${alternates}</ul></div><div class="page-actions">${property ? `<button class="button primary" type="button" data-property-id="${escapeHtml(property.id)}">Open property</button>` : ''}${button('Back to People','people')}</div></section>`, 'people');
+}
+
+function renderProperty(){
+  const id=routeParams().get('id') || 'property-murugan';
+  const property=repository.get('properties', id);
+  if(!property) return shell(`<section class="page"><h1>Property not found</h1><p class="lead">This local record no longer exists.</p>${button('Back to Home','home')}</section>`, '');
+  return shell(`<section class="page"><p class="eyebrow">LOCAL MEMORY</p><h1 data-testid="property-title">${escapeHtml(property.propertyType)} in ${escapeHtml(property.locality)}</h1><p class="lead">${escapeHtml(property.intent)} · ${property.price == null ? 'Price not set' : `₹${Number(property.price).toLocaleString('en-IN')}`}</p><div class="placeholder-card"><strong>Stored locally</strong><p>This structured property record is independent of display language and AI availability.</p></div><div class="page-actions">${button('View Matches','matches')}</div></section>`, '');
 }
 
 function renderLanguage(){
@@ -73,21 +101,23 @@ function renderLanguage(){
 
 function renderGeneric(id){
   const [title,description]=routes[id] || ['Not found','This screen does not exist.'];
-  const actions={splash:button('Get started','onboarding','button primary'),onboarding:button('Continue to Home','home','button primary'),speak:button('Use Type & Save instead','type','button primary'),type:button('Review example','review','button primary'),review:button('Back to Home','home','button primary'),'after-call':button('Back to Home','home','button primary'),ask:button('Back to Home','home'),people:button('Open sample person','person'),person:button('Open related property','property'),property:button('View Matches','matches'),matches:button('Open match detail','match'),match:button('Follow up','followups'),poster:button('Review captured poster','poster-review','button primary'),'poster-review':button('Save poster lead','poster-lead','button primary'),'poster-lead':button('View Matches','matches'),followups:button('Back to Home','home'),settings:button('Language','language','button primary')}[id] || button('Back to Home','home');
-  const content=`<section class="page"><p class="eyebrow">PROPERTY ASSISTANT</p><h1 data-testid="screen-title">${title}</h1><p class="lead">${description}</p><div class="placeholder-card"><strong>P1 application shell</strong><p>This route is wired and intentionally contains no fake business logic. Its production workflow arrives in the phase that owns it.</p></div><div class="page-actions">${actions}</div></section>`;
+  const actions={splash:button('Get started','onboarding','button primary'),onboarding:button('Continue to Home','home','button primary'),speak:button('Use Type & Save instead','type','button primary'),type:button('Review example','review','button primary'),review:button('Back to Home','home','button primary'),'after-call':button('Back to Home','home','button primary'),ask:button('Back to Home','home'),matches:button('Open match detail','match'),match:button('Follow up','followups'),poster:button('Review captured poster','poster-review','button primary'),'poster-review':button('Save poster lead','poster-lead','button primary'),'poster-lead':button('View Matches','matches'),followups:button('Back to Home','home'),settings:button('Language','language','button primary')}[id] || button('Back to Home','home');
+  const content=`<section class="page"><p class="eyebrow">PROPERTY ASSISTANT</p><h1 data-testid="screen-title">${title}</h1><p class="lead">${description}</p><div class="placeholder-card"><strong>Phase-owned workflow</strong><p>This route is wired and intentionally avoids fake AI or matching behavior before its owning phase.</p></div><div class="page-actions">${actions}</div></section>`;
   if(id==='splash') return `<div class="splash">${content}</div>`;
   return shell(content, primaryNav.some(([nav])=>nav===id)?id:'');
 }
 
 function render(){
   const id=route();
-  app.innerHTML = id==='home' ? renderHome() : id==='language' ? renderLanguage() : renderGeneric(id);
+  app.innerHTML = id==='home' ? renderHome() : id==='language' ? renderLanguage() : id==='people' ? renderPeople() : id==='person' ? renderPerson() : id==='property' ? renderProperty() : renderGeneric(id);
   document.documentElement.lang = getDisplayLanguage()==='ta'?'ta':'en';
   bind();
 }
 
 function bind(){
   document.querySelectorAll('[data-route]').forEach(el=>el.addEventListener('click',()=>go(el.dataset.route)));
+  document.querySelectorAll('[data-person-id]').forEach(el=>el.addEventListener('click',()=>{ location.hash=`#/person?id=${encodeURIComponent(el.dataset.personId)}`; }));
+  document.querySelectorAll('[data-property-id]').forEach(el=>el.addEventListener('click',()=>{ location.hash=`#/property?id=${encodeURIComponent(el.dataset.propertyId)}`; }));
   document.querySelectorAll('[data-display-language]').forEach(el=>el.addEventListener('click',()=>{ localStorage.setItem(STORAGE_KEYS.display,el.dataset.displayLanguage); render(); }));
   document.querySelectorAll('[data-input-language]').forEach(el=>el.addEventListener('click',()=>{ localStorage.setItem(STORAGE_KEYS.input,el.dataset.inputLanguage); render(); }));
 }
