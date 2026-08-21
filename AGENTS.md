@@ -15,10 +15,11 @@ Before editing code:
 1. Read `PROJECT_STATE.yaml`.
 2. Read this file fully.
 3. Read `docs/product/PRODUCT_GUARDRAILS.md`.
-4. Read the active phase in `docs/engineering/DELIVERY_PHASES.md`.
-5. Inspect recent commits, open PRs, CI status, and current tests.
-6. Run `python3 scripts/harness_check.py`.
-7. Continue the highest-priority unfinished task in `PROJECT_STATE.yaml`; do not invent a new roadmap.
+4. Read `docs/engineering/AGENT_EXECUTION_LOOP.md`.
+5. Read the active phase in `docs/engineering/DELIVERY_PHASES.md`.
+6. Inspect recent commits, open PRs, CI status, and current tests.
+7. Run `python3 scripts/harness_check.py`.
+8. Continue the highest-priority unfinished task in `PROJECT_STATE.yaml`; do not invent a new roadmap.
 
 If repository state and chat instructions conflict, explicit current user instructions win, but record the decision in `PROJECT_STATE.yaml` and the handoff log.
 
@@ -107,6 +108,7 @@ A task is done only when:
 - lint/type/static checks pass when configured;
 - E2E passes for affected critical flows;
 - relevant screenshots/traces/logs are retained by CI where configured;
+- the latest required CI run for current HEAD is terminal and successful;
 - state/handoff docs are updated;
 - no product invariant was weakened.
 
@@ -121,34 +123,54 @@ If a test or workflow fails:
 3. Add or improve a regression test when feasible.
 4. Fix the smallest correct layer.
 5. Rerun the narrow test, then the phase suite.
-6. Record any remaining limitation in `PROJECT_STATE.yaml`.
+6. Commit/push the fix and re-enter the CI completion loop.
+7. Record any remaining limitation in `PROJECT_STATE.yaml`.
 
 Never report success from a green partial test when required phase/E2E checks still fail.
 
-## 9. State and handoff discipline
+## 9. CI completion loop — mandatory
+
+After every push that changes implementation, tests, harness rules, or build configuration:
+
+1. Discover the workflow run/checks for the exact current HEAD commit or open PR.
+2. Poll until the relevant run reaches terminal `completed` state.
+3. Do not treat queued/in-progress as success.
+4. Inspect every required job.
+5. On failure/cancel/timeout: inspect job steps and logs, diagnose root cause, fix, add regression coverage when practical, push, and repeat from step 1.
+6. If no relevant run/checks exist for current HEAD, mark CI `missing`/`blocked`; do not advance.
+7. Only after CI is green run code review, QA review, and product-guardrail review.
+8. If those reviews require changes, push fixes and repeat the CI loop again.
+9. Only then may the current task/phase be marked complete or the next phase begin.
+
+The canonical algorithm and state model are in `docs/engineering/AGENT_EXECUTION_LOOP.md`.
+
+**Hard invariant:** `push != done`. `CI green for current HEAD + reviews green = eligible to advance`.
+
+## 10. State and handoff discipline
 
 `PROJECT_STATE.yaml` is machine-readable current state. Keep it concise and current.
 
 At the end of every meaningful session:
 
 - update active phase/task statuses;
-- set `last_verified_commit` to the commit actually tested, or `UNCOMMITTED` while work is not committed;
-- record commands/checks and their results;
+- set `last_verified_commit` only to the exact commit whose required CI and reviews passed; otherwise use `UNVERIFIED`/the current unverified SHA as appropriate;
+- maintain `ci_gate.status` (`not_started`, `waiting`, `failed`, `missing`, `green`, or `blocked`);
+- record workflow/run/check evidence and results;
 - record blockers and exact next actions;
 - append a timestamped entry to `docs/handoff/HANDOFF_LOG.md`.
 
 Do not overwrite historical handoff entries.
 
-## 10. Git discipline
+## 11. Git discipline
 
 - Never develop directly on `main` unless explicitly instructed.
 - Use focused branches and commits.
 - Never mix unrelated changes.
 - PR descriptions must state: phase, acceptance criteria addressed, tests/evidence, known limitations, guardrail impact.
-- Do not merge with failing required checks.
+- Do not merge with failing, pending, missing, or unverified required checks.
 - Do not claim an APK exists until CI/local build produced one successfully.
 
-## 11. Security/privacy rules
+## 12. Security/privacy rules
 
 - No secrets in repo, logs, fixtures, screenshots, test data, or prompts.
 - Use synthetic people/phone numbers in tests.
@@ -156,7 +178,7 @@ Do not overwrite historical handoff entries.
 - New network/cloud dependencies require explicit architectural justification and product-guardrail review.
 - Backups must eventually be encrypted and restorable; a backup without a tested restore path is incomplete.
 
-## 12. AI/model architecture rules
+## 13. AI/model architecture rules
 
 Treat model components as replaceable adapters. Domain records and business logic must not depend on one vendor/model schema.
 
@@ -168,7 +190,7 @@ Use deterministic logic where it is sufficient. For model-assisted extraction/se
 - maintain a deterministic fallback for core workflows;
 - optimize business meaning over verbatim transcription.
 
-## 13. UI contract
+## 14. UI contract
 
 Production UI should follow the approved visual prototype unless a documented decision changes it. Key experience characteristics:
 
@@ -184,13 +206,14 @@ Production UI should follow the approved visual prototype unless a documented de
 
 Primary screens/flows to preserve include Splash, Onboarding, Home, Speak, Type, Review, Ask/Search, People, Person detail, Property detail, Matches, Match detail, Poster capture/review/lead, Follow-ups, Language, and Settings/Backup.
 
-## 14. Stop conditions
+## 15. Stop conditions
 
 Stop and record a blocker instead of fabricating progress when:
 
 - a required credential/device/tool is unavailable;
 - platform restrictions make a requested flow impossible as specified;
 - a product decision is genuinely ambiguous and materially changes architecture;
-- required tests cannot be executed in the current environment.
+- required tests cannot be executed in the current environment;
+- CI cannot be discovered/polled/logged for current HEAD.
 
 Even when blocked, leave the repo in a resumable state with the exact next command/action documented.
