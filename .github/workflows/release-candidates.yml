@@ -26,6 +26,22 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
+      - name: Derive isolated Android RC identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < VERSION)"
+          if [[ ! "$version" =~ -rc\.([0-9]+)$ ]]; then
+            echo "VERSION must end in -rc.N for CI release candidates: $version" >&2
+            exit 1
+          fi
+          rc="${BASH_REMATCH[1]}"
+          {
+            echo "PA_VERSION_NAME=$version"
+            echo "PA_VERSION_CODE=$((1000 + rc))"
+            echo "PA_APPLICATION_ID=ai.propertyassistant.app.rc${rc}"
+            echo "PA_APPLICATION_LABEL=Property Assistant RC${rc}"
+          } >> "$GITHUB_ENV"
       - name: Prepare ephemeral Android RC signing key
         shell: bash
         run: |
@@ -43,9 +59,6 @@ jobs:
           PA_RELEASE_STORE_PASSWORD: rc-password
           PA_RELEASE_KEY_ALIAS: property-assistant-rc
           PA_RELEASE_KEY_PASSWORD: rc-password
-          PA_VERSION_CODE: 13
-          PA_APPLICATION_ID: ai.propertyassistant.app.rc3
-          PA_APPLICATION_LABEL: Property Assistant RC3
         run: |
           chmod +x gradlew
           ./gradlew clean :app:assembleRelease --stacktrace
@@ -53,6 +66,7 @@ jobs:
       - name: Verify Android release candidate
         shell: bash
         run: |
+          set -euo pipefail
           apk="android/app/build/outputs/apk/release/app-release.apk"
           apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
           aapt="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n1)"
@@ -60,9 +74,11 @@ jobs:
           test -x "$aapt"
           "$apksigner" verify --verbose "$apk"
           unzip -l "$apk" | grep -q 'assets/index.html'
-          "$aapt" dump badging "$apk" | grep -q "package: name='ai.propertyassistant.app.rc3'"
-          "$aapt" dump badging "$apk" | grep -q "versionName='0.11.0-rc.3'"
-          "$aapt" dump badging "$apk" | grep -q "application-label:'Property Assistant RC3'"
+          badging="$($aapt dump badging "$apk")"
+          grep -Fq "package: name='$PA_APPLICATION_ID'" <<< "$badging"
+          grep -Fq "versionCode='$PA_VERSION_CODE'" <<< "$badging"
+          grep -Fq "versionName='$PA_VERSION_NAME'" <<< "$badging"
+          grep -Fq "application-label:'$PA_APPLICATION_LABEL'" <<< "$badging"
       - name: Build desktop release candidate
         run: python3 scripts/build_desktop_rc.py --out dist
       - name: Smoke desktop packaged candidate
