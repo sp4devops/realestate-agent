@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.webkit.GeolocationPermissions;
+import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -40,6 +41,7 @@ public final class MainActivity extends Activity {
     settings.setDomStorageEnabled(true);
     settings.setAllowFileAccess(true);
     settings.setGeolocationEnabled(true);
+    web.addJavascriptInterface(new PropertyAssistantHost(), "PropertyAssistantHost");
     web.setWebViewClient(new WebViewClient());
     web.setWebChromeClient(new WebChromeClient() {
       @Override public void onPermissionRequest(PermissionRequest request) {
@@ -61,6 +63,49 @@ public final class MainActivity extends Activity {
     });
     web.loadUrl("file:///android_asset/index.html#/splash");
     setContentView(web);
+  }
+
+  public final class PropertyAssistantHost {
+    @JavascriptInterface public void dial(String phone) {
+      runOnUiThread(() -> launchExternal(new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + digitsOnly(phone)))));
+    }
+
+    @JavascriptInterface public void whatsapp(String phone, String text) {
+      runOnUiThread(() -> {
+        String number = digitsOnly(phone);
+        Uri appUri = Uri.parse("whatsapp://send?phone=" + number + "&text=" + Uri.encode(text == null ? "" : text));
+        Intent appIntent = new Intent(Intent.ACTION_VIEW, appUri);
+        if (!launchExternal(appIntent)) {
+          launchExternal(new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/" + number + "?text=" + Uri.encode(text == null ? "" : text))));
+        }
+      });
+    }
+
+    @JavascriptInterface public void shareText(String text) {
+      runOnUiThread(() -> {
+        Intent share = new Intent(Intent.ACTION_SEND);
+        share.setType("text/plain");
+        share.putExtra(Intent.EXTRA_TEXT, text == null ? "" : text);
+        try {
+          startActivity(Intent.createChooser(share, "Share follow-up"));
+        } catch (ActivityNotFoundException ignored) {
+          // The web UI reports availability where possible; no broad permission is requested.
+        }
+      });
+    }
+  }
+
+  private String digitsOnly(String value) {
+    return value == null ? "" : value.replaceAll("[^0-9]", "");
+  }
+
+  private boolean launchExternal(Intent intent) {
+    try {
+      startActivity(intent);
+      return true;
+    } catch (ActivityNotFoundException error) {
+      return false;
+    }
   }
 
   private void handleWebPermissionRequest(PermissionRequest request) {
