@@ -5,7 +5,7 @@ status: ready_for_merge
 active_phase: P6
 active_phase_name: Ask/search and operational result cards
 last_verified_commit: 5919b67dd983940552ccfc42350697b18e681061
-last_updated: 2026-08-21T23:36:00+05:30
+last_updated: 2026-08-21T23:39:00+05:30
 active_pr: 7
 active_branch: ai/p6-ask-search-results
 
@@ -19,7 +19,7 @@ ci_gate:
   workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: P6 late-review functional repair HEAD is terminal green. This state/handoff documentation moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
+  note: P6 late-review functional repair HEAD is terminal green. State/handoff documentation is now current and moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
 
 review_gates:
   code_review:
@@ -145,9 +145,11 @@ last_checks:
   - check: product guardrail reviewer
     result: pass
     evidence: Local-first Ask, operational cards, linked business-memory filtering, typed/voice parity and starter Tamil/Tanglish support preserve the core product loop without cloud/chat-only/CRM drift.
+  - check: P6 late-review handoff
+    result: pass
+    evidence: docs/handoff/HANDOFF_LOG.md now records the blocking late-review relevance finding, repair semantics, Quality Gates #165 failure diagnosis, Quality Gates #167 success, and all three reviewer passes.
 
 next_actions:
-  - Append the P6 late-review repair and Quality Gates #167 evidence to docs/handoff/HANDOFF_LOG.md.
-  - Wait for Quality Gates on the exact final PR HEAD created by state/handoff documentation commits and inspect every required job.
+  - Wait for Quality Gates on the exact final PR HEAD created by the completed state/handoff documentation commits and inspect every required job.
   - If terminal success, PR #7 is merge-ready; do not merge without explicit merge authorization.
   - After authorized P6 merge, confirm main and begin P7 Poster capture and OCR lead flow on a fresh focused branch/PR.
