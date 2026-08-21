@@ -25,8 +25,9 @@ test('wrong password and corrupt or unrelated files fail without replacing curre
  await assert.rejects(()=>backup.decryptBackup('{bad','correct-123'),/corrupted/i);
  await assert.rejects(()=>backup.decryptBackup(JSON.stringify({format:'other',version:1}),'correct-123'),/not a Property Assistant backup/i);
  const target=storage({[persistence.STORAGE_KEY]:JSON.stringify(repo.loadSnapshot())});const before=target.getItem(persistence.STORAGE_KEY);
- const badPayload={domain:{schemaVersion:1,entities:{}},settings:{displayLanguage:'en',inputLanguage:'auto'}};
- await assert.rejects(()=>backup.restorePayload(badPayload,{imageStore:null,storage:target}));assert.equal(target.getItem(persistence.STORAGE_KEY),before);
+ const badDomain=persistence.freshDatabase();badDomain.entities.people['broken']={id:'different-id',name:'Broken',role:'buyer',primaryPhone:'+91 90000 00009',alternatePhones:[]};
+ const badPayload={domain:badDomain,settings:{displayLanguage:'en',inputLanguage:'auto'}};
+ await assert.rejects(()=>backup.restorePayload(badPayload,{imageStore:null,storage:target}),/record id is inconsistent/i);assert.equal(target.getItem(persistence.STORAGE_KEY),before);
 });
 
 test('backup password must be at least eight characters',async()=>{
