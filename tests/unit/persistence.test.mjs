@@ -54,6 +54,31 @@ test('duplicate primary/alternate phone identity is rejected', () => {
   }), /primaryPhone cannot also be alternate/);
 });
 
+test('relationships must reference existing local records and referenced records cannot be deleted', () => {
+  const repo = deterministicRepo(memoryStorage());
+  const buyer = repo.create('people', {
+    id:'person-buyer', name:'Buyer Demo', role:'buyer', primaryPhone:'+91 90000 00301', alternatePhones:[]
+  });
+  assert.throws(() => repo.create('requirements', {
+    id:'bad-requirement', personId:'missing-person', intent:'buy', propertyType:'land', locations:['Erode']
+  }), /personId does not exist/);
+
+  const requirement = repo.create('requirements', {
+    id:'requirement-buyer', personId:buyer.id, intent:'buy', propertyType:'land', locations:['Erode']
+  });
+  assert.throws(() => repo.remove('people', buyer.id), /still referenced/);
+
+  const owner = repo.create('people', {
+    id:'person-owner', name:'Owner Demo', role:'owner', primaryPhone:'+91 90000 00302', alternatePhones:[]
+  });
+  const property = repo.create('properties', {
+    id:'property-owner', ownerPersonId:owner.id, intent:'sale', propertyType:'land', locality:'Erode', price:2200000
+  });
+  repo.create('matches', { id:'match-demo', requirementId:requirement.id, propertyId:property.id, score:0.9, reasons:['same locality'] });
+  assert.throws(() => repo.remove('requirements', requirement.id), /still referenced/);
+  assert.throws(() => repo.remove('properties', property.id), /still referenced/);
+});
+
 test('migration upgrades legacy array collections to schema version 1', () => {
   const migrated = migrate({
     people: [{ id:'legacy-person', name:'Legacy Demo', role:'buyer', primaryPhone:'+91 90000 00999', alternatePhones:[] }],
@@ -62,6 +87,14 @@ test('migration upgrades legacy array collections to schema version 1', () => {
   assert.equal(migrated.schemaVersion, CURRENT_SCHEMA_VERSION);
   assert.equal(migrated.entities.people['legacy-person'].name, 'Legacy Demo');
   for (const type of ENTITY_TYPES) assert.ok(migrated.entities[type]);
+});
+
+test('malformed structured local data is rejected during load', () => {
+  const storage = memoryStorage({
+    'pa.domain.v1': JSON.stringify({ schemaVersion:1, entities:{ people:{ broken:{ id:'broken', role:'buyer', primaryPhone:'+91 90000 00998', alternatePhones:[] } } } })
+  });
+  const repo = deterministicRepo(storage);
+  assert.throws(() => repo.list('people'), /name is required/);
 });
 
 test('synthetic seed is deterministic and never overwrites an existing database', () => {
