@@ -1,9 +1,9 @@
 (function (root) {
   'use strict';
 
-  const LOCALITIES = ['Erode','Chennai','Coimbatore','Salem','Madurai','Trichy','Tiruppur'];
+  const LOCALITIES = ['Erode','Perundurai','Bhavani','Chithode','Chennai','Coimbatore','Salem','Madurai','Trichy','Tiruppur'];
   const PROPERTY_TYPES = [
-    { value:'land', patterns:[/\bland\b/i,/\bplot\b/i,/நிலம்/u,/மனை/u,/\bmanai\b/i,/\bnilam\b/i] },
+    { value:'land', patterns:[/\bland\b/i,/\bplot\b/i,/\b(?:acre|acres|cent|cents)\b/i,/நிலம்/u,/மனை/u,/\bmanai\b/i,/\bnilam\b/i] },
     { value:'house', patterns:[/\bhouse\b/i,/\bhome\b/i,/வீடு/u,/\bveedu\b/i] },
     { value:'apartment', patterns:[/\bapartment\b/i,/\bflat\b/i,/அபார்ட்மெண்ட்/u] }
   ];
@@ -29,6 +29,14 @@
     return null;
   }
 
+  function parseSize(text) {
+    const match=String(text || '').match(/\b(\d+(?:\.\d+)?)\s*(acre|acres|cent|cents|sq\.?\s*ft|sqft|square\s*feet)\b/i);
+    if(!match) return null;
+    const rawUnit=match[2].toLowerCase().replace(/\s+/g,'');
+    const unit=rawUnit.startsWith('acre')?'acre':rawUnit.startsWith('cent')?'cent':'sqft';
+    return { value:Number(match[1]), unit };
+  }
+
   function detectLocality(text) {
     return LOCALITIES.find(name => new RegExp(`\\b${name}\\b`,'i').test(text)) || null;
   }
@@ -39,11 +47,11 @@
   }
 
   function extractName(text) {
-    const explicit = text.match(/(?:name\s*(?:is|:)|பெயர்\s*:?|peru\s*(?:is|:)?)(?:\s*)([A-Za-z\u0B80-\u0BFF][A-Za-z\u0B80-\u0BFF .'-]{1,40})/i);
+    const explicit = text.match(/(?:\bname\s*(?:is|:)|பெயர்\s*:?|\bperu\b\s*(?:is|:)?)(?:\s*)([A-Za-z\u0B80-\u0BFF][A-Za-z\u0B80-\u0BFF .'-]{1,40})/i);
     if (explicit) return explicit[1].trim().replace(/\s+(?:phone|mobile|number|wants|needs|looking|தேவை|venum).*$/i,'').trim();
-    const buyer = text.match(/^\s*([A-Z][a-z]+)\s+(?:wants|needs|looking)/);
+    const buyer = text.match(/^\s*([A-Za-z][A-Za-z.'-]{1,30})\s+(?:wants|needs|looking)\b/i);
     if (buyer) return buyer[1];
-    const owner = text.match(/^\s*([A-Z][a-z]+)\s+(?:owner|has|selling|sells)/i);
+    const owner = text.match(/^\s*([A-Za-z][A-Za-z.'-]{1,30})\s+(?:owner|has|selling|sells)\b/i);
     if (owner) return owner[1];
     return null;
   }
@@ -64,6 +72,7 @@
     const locality = detectLocality(source);
     const propertyType = detectPropertyType(source);
     const amount = parseMoney(source);
+    const size = parseSize(source);
     const detected = detectIntentAndKind(source);
     const name = extractName(source);
     const uncertain = [];
@@ -80,8 +89,8 @@
       confidence: Math.max(0.35, 1 - uncertain.length * 0.12),
       uncertain,
       person: { name:name || '', role:detected.role, primaryPhone:phone || '', alternatePhones:[] },
-      requirement: detected.kind === 'requirement' ? { intent:detected.intent, propertyType:propertyType || '', locations:locality?[locality]:[], budgetMin:null, budgetMax:amount } : null,
-      property: detected.kind === 'property' ? { intent:detected.intent, propertyType:propertyType || '', locality:locality || '', price:amount, ownerPersonId:null } : null
+      requirement: detected.kind === 'requirement' ? { intent:detected.intent, propertyType:propertyType || '', locations:locality?[locality]:[], budgetMin:null, budgetMax:amount, size } : null,
+      property: detected.kind === 'property' ? { intent:detected.intent, propertyType:propertyType || '', locality:locality || '', price:amount, ownerPersonId:null, size } : null
     };
   }
 
@@ -107,5 +116,5 @@
     };
   }
 
-  root.PropertyAssistantCapture = { parse, cleanPhone, parseMoney, createExtractor };
+  root.PropertyAssistantCapture = { parse, cleanPhone, parseMoney, parseSize, createExtractor };
 })(globalThis);
