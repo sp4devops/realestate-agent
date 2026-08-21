@@ -16,13 +16,19 @@
 
   function sameText(a,b){ return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); }
 
+  function areNearby(a,b){
+    const direct=NEARBY[a];
+    if(direct && [...direct].some(item=>sameText(item,b))) return true;
+    const reverse=NEARBY[b];
+    return Boolean(reverse && [...reverse].some(item=>sameText(item,a)));
+  }
+
   function locationFit(locations, locality) {
     const wanted=(locations || []).filter(Boolean);
     if (!wanted.length) return { score:10, reason:'Location was not restricted' };
     if (wanted.some(item=>sameText(item,locality))) return { score:30, reason:`Exact location: ${locality}` };
     for (const wantedLocality of wanted) {
-      const nearby=NEARBY[wantedLocality];
-      if (nearby && [...nearby].some(item=>sameText(item,locality))) return { score:18, reason:`Nearby ${wantedLocality}: ${locality}` };
+      if (areNearby(wantedLocality,locality)) return { score:18, reason:`Nearby ${wantedLocality}: ${locality}` };
     }
     return { score:0, reason:`Outside preferred location (${wanted.join(', ')})` };
   }
@@ -32,7 +38,7 @@
     const min=requirement.budgetMin == null ? 0 : requirement.budgetMin;
     const max=requirement.budgetMax == null ? Number.POSITIVE_INFINITY : requirement.budgetMax;
     if (property.price >= min && property.price <= max) return { score:30, reason:'Within stated budget' };
-    if (Number.isFinite(max) && property.price > max && property.price <= max * 1.10) {
+    if (Number.isFinite(max) && max > 0 && property.price > max && property.price <= max * 1.10) {
       const pct=Math.round(((property.price-max)/max)*100);
       return { score:18, reason:`${pct}% above budget — possible negotiation` };
     }
@@ -66,5 +72,5 @@
     return results.sort((a,b)=>b.score-a.score || a.requirementId.localeCompare(b.requirementId) || a.propertyId.localeCompare(b.propertyId));
   }
 
-  root.PropertyAssistantMatching={ evaluate, rank, intentCompatible, locationFit, priceFit };
+  root.PropertyAssistantMatching={ evaluate, rank, intentCompatible, locationFit, priceFit, areNearby };
 })(globalThis);
