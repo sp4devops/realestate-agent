@@ -1,30 +1,41 @@
 schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
-status: in_progress
+status: ready_for_merge
 active_phase: P11
 active_phase_name: Android APK and desktop release candidates
-last_verified_commit: b66cd05f3f9f86e406842e125ef596bf12ef1e92
-last_updated: 2026-08-22T02:07:00+05:30
-active_pr: null
+last_verified_commit: f4f8bcac2f60c22707ffbc6c523feec50c24bde9
+last_updated: 2026-08-22T02:15:00+05:30
+active_pr: 12
 active_branch: ai/p11-release-candidates
 
 ci_gate:
-  status: pending
-  verified_head_sha: b66cd05f3f9f86e406842e125ef596bf12ef1e92
+  status: green
+  verified_head_sha: f4f8bcac2f60c22707ffbc6c523feec50c24bde9
   workflow_name: Quality Gates + Release Candidates
-  workflow_run_id: null
-  workflow_run_number: null
-  workflow_status: pending
-  workflow_conclusion: null
+  quality_workflow_run_id: 32524976973
+  quality_workflow_run_number: 287
+  release_workflow_run_id: 32524976982
+  release_workflow_run_number: 6
+  workflow_status: completed
+  workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: P11 implementation is active. Both Quality Gates and Release Candidates must be terminal green on the exact final PR HEAD before completion.
+  note: P11 functional/reviewer HEAD is green on both required workflows. State/handoff documentation moves PR HEAD, so one final exact-head dual-workflow run remains mandatory before merge.
 
 review_gates:
-  code_review: {status: pending, blocking_findings: 0}
-  qa_review: {status: pending, blocking_findings: 0}
-  product_guardrail_review: {status: pending, blocking_findings: 0}
+  code_review:
+    status: pass
+    blocking_findings: 0
+    note: Reviewed configurable Android signing/versioning, ephemeral CI key boundary, APK signature/content verification, deterministic desktop packager and loopback-only launcher. No production key or cloud dependency is committed; no Critical/High finding remains.
+  qa_review:
+    status: pass
+    blocking_findings: 0
+    note: Quality Gates #287 passed Harness, JS/unit/lint/type, Playwright, Android tests/debug APK and required summary. Release Candidates #6 passed signed release APK build, apksigner verification, embedded web asset check, packaged desktop smoke/archive verification and both retained artifact uploads.
+  product_guardrail_review:
+    status: pass
+    blocking_findings: 0
+    note: P11 only packages existing Android/desktop surfaces. Desktop remains loopback/local-first, Android remains permission-minimal, and no CRM/cloud/paid-service scope was introduced.
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -49,18 +60,18 @@ phases:
   P8: {name: After-call recap follow-ups and communication actions, status: done}
   P9: {name: Backup restore settings language and privacy hardening, status: done}
   P10: {name: Performance accessibility resilience and offline QA, status: done}
-  P11: {name: Android APK and desktop release candidates, status: in_progress}
+  P11: {name: Android APK and desktop release candidates, status: done}
   P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
   - id: P11-T1
-    status: in_progress
+    status: done
     owner: ai-agent
     description: Build versioned Android and desktop release candidates, configurable Android signing, retained artifacts and packaged-candidate smoke verification.
   - id: P11-T2
-    status: pending
+    status: ready_for_merge
     owner: ai-agent
-    description: Complete exact-head Quality Gates and Release Candidates workflows plus code, QA and product reviewer gates.
+    description: Record P11 evidence, run exact documentation-head Quality Gates and Release Candidates, and merge PR #12 only after explicit user authorization.
   - id: P4-T3
     status: deferred
     owner: ai-agent
@@ -76,17 +87,35 @@ known_constraints:
   - Cash build-cost target is zero until product validation/revenue threshold.
   - No paid AI APIs or cloud dependency should be introduced merely for convenience.
   - CI Android release candidates use an ephemeral signing key for install/smoke validation; production distribution requires a persistent protected signing key.
-  - Desktop RC intentionally uses a loopback-only Python launcher and system browser to preserve the lightweight local-first architecture.
+  - Android install/launch was not emulator-verified in CI because the current runner gate does not provision an Android emulator; build, signing and APK integrity are verified.
+  - Desktop RC intentionally uses a loopback-only Python launcher and system browser; Python 3.9+ is required.
   - Production local STT/OCR runtimes and approximately 4 GB Android target-device memory/thermal benchmarking remain pre-pilot constraints.
 
 last_checks:
   - check: P10 merge
     result: pass
     evidence: PR #11 merged to main as b66cd05f3f9f86e406842e125ef596bf12ef1e92 after exact-head Quality Gates #275 success and explicit user authorization.
+  - check: P11 Quality Gates
+    result: pass
+    evidence: Quality Gates #287 (32524976973) completed successfully for f4f8bcac2f60c22707ffbc6c523feec50c24bde9 with Detect, Harness, JS/unit/lint/type, Playwright, Android tests/debug APK and Required gate summary green.
+  - check: P11 Release Candidates
+    result: pass
+    evidence: Release Candidates #6 (32524976982) completed successfully for f4f8bcac2f60c22707ffbc6c523feec50c24bde9; signed Android release APK, apksigner verification, assets/index.html verification, desktop package build/smoke/archive verification and Android/desktop artifact uploads all passed.
+  - check: P11 artifacts
+    result: pass
+    evidence: RC workflow retained property-assistant-android-rc and property-assistant-desktop-rc artifacts on the exact functional HEAD.
+  - check: code reviewer
+    result: pass
+    evidence: No Critical/High finding remains in signing/version configuration, CI release workflow, desktop packaging or launcher implementation.
+  - check: QA reviewer
+    result: pass
+    evidence: Both required workflows are terminal green and directly exercise the packaged desktop candidate plus APK signature/content integrity.
+  - check: product guardrail reviewer
+    result: pass
+    evidence: P11 is packaging-only scope and preserves local-first/private-by-default behavior with no unrelated CRM/cloud expansion.
 
 next_actions:
-  - Open P11 PR from ai/p11-release-candidates to main.
-  - Inspect exact-head Quality Gates and Release Candidates workflow results; repair any failure without weakening gates.
-  - Verify retained Android APK and desktop ZIP artifacts and packaged desktop smoke result.
-  - Run code, QA and product guardrail reviews; repair Critical/High findings.
-  - Record P11 handoff and run final exact-head workflows before requesting merge authorization.
+  - Add docs/handoff/P11_HANDOFF.md with release build, artifact, signing, CI and reviewer evidence.
+  - Run both Quality Gates and Release Candidates on the exact final PR HEAD created by documentation commits and inspect terminal results.
+  - If both are terminal success, PR #12 is merge-ready; do not merge without explicit user authorization.
+  - After authorized P11 merge, confirm main and begin P12 pilot-readiness work on a fresh focused branch/PR.
