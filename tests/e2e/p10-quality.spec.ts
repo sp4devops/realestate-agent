@@ -4,7 +4,7 @@ const criticalRoutes = ['home','type','ask','matches','people','followups','post
 
 test('P10 captures startup, heap and local-storage measurements', async ({ page }, testInfo) => {
   await page.goto('/#/home');
-  await expect(page.getByRole('heading')).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
 
   const metrics = await page.evaluate(async () => {
     const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
@@ -75,7 +75,7 @@ test('P10 critical screens have names, focusable controls and no horizontal over
 
 test('P10 core local workflow remains usable after network is lost', async ({ page, context }) => {
   await page.goto('/#/home');
-  await expect(page.getByRole('heading')).toBeVisible();
+  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
   await context.setOffline(true);
 
   await page.getByTestId('type-save').click();
@@ -86,23 +86,29 @@ test('P10 core local workflow remains usable after network is lost', async ({ pa
   await page.getByTestId('save-capture').click();
   await expect(page.getByTestId('person-name')).toContainText('Offline Ravi');
 
-  await page.goto('/#/people');
+  await page.evaluate(() => { location.hash = '#/people'; });
   await expect(page.getByText('Offline Ravi')).toBeVisible();
-  await page.goto('/#/matches');
+  await page.evaluate(() => { location.hash = '#/matches'; });
   await expect(page.getByRole('heading').first()).toBeVisible();
 });
 
-test('P10 model/STT absence does not block typed capture or local navigation', async ({ page }) => {
+test('P10 microphone/STT absence keeps Type & Save and local persistence usable', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
-    (window as any).__PA_LOCAL_MODEL_UNAVAILABLE__ = true;
   });
-  await page.goto('/#/type');
-  await page.getByTestId('capture-text').fill('Fallback Meena wants 2BHK in Erode budget 30 lakh phone 98765 43218');
+  await page.goto('/#/speak');
+  await page.getByTestId('voice-toggle').click();
+  await expect(page.getByTestId('voice-status')).toContainText('Type & Save is still fully available');
+  await page.getByRole('button', { name: 'Use Type & Save instead' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Type & Save' })).toBeVisible();
+  await page.getByTestId('capture-text').fill('Fallback Meena wants land in Erode budget 30 lakh phone 98765 43218');
   await page.getByTestId('analyze-capture').click();
   await expect(page.getByRole('heading', { name: 'Check what I understood' })).toBeVisible();
   await page.getByTestId('save-capture').click();
-  await expect(page.getByTestId('person-name')).toContainText('Fallback Meena');
-  await page.getByTestId('nav-home').click();
-  await expect(page.getByRole('heading')).toBeVisible();
+
+  const saved = await page.evaluate(() => (window as any).__PA_REPOSITORY__.list('people').some((person:any) => person.name === 'Fallback Meena'));
+  expect(saved).toBe(true);
+  await page.evaluate(() => { location.hash = '#/home'; });
+  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
 });
