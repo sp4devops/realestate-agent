@@ -31,10 +31,24 @@ async function get(id){
  const db=await openDatabase();
  try{const tx=db.transaction(STORE_NAME,'readonly');return (await requestResult(tx.objectStore(STORE_NAME).get(id)))||null;}finally{db.close();}
 }
+async function list(){
+ const db=await openDatabase();
+ try{const tx=db.transaction(STORE_NAME,'readonly');return (await requestResult(tx.objectStore(STORE_NAME).getAll()))||[];}finally{db.close();}
+}
 async function remove(id){
  if(!id)return;
  const db=await openDatabase();
  try{const tx=db.transaction(STORE_NAME,'readwrite');tx.objectStore(STORE_NAME).delete(id);await transactionDone(tx);}finally{db.close();}
 }
-root.PropertyAssistantPosterImages={DB_NAME,STORE_NAME,save,get,remove};
+async function replaceAll(records){
+ if(!Array.isArray(records))throw new Error('Poster image backup is invalid');
+ for(const record of records)if(!record||!record.id||!(record.blob instanceof Blob)||record.blob.size===0)throw new Error('Poster image backup is invalid');
+ const db=await openDatabase();
+ try{
+  const tx=db.transaction(STORE_NAME,'readwrite');const store=tx.objectStore(STORE_NAME);store.clear();
+  for(const record of records)store.put({id:record.id,blob:record.blob,name:record.name||'poster-image',type:record.type||record.blob.type||'application/octet-stream',size:record.blob.size,createdAt:record.createdAt||new Date().toISOString()});
+  await transactionDone(tx);
+ }finally{db.close();}
+}
+root.PropertyAssistantPosterImages={DB_NAME,STORE_NAME,save,get,list,remove,replaceAll};
 })(globalThis);
