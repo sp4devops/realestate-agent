@@ -21,7 +21,7 @@ This loop is mandatory for every implementation task and every phase. An AI agen
 9. If workflow discovery returns no run/checks, treat CI as **missing/unverified**, not green. Investigate workflow trigger/configuration before advancing.
 10. Only when all required jobs for the current commit are terminal and successful may the agent run the three review gates: code review, QA review, and product-guardrail review.
 11. Resolve every Critical/High finding and repeat the test/CI loop after fixes.
-12. Update `PROJECT_STATE.yaml` with the exact verified commit SHA, workflow/run evidence, review results, and next action.
+12. Update `PROJECT_STATE.yaml` with the last observed green commit SHA, workflow/run evidence, review results, and next action. The state-update commit itself may be newer than `last_verified_commit`; live CI for the current PR HEAD remains authoritative for merge/advance decisions.
 13. Advance to the next task or phase only after the current phase's acceptance criteria and Definition of Done are satisfied.
 
 ## Hard rule: do not advance
@@ -31,10 +31,10 @@ The agent must **do not advance** to the next implementation task/phase while an
 - the latest relevant workflow is queued or in progress;
 - the latest relevant workflow failed;
 - required checks are missing;
-- the workflow result belongs to an older commit rather than current HEAD;
+- the workflow result belongs to an older implementation/build commit rather than the code being evaluated;
 - required E2E/unit/integration tests have not run;
 - Critical or High review findings remain open;
-- `PROJECT_STATE.yaml` does not identify the verified commit.
+- CI evidence cannot be tied to the code under review.
 
 ## CI state model
 
@@ -44,10 +44,10 @@ Use these states in `PROJECT_STATE.yaml`:
 - `waiting` — pushed; run is queued/in progress.
 - `failed` — terminal required run/check failed.
 - `missing` — no relevant run/check can be found for current HEAD.
-- `green` — all required checks for current HEAD are successful.
+- `green` — all required checks for the evaluated code are successful.
 - `blocked` — external/tool/platform constraint prevents validation.
 
-Only `green` permits phase advancement.
+Only `green` plus green review gates permits phase advancement. Immediately before merge, inspect live CI for the exact current PR HEAD; do not rely only on the state file.
 
 ## Failure loop
 
@@ -57,7 +57,7 @@ The expected loop is:
 
 When successful:
 
-`CI green → code review → QA review → product review → fix findings if any → CI loop again → state update → next task`
+`CI green → code review → QA review → product review → fix findings if any → CI loop again → state/handoff update → verify final PR HEAD CI → next task/merge`
 
 ## Tool/environment limitation
 
