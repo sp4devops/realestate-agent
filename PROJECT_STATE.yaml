@@ -1,39 +1,30 @@
 schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
-status: ready_for_merge
-active_phase: P1
-active_phase_name: Application skeleton and navigation
-last_verified_commit: 955e9cbb3310b277111d6de0755c9721dedd0784
-last_updated: 2026-08-21T19:33:51+05:30
-active_pr: 2
-active_branch: ai/p1-app-shell-navigation
+status: in_progress
+active_phase: P2
+active_phase_name: Local domain model and persistence
+last_verified_commit: UNVERIFIED
+last_updated: 2026-08-21T20:45:00+05:30
+active_pr: null
+active_branch: ai/p2-local-domain-persistence
 
 ci_gate:
-  status: green
-  verified_head_sha: 955e9cbb3310b277111d6de0755c9721dedd0784
+  status: waiting
+  verified_head_sha: null
   workflow_name: Quality Gates
-  workflow_run_id: 32489999794
-  workflow_run_number: 36
-  workflow_status: completed
-  workflow_conclusion: success
+  workflow_run_id: null
+  workflow_run_number: null
+  workflow_status: null
+  workflow_conclusion: null
   required_for_advance: true
   terminal_success_required: true
-  note: P1 implementation/reviewer-repair HEAD is terminal green. This state/handoff commit is expected to move PR HEAD and therefore requires one final live CI verification before merge; live exact-HEAD CI is authoritative.
+  note: P2 implementation has been pushed to its focused branch. Fresh exact-HEAD PR CI is required before reviews or phase completion.
 
 review_gates:
-  code_review:
-    status: pass
-    blocking_findings: 0
-    note: Reviewed architecture, WebView boundary, navigation, state preferences, security/privacy, resource use, CI and tests. No Critical/High finding remains.
-  qa_review:
-    status: pass
-    blocking_findings: 0
-    note: Initial review found the missing After-call recap route/full route E2E coverage; fixed in 955e9cbb and revalidated. Required shell routes, primary flows, language separation, mobile overflow and Android build now pass.
-  product_guardrail_review:
-    status: pass
-    blocking_findings: 0
-    note: Shell preserves Capture -> Understand -> Remember -> Match -> Act, Property Advisor terminology, local-first/no-Internet Android baseline, approved visual direction and scope control without CRM drift.
+  code_review: {status: pending, blocking_findings: null, note: Run only after exact-head CI is green.}
+  qa_review: {status: pending, blocking_findings: null, note: Run only after exact-head CI is green.}
+  product_guardrail_review: {status: pending, blocking_findings: null, note: Run only after exact-head CI is green.}
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -49,7 +40,7 @@ product_contract:
 phases:
   P0: {name: Harness and source-of-truth bootstrap, status: done}
   P1: {name: Application skeleton and navigation, status: done}
-  P2: {name: Local domain model and persistence, status: pending}
+  P2: {name: Local domain model and persistence, status: in_progress}
   P3: {name: Type capture and structured extraction, status: pending}
   P4: {name: Voice capture and multilingual understanding, status: pending}
   P5: {name: Matching and action brain, status: pending}
@@ -62,18 +53,18 @@ phases:
   P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
-  - id: P1-T1
-    status: done
+  - id: P2-T1
+    status: in_progress
     owner: ai-agent
-    description: Implement dependency-light shared application shell, approved screen hierarchy, navigation, language-setting separation, Playwright smoke coverage, and thin Android local-asset host.
-  - id: P1-T2
-    status: done
+    description: Implement language-neutral domain collections, versioned local repository CRUD/migration, synthetic seed data, UI integration, and persistence/reload tests.
+  - id: P2-T2
+    status: pending
     owner: ai-agent
-    description: Obtain terminal green CI for exact P1 implementation HEAD, inspect Android APK evidence, perform three reviewer gates, repair findings, and revalidate.
+    description: Obtain terminal green exact-head CI, run separate code/QA/product reviews, fix blocking findings, update state/handoff, and prepare P2 merge gate.
   - id: P1-T3
-    status: ready_for_merge
+    status: done
     owner: ai-agent
-    description: Verify Quality Gates on the final state/handoff PR HEAD and merge PR #2 only when explicit merge authorization is given.
+    description: PR #2 merged to main as 0c9b63af083db4adbd8942883ca002ee8fdaf59f after exact-head Quality Gates #38 success and explicit user authorization.
   - id: P0-T2
     status: deferred
     owner: ai-agent
@@ -87,38 +78,21 @@ known_constraints:
   - Normal Android apps must not assume unrestricted cellular-call audio capture/transcription.
   - UI display language must remain independent from voice/input language.
   - P1 desktop is the loopback-served web-compatible shell; packaged desktop release infrastructure is scheduled for P11.
-  - P1 proves display-language switching architecture; production multilingual copy/intelligence quality continues in later phases.
+  - P2 uses a versioned repository contract over localStorage as the first shared persistence adapter; a future native database adapter may replace the backend without changing domain schemas when justified by scale, encryption, backup, or query needs.
 
 last_checks:
-  - check: P0 merge
+  - check: P1 merge
     result: pass
-    evidence: PR #1 merged to main as 3650addb4e876c2e3a7bc1e723648c3cc91bbd66 after final P0 PR HEAD CI success.
-  - check: P1 first implementation CI
-    result: fail_then_fixed
-    evidence: Quality Gates run 32489477773 (#32) failed only in Playwright because a Tanglish locator matched both display and input choices; test selectors were scoped to their independent language sections.
-  - check: P1 repaired CI
+    evidence: PR #2 merged to main as 0c9b63af083db4adbd8942883ca002ee8fdaf59f after final exact-head Quality Gates run 32490226859 (#38) succeeded.
+  - check: P2 branch
     result: pass
-    evidence: Quality Gates run 32489748413 (#34) completed successfully for 5c547a99fc31bd2dc756b332ef38d09cd1f6b3ff; JS, Playwright, Android and gate summary all passed.
-  - check: P1 reviewer repair
-    result: pass
-    evidence: Added missing After-call recap shell and comprehensive required-route E2E coverage in 955e9cbb3310b277111d6de0755c9721dedd0784.
-  - check: P1 post-review CI
-    result: pass
-    evidence: Quality Gates run 32489999794 (#36) completed successfully for 955e9cbb3310b277111d6de0755c9721dedd0784; Harness, JS, Playwright, Android build/tests and Required gate summary all succeeded.
-  - check: Android APK evidence
-    result: pass
-    evidence: Final green run #36 completed Android assembleDebug and uploaded android-debug-apk artifact.
-  - check: code reviewer
-    result: pass
-    evidence: No Critical/High findings remain after reviewer repair.
-  - check: QA reviewer
-    result: pass
-    evidence: Missing After-call shell/full route E2E finding was fixed; no Critical/High findings remain.
-  - check: product guardrail reviewer
-    result: pass
-    evidence: No Critical/High scope, privacy, terminology or visual-contract deviation remains.
+    evidence: ai/p2-local-domain-persistence created from main merge commit 0c9b63af083db4adbd8942883ca002ee8fdaf59f.
+  - check: P2 implementation scope
+    result: pending_ci
+    evidence: Added versioned local repository, required entity collections, migration/validation, synthetic seed, People/property UI integration, unit tests and Playwright persistence tests.
 
 next_actions:
-  - Wait for Quality Gates on the exact final PR HEAD created by this state/handoff update and inspect all required jobs.
-  - If terminal success, PR #2 is eligible for merge; do not merge without explicit merge authorization.
-  - After PR #2 merges, confirm main and start P2 Local domain model and persistence on a new focused branch/PR.
+  - Open a focused P2 pull request from ai/p2-local-domain-persistence to main.
+  - Discover Quality Gates for the exact PR HEAD and poll to terminal completion.
+  - Inspect every required job; on failure, diagnose exact logs, fix, push, and repeat.
+  - Only after green CI run code, QA, and product-guardrail reviews.
