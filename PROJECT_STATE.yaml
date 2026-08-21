@@ -4,10 +4,17 @@ repository: sp4devops/realestate-agent
 status: bootstrap
 active_phase: P0
 active_phase_name: Harness and source-of-truth bootstrap
-last_verified_commit: UNVERIFIED-CI
-last_updated: 2026-08-21T18:50:00+05:30
+last_verified_commit: UNVERIFIED
+last_updated: 2026-08-21T18:57:00+05:30
 active_pr: 1
 active_branch: ai/bootstrap-project-harness
+
+ci_gate:
+  status: failed
+  head_sha: fe8ae19ae1e3915ad1a77f6f031cb7102655505d
+  required_for_advance: true
+  observed_issue: Earlier harness workflow runs failed; validator contained a formatting-brittle semantic check. The validator has been corrected and the agent execution loop is now mandatory.
+  terminal_success_required: true
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -25,7 +32,7 @@ phases:
     name: Harness and source-of-truth bootstrap
     status: in_progress
     acceptance:
-      - AGENTS.md defines session, testing, review, handoff, privacy, and Git rules
+      - AGENTS.md defines session, testing, review, handoff, privacy, Git, and CI completion-loop rules
       - machine-readable state exists
       - delivery phases and quality gates exist
       - CI validates harness integrity
@@ -56,15 +63,12 @@ current_tasks:
   - id: P0-T3
     status: in_progress
     owner: ai-agent
-    description: Verify harness workflow and close bootstrap reviewer findings before advancing to P1.
+    description: Drive the CI completion loop until the current HEAD is terminal green, then run code/QA/product reviews before advancing.
 
 blockers:
   - id: P0-B1
     severity: medium
     description: The connector can create UTF-8 repository files but does not provide direct upload of the two attached source files; concise locked guardrails and visual acceptance contract are committed instead.
-  - id: P0-B2
-    severity: medium
-    description: The available workflow-run lookup only exposes pull-request-triggered runs; the new workflow did not return a PR run while it exists only on the feature branch, so CI is not yet claimed green.
 
 known_constraints:
   - Cash build-cost target is zero until product validation/revenue threshold.
@@ -76,22 +80,20 @@ last_checks:
   - check: repository access
     result: pass
     evidence: GitHub connector has admin/push access to private repository.
-  - check: repository baseline
-    result: pass
-    evidence: main contained only README.md and .gitignore before bootstrap.
   - check: draft pull request
     result: pass
-    evidence: PR #1 is open and mergeable from ai/bootstrap-project-harness to main.
-  - check: workflow design review
-    result: pass
-    evidence: Progressive stack detection was corrected to run after checkout before conditionally enabling JS Playwright and Android jobs.
-  - check: workflow execution
-    result: pending
-    evidence: No PR-triggered workflow run is visible yet through the current connector; do not claim CI success.
+    evidence: PR #1 remains open and mergeable.
+  - check: CI failure diagnosis
+    result: fail_then_fixed
+    evidence: scripts/harness_check.py expected normalized phrase 'not a generic CRM' but Markdown emphasis split the literal string; validator now normalizes Markdown/punctuation.
+  - check: agent control loop
+    result: pass_design
+    evidence: docs/engineering/AGENT_EXECUTION_LOOP.md and AGENTS.md now require discover/poll/inspect/fix/repeat and prohibit advancement without terminal green CI for current HEAD.
 
 next_actions:
-  - Perform final code/QA/product review of PR #1.
-  - Merge bootstrap only after acceptable review disposition.
-  - Verify Quality Gates on main or the next PR where the workflow is available to the PR event.
-  - Mark P0 complete only after harness validation is observed passing.
-  - Begin P1 application skeleton after P0 gate is satisfied.
+  - Discover the workflow run/checks for current HEAD after this state commit.
+  - Poll until terminal completion.
+  - If failed, inspect exact job logs, fix, push, and repeat without advancing.
+  - When CI is green, run separate code reviewer, QA reviewer, and product-guardrail reviewer passes.
+  - Resolve Critical/High findings and repeat CI if any code changes result.
+  - Mark P0 complete only after current HEAD has terminal green CI plus green review gates.
