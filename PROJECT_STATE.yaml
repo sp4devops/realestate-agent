@@ -1,39 +1,30 @@
 schema_version: 1
 project: Property Assistant
 repository: sp4devops/realestate-agent
-status: ready_for_merge
-active_phase: P10
-active_phase_name: Performance accessibility resilience and offline QA
-last_verified_commit: 390950f9cdbcc84cf9dff8f238ef4ac044ae4ba8
-last_updated: 2026-08-22T02:00:00+05:30
-active_pr: 11
-active_branch: ai/p10-performance-accessibility-resilience
+status: in_progress
+active_phase: P11
+active_phase_name: Android APK and desktop release candidates
+last_verified_commit: b66cd05f3f9f86e406842e125ef596bf12ef1e92
+last_updated: 2026-08-22T02:07:00+05:30
+active_pr: null
+active_branch: ai/p11-release-candidates
 
 ci_gate:
-  status: green
-  verified_head_sha: 390950f9cdbcc84cf9dff8f238ef4ac044ae4ba8
-  workflow_name: Quality Gates
-  workflow_run_id: 32523542935
-  workflow_run_number: 271
-  workflow_status: completed
-  workflow_conclusion: success
+  status: pending
+  verified_head_sha: b66cd05f3f9f86e406842e125ef596bf12ef1e92
+  workflow_name: Quality Gates + Release Candidates
+  workflow_run_id: null
+  workflow_run_number: null
+  workflow_status: pending
+  workflow_conclusion: null
   required_for_advance: true
   terminal_success_required: true
-  note: P10 functional and reviewer-repair HEAD is terminal green. State/handoff documentation moves PR HEAD, so one final exact-head Quality Gates run remains mandatory before merge.
+  note: P11 implementation is active. Both Quality Gates and Release Candidates must be terminal green on the exact final PR HEAD before completion.
 
 review_gates:
-  code_review:
-    status: pass
-    blocking_findings: 0
-    note: Reviewed P10 CSS hardening, Playwright measurement/offline/accessibility coverage, retained artifact generation and CI upload changes. Production change is limited to accessibility/layout styling; no network dependency, business-logic mutation or privacy regression was introduced. No Critical/High finding remains.
-  qa_review:
-    status: pass
-    blocking_findings: 0
-    note: Startup/resource/heap/storage thresholds, desktop/mobile critical-screen baselines, labeled and adequately sized controls, keyboard focus, horizontal overflow, offline typed capture/persistence/navigation, microphone/STT-unavailable fallback, Android build/tests/APK and full Quality Gates are covered. Visual review exposed the mobile Settings/Backup field collision and it was repaired with regression coverage.
-  product_guardrail_review:
-    status: pass
-    blocking_findings: 0
-    note: P10 remains a hardening/QA phase only. It preserves local-first operation, deterministic no-model typed capture, simple Property Advisor UI and existing Capture-Understand-Remember-Match-Act flows without CRM/cloud scope expansion.
+  code_review: {status: pending, blocking_findings: 0}
+  qa_review: {status: pending, blocking_findings: 0}
+  product_guardrail_review: {status: pending, blocking_findings: 0}
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -58,92 +49,44 @@ phases:
   P8: {name: After-call recap follow-ups and communication actions, status: done}
   P9: {name: Backup restore settings language and privacy hardening, status: done}
   P10: {name: Performance accessibility resilience and offline QA, status: done}
-  P11: {name: Android APK and desktop release candidates, status: pending}
+  P11: {name: Android APK and desktop release candidates, status: in_progress}
   P12: {name: Broker pilot readiness, status: pending}
 
 current_tasks:
-  - id: P10-T1
-    status: done
+  - id: P11-T1
+    status: in_progress
     owner: ai-agent
-    description: Add repeatable performance/storage measurements, retained desktop/mobile visual baselines, accessibility/touch/focus checks, offline/no-STT resilience coverage and repair discovered mobile settings usability defects.
-  - id: P10-T2
-    status: ready_for_merge
+    description: Build versioned Android and desktop release candidates, configurable Android signing, retained artifacts and packaged-candidate smoke verification.
+  - id: P11-T2
+    status: pending
     owner: ai-agent
-    description: Record P10 evidence, verify final documentation exact-head Quality Gates, and merge PR #11 only after explicit user authorization.
-  - id: P9-T2
-    status: done
-    owner: ai-agent
-    description: PR #10 merged to main as f06ee52134e0817fe8c14bdbde98370383acd44c after exact-head Quality Gates #249 success and explicit user authorization.
-  - id: P7-T3
-    status: deferred
-    owner: ai-agent
-    description: Select/package/benchmark the production local OCR engine on representative target hardware before pilot/release.
-  - id: P6-T3
-    status: deferred
-    owner: ai-agent
-    description: Expand deterministic query vocabulary, Tamil morphology and locality coverage using real pilot queries.
-  - id: P5-T3
-    status: deferred
-    owner: ai-agent
-    description: Expand deterministic nearby-locality knowledge and add an explicit negotiability domain field when capture/domain schema owns that business fact.
+    description: Complete exact-head Quality Gates and Release Candidates workflows plus code, QA and product reviewer gates.
   - id: P4-T3
     status: deferred
     owner: ai-agent
-    description: Select, package, and benchmark production local STT engine weights/runtime on representative target hardware before release/pilot.
-  - id: P0-T2
+    description: Select, package, and benchmark production local STT runtime on representative target hardware before pilot.
+  - id: P7-T3
     status: deferred
     owner: ai-agent
-    description: Add exact approved product-charter and visual-prototype source artifacts byte-for-byte when practical transfer is available.
+    description: Select, package, and benchmark production local OCR runtime on representative target hardware before pilot.
 
 blockers: []
 
 known_constraints:
   - Cash build-cost target is zero until product validation/revenue threshold.
   - No paid AI APIs or cloud dependency should be introduced merely for convenience.
-  - Normal Android apps must not assume unrestricted cellular-call audio capture/transcription.
-  - UI display language must remain independent from voice/input language.
-  - P1 desktop is the loopback-served web-compatible shell; packaged desktop release infrastructure is scheduled for P11.
-  - Production local STT and OCR engines remain replaceable adapters; concrete runtimes/weights still require packaging and representative-device benchmarking before release/pilot.
-  - P5 nearby-locality knowledge and P6 deterministic query vocabulary are intentionally starter sets and should expand from real pilot data.
-  - P8 Android avoids broad call-log/call/SMS permissions and uses explicit external communication actions.
-  - P9 backup passwords are intentionally unrecoverable and image-heavy encrypted backups can create transient memory pressure.
-  - P10 CI browser measurements are regression evidence, not a substitute for approximately 4 GB Android target-device memory/thermal/startup testing.
-  - Low-storage/quota exhaustion, process interruption across localStorage/IndexedDB restore, large image-heavy backup behavior and packaged desktop file handling remain target-runtime/release hardening risks for P11.
+  - CI Android release candidates use an ephemeral signing key for install/smoke validation; production distribution requires a persistent protected signing key.
+  - Desktop RC intentionally uses a loopback-only Python launcher and system browser to preserve the lightweight local-first architecture.
+  - Production local STT/OCR runtimes and approximately 4 GB Android target-device memory/thermal benchmarking remain pre-pilot constraints.
 
 last_checks:
-  - check: P9 merge
+  - check: P10 merge
     result: pass
-    evidence: PR #10 merged to main as f06ee52134e0817fe8c14bdbde98370383acd44c after exact-head Quality Gates #249 succeeded and explicit user authorization was given.
-  - check: P10 initial CI
-    result: fail_then_fixed
-    evidence: Quality Gates #257 (32522477033) kept Harness/JS/Android green but Playwright exposed ambiguous heading selectors and unsupported multi-word name fixtures; the tests were repaired without weakening production behavior.
-  - check: P10 corrected resilience CI
-    result: pass
-    evidence: Quality Gates #261 (32522952458) completed successfully for 340fd85d051a392d1c025877611f2a593e7a79c5 with every required job green.
-  - check: P10 retained evidence CI
-    result: pass
-    evidence: Quality Gates #267 (32523231402) completed successfully for 1a600ef06ea15e5214c65a279e6c8eaa4d057c2a and retained 18 desktop/mobile critical-screen PNG baselines plus two runtime-metrics JSON files.
-  - check: P10 visual reviewer repair
-    result: pass
-    evidence: Retained mobile Settings/Backup baseline exposed cramped inline labels/inputs. The form was changed to stacked full-width >=44px controls and the P10 audit now checks input labels and dimensions.
-  - check: P10 final functional CI
-    result: pass
-    evidence: Quality Gates #271 (32523542935) completed successfully for 390950f9cdbcc84cf9dff8f238ef4ac044ae4ba8 with Detect, Harness, JS/unit/lint/type, Playwright, Android tests/build/APK upload and Required gate summary green.
-  - check: P10 runtime measurements
-    result: pass
-    evidence: Final CI reported desktop DCL 75.4ms / load 76.7ms and mobile DCL 60.5ms / load 61.6ms; startup resources 111520 bytes across 18 resources; Chromium reported about 10MB used JS heap. These are CI regression measurements, not target-device SLAs.
-  - check: code reviewer
-    result: pass
-    evidence: No Critical/High finding remains in the P10 styling, test harness, measurement/baseline artifact generation or CI changes.
-  - check: QA reviewer
-    result: pass
-    evidence: P10 acceptance paths and discovered Settings/Backup mobile regression are covered; no Critical/High QA issue remains in the tested scope.
-  - check: product guardrail reviewer
-    result: pass
-    evidence: P10 is scope-controlled hardening with no cloud, paid service, generic CRM behavior or weakening of local-first/no-model core workflows.
+    evidence: PR #11 merged to main as b66cd05f3f9f86e406842e125ef596bf12ef1e92 after exact-head Quality Gates #275 success and explicit user authorization.
 
 next_actions:
-  - Add docs/handoff/P10_HANDOFF.md with P10 implementation, CI failure/repair, metrics, visual baseline and reviewer evidence.
-  - Wait for Quality Gates on the exact final PR HEAD created by state/handoff documentation commits and inspect every required job.
-  - If terminal success, PR #11 is merge-ready; do not merge without explicit user authorization.
-  - After authorized P10 merge, confirm main and begin P11 Android APK and desktop release candidates on a fresh focused branch/PR.
+  - Open P11 PR from ai/p11-release-candidates to main.
+  - Inspect exact-head Quality Gates and Release Candidates workflow results; repair any failure without weakening gates.
+  - Verify retained Android APK and desktop ZIP artifacts and packaged desktop smoke result.
+  - Run code, QA and product guardrail reviews; repair Critical/High findings.
+  - Record P11 handoff and run final exact-head workflows before requesting merge authorization.
