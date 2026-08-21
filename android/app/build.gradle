@@ -12,6 +12,10 @@ android {
   }
 }
 
+dependencies {
+  implementation 'androidx.core:core:1.15.0'
+}
+
 tasks.register('syncWebAssets', Copy) {
   from rootProject.file('../web')
   into project.file('src/main/assets')
