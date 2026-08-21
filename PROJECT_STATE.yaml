@@ -4,17 +4,36 @@ repository: sp4devops/realestate-agent
 status: bootstrap
 active_phase: P0
 active_phase_name: Harness and source-of-truth bootstrap
-last_verified_commit: UNVERIFIED
-last_updated: 2026-08-21T18:57:00+05:30
+last_verified_commit: ffabbf48a9b6447af40441e6c366936620b00c96
+last_updated: 2026-08-21T19:08:00+05:30
 active_pr: 1
 active_branch: ai/bootstrap-project-harness
 
 ci_gate:
-  status: blocked
-  head_sha: 366211346d74b5bef15b3587a887304cc533e106
+  status: green
+  verified_head_sha: ffabbf48a9b6447af40441e6c366936620b00c96
+  workflow_name: Quality Gates
+  workflow_run_id: 32487168029
+  workflow_run_number: 22
+  workflow_status: completed
+  workflow_conclusion: success
   required_for_advance: true
-  observed_issue: Earlier harness runs failed because the validator used a formatting-brittle literal phrase check. That defect is fixed. Current connector run lookup cannot retrieve push-triggered runs for this private branch, so terminal success for current HEAD cannot yet be observed here.
   terminal_success_required: true
+  note: Live CI for the exact final PR HEAD must be rechecked immediately before merge because state/handoff documentation commits can move HEAD after this recorded green run.
+
+review_gates:
+  code_review:
+    status: pass
+    blocking_findings: 0
+    note: Harness architecture, CI loop, validator, watcher, and Git discipline reviewed; no Critical/High correctness or security defect remains.
+  qa_review:
+    status: pass
+    blocking_findings: 0
+    note: P0 acceptance, failure handling, workflow gating, resumability, and progressive test activation reviewed; app E2E/Android jobs are correctly skipped until P1 introduces those stacks.
+  product_guardrail_review:
+    status: pass
+    blocking_findings: 0
+    note: Harness preserves the locked Property Assistant scope, terminology, local-first requirement, language priorities, and visual/product contracts.
 
 product_contract:
   core_loop: [capture, understand, remember, match, act]
@@ -63,15 +82,12 @@ current_tasks:
   - id: P0-T3
     status: in_progress
     owner: ai-agent
-    description: Drive the CI completion loop until the current HEAD is terminal green, then run code/QA/product reviews before advancing.
+    description: Verify final PR HEAD remains terminal green after state/handoff updates, then merge P0 bootstrap to main.
 
 blockers:
   - id: P0-B1
     severity: medium
-    description: The connector can create UTF-8 repository files but does not provide direct upload of the two attached source files; concise locked guardrails and visual acceptance contract are committed instead.
-  - id: P0-B2
-    severity: high
-    description: Current ChatGPT GitHub run lookup only exposes pull-request-triggered workflow runs and cannot observe this branch's push-triggered run; phase advancement is blocked until terminal CI for current HEAD is observable. Repo-native scripts/ci_wait.sh provides blocking wait/log behavior for agents with gh CLI access.
+    description: Exact uploaded product-charter and visual-prototype source files are not yet copied byte-for-byte; concise locked guardrails and visual acceptance contract are committed and sufficient for P0 operation.
 
 known_constraints:
   - Cash build-cost target is zero until product validation/revenue threshold.
@@ -85,20 +101,30 @@ last_checks:
     evidence: GitHub connector has admin/push access to private repository.
   - check: draft pull request
     result: pass
-    evidence: PR #1 remains open and mergeable.
+    evidence: PR #1 is open and mergeable.
   - check: CI failure diagnosis
     result: fail_then_fixed
-    evidence: scripts/harness_check.py used a literal semantic phrase that Markdown formatting split; validator now normalizes formatting and punctuation.
+    evidence: scripts/harness_check.py originally used a formatting-brittle literal semantic check; validator now normalizes Markdown/punctuation.
   - check: agent control loop
-    result: pass_design
-    evidence: AGENTS.md and docs/engineering/AGENT_EXECUTION_LOOP.md require push -> discover -> poll -> completed -> inspect -> fix -> repeat and prohibit phase advancement without current-HEAD green CI.
+    result: pass
+    evidence: AGENTS.md and docs/engineering/AGENT_EXECUTION_LOOP.md require push -> discover -> poll -> completed -> inspect -> fix -> repeat and prohibit advancement without green CI.
   - check: blocking watcher
-    result: added
-    evidence: scripts/ci_wait.sh uses gh run watch --exit-status and prints failed logs; non-green or missing CI exits non-zero.
+    result: pass
+    evidence: scripts/ci_wait.sh blocks with gh run watch --exit-status and emits failed logs.
+  - check: quality gates run 22
+    result: pass
+    evidence: workflow run 32487168029 completed successfully for ffabbf48a9b6447af40441e6c366936620b00c96; Detect, Harness integrity, and Required gate summary succeeded; JS, Playwright, and Android were skipped because those stacks are not present in P0.
+  - check: code reviewer
+    result: pass
+    evidence: no Critical/High findings.
+  - check: QA reviewer
+    result: pass
+    evidence: no Critical/High findings.
+  - check: product guardrail reviewer
+    result: pass
+    evidence: no Critical/High findings.
 
 next_actions:
-  - From an environment with authenticated gh CLI, run scripts/ci_wait.sh for current HEAD and block until completion.
-  - If failed, inspect emitted logs, fix the root cause, push, and rerun the watcher.
-  - When CI is green, run separate code reviewer, QA reviewer, and product-guardrail reviewer passes.
-  - Resolve Critical/High findings and repeat CI after fixes.
-  - Mark P0 complete only after current HEAD has terminal green CI plus green review gates.
+  - Poll Quality Gates for the exact current PR HEAD after these final documentation commits.
+  - If terminal success, merge PR #1 to main.
+  - After merge, confirm main contains the harness and begin P1 on a new focused branch/PR.
