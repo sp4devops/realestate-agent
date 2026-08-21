@@ -1,5 +1,35 @@
 import { test, expect } from '@playwright/test';
 
+const requiredRoutes = [
+  ['splash','Property Assistant'],
+  ['onboarding','Welcome'],
+  ['speak','Speak & Save'],
+  ['type','Type & Save'],
+  ['review','Review'],
+  ['after-call','After-call recap'],
+  ['ask','Ask'],
+  ['people','People'],
+  ['person','Person detail'],
+  ['property','Property detail'],
+  ['matches','Matches'],
+  ['match','Match detail'],
+  ['poster','Scan Poster'],
+  ['poster-review','Poster review'],
+  ['poster-lead','Poster lead'],
+  ['followups','Follow-ups'],
+  ['language','Language'],
+  ['settings','Settings & Backup']
+];
+
+test('all approved P1 shell routes render', async ({ page }) => {
+  await page.goto('/#/home');
+  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
+  for (const [route, heading] of requiredRoutes) {
+    await page.goto(`/#/${route}`);
+    await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+  }
+});
+
 test('primary shell navigation is wired with no dead primary controls', async ({ page }) => {
   await page.goto('/#/home');
   await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
@@ -12,6 +42,15 @@ test('primary shell navigation is wired with no dead primary controls', async ({
   await expect(page.getByRole('heading', { name: 'Speak & Save' })).toBeVisible();
   await page.getByRole('button', { name: 'Use Type & Save instead' }).click();
   await expect(page.getByRole('heading', { name: 'Type & Save' })).toBeVisible();
+});
+
+test('capture shortcuts reach poster and after-call shells', async ({ page }) => {
+  await page.goto('/#/home');
+  await page.getByRole('button', { name: /Scan Poster/ }).click();
+  await expect(page.getByRole('heading', { name: 'Scan Poster' })).toBeVisible();
+  await page.goto('/#/home');
+  await page.getByRole('button', { name: 'After-call recap' }).click();
+  await expect(page.getByRole('heading', { name: 'After-call recap' })).toBeVisible();
 });
 
 test('display language and input language are independent', async ({ page }) => {
