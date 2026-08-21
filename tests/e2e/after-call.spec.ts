@@ -58,5 +58,6 @@ test('Call WhatsApp and Share use host actions and returning from Call offers re
  await expect(page.getByTestId('after-call-banner')).toBeVisible();
  await page.getByTestId('after-call-banner').getByRole('button',{name:'Add recap'}).click();
  await expect(page.getByTestId('recap-phone')).toHaveValue('9000000001');
- await expect(page.getByTestId('after-call-return-prompt')).toContainText('does not record');
+ await expect(page.getByTestId('after-call-return-prompt')).toContainText('comes only from the action you launched');
+ await expect(page.getByText('Property Assistant does not record the call.')).toBeVisible();
 });
