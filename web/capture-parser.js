@@ -43,6 +43,8 @@
     if (explicit) return explicit[1].trim().replace(/\s+(?:phone|mobile|number|wants|needs|looking|தேவை|venum).*$/i,'').trim();
     const buyer = text.match(/^\s*([A-Z][a-z]+)\s+(?:wants|needs|looking)/);
     if (buyer) return buyer[1];
+    const owner = text.match(/^\s*([A-Z][a-z]+)\s+(?:owner|has|selling|sells)/i);
+    if (owner) return owner[1];
     return null;
   }
 
@@ -67,8 +69,8 @@
     const uncertain = [];
     if (!locality) uncertain.push('locality');
     if (!propertyType) uncertain.push('propertyType');
-    if (detected.kind === 'requirement' && !phone) uncertain.push('primaryPhone');
-    if (detected.kind === 'requirement' && !name) uncertain.push('name');
+    if (!phone) uncertain.push('primaryPhone');
+    if (!name) uncertain.push('name');
     if (amount == null) uncertain.push(detected.kind === 'requirement' ? 'budgetMax' : 'price');
 
     return {
@@ -77,14 +79,16 @@
       kind:detected.kind,
       confidence: Math.max(0.35, 1 - uncertain.length * 0.12),
       uncertain,
-      person: detected.kind === 'requirement' ? { name:name || '', role:detected.role, primaryPhone:phone || '', alternatePhones:[] } : null,
+      person: { name:name || '', role:detected.role, primaryPhone:phone || '', alternatePhones:[] },
       requirement: detected.kind === 'requirement' ? { intent:detected.intent, propertyType:propertyType || '', locations:locality?[locality]:[], budgetMin:null, budgetMax:amount } : null,
       property: detected.kind === 'property' ? { intent:detected.intent, propertyType:propertyType || '', locality:locality || '', price:amount, ownerPersonId:null } : null
     };
   }
 
   function isExtraction(value) {
-    return Boolean(value && value.ok === true && ['requirement','property'].includes(value.kind) && Array.isArray(value.uncertain));
+    if (!(value && value.ok === true && ['requirement','property'].includes(value.kind) && Array.isArray(value.uncertain))) return false;
+    if (!value.person || typeof value.person !== 'object') return false;
+    return value.kind === 'requirement' ? Boolean(value.requirement && typeof value.requirement === 'object') : Boolean(value.property && typeof value.property === 'object');
   }
 
   function createExtractor(modelAdapter = null) {
