@@ -16,13 +16,22 @@ test('Type & Save extracts, allows correction, and saves a buyer locally', async
   expect(saved.budgetMax).toBe(2500000);
 });
 
-test('Type & Save can save a property without AI', async ({ page }) => {
+test('Type & Save saves a property and preserves its owner contact without AI', async ({ page }) => {
   await page.goto('/#/type');
-  await page.getByTestId('capture-text').fill('Land for sale in Salem price 1800000');
+  await page.getByTestId('capture-text').fill('Name is Selvam, land for sale in Salem price 1800000 phone 96543 21098');
   await page.getByTestId('analyze-capture').click();
+  await expect(page.getByTestId('field-name')).toHaveValue('Selvam');
+  await expect(page.getByTestId('field-primaryPhone')).toHaveValue('+91 96543 21098');
   await expect(page.getByTestId('field-locality')).toHaveValue('Salem');
   await page.getByTestId('save-capture').click();
   await expect(page.getByTestId('property-title')).toContainText('land in Salem');
+  const linked = await page.evaluate(() => {
+    const property = window.__PA_REPOSITORY__.list('properties').find(item => item.locality === 'Salem' && item.price === 1800000);
+    const owner = property?.ownerPersonId ? window.__PA_REPOSITORY__.get('people', property.ownerPersonId) : null;
+    return { property, owner };
+  });
+  expect(linked.owner.name).toBe('Selvam');
+  expect(linked.owner.primaryPhone).toBe('+91 96543 21098');
 });
 
 test('empty typed capture gives a useful local validation error', async ({ page }) => {
