@@ -85,10 +85,10 @@ test('GPS completion does not redraw poster review after navigation away',async(
  await page.getByTestId('use-poster-text').click();
  await page.getByTestId('get-capture-location').click();
  await page.evaluate(()=>{location.hash='#/people';});
- await expect(page.getByRole('heading',{name:'People'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Contacts',exact:true})).toBeVisible();
  await page.waitForTimeout(250);
  await expect(page).toHaveURL(/#\/people$/);
- await expect(page.getByRole('heading',{name:'People'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Contacts',exact:true})).toBeVisible();
 });
 
 test('typed fallback keeps a selected poster image with the saved lead',async({page})=>{
