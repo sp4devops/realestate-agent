@@ -35,10 +35,32 @@ function saveRecap(){
 }
 function resolvePhone(f){return core.resolveFollowUpPhone(repo,f);}
 function shareText(f){const phone=resolvePhone(f);return `${f.title}${phone?` · ${phone}`:''} · ${new Date(f.dueAt).toLocaleString()}`;}
+function followUpContext(f){
+ const person=f.personId?repo.get('people',f.personId):null;
+ const property=f.propertyId?repo.get('properties',f.propertyId):null;
+ return {person,property,phone:resolvePhone(f)};
+}
+function followUpCard(f){
+ const {person,property,phone}=followUpContext(f);
+ const overdue=f.status==='open'&&new Date(f.dueAt)<new Date();
+ const actions=f.status==='open'
+  ? `<button class="button done-button" data-followup-action="done" data-id="${esc(f.id)}">${icon('check')} Done</button><button class="button subtle-button" data-followup-action="cancel" data-id="${esc(f.id)}">Cancel</button>`
+  : `<button class="button" data-followup-action="reopen" data-id="${esc(f.id)}">Reopen</button>`;
+ const comms=phone?`<button class="button" data-comm="call" data-id="${esc(f.id)}">${icon('phone')} Call</button><button class="button" data-comm="whatsapp" data-id="${esc(f.id)}">WhatsApp</button><button class="button subtle-button" data-comm="share" data-id="${esc(f.id)}">Share</button>`:'';
+ const context=property?propertyTitle(property):person?`${titleCase(person.role)} · ${phone || ''}`:'Saved local reminder';
+ return `<article class="followup-card" data-testid="followup-card" data-status="${esc(f.status)}"><div class="followup-card-head"><span class="avatar ${property?'gold':''}">${property?icon('properties'):initials(person?.name || f.title)}</span><div><h2>${esc(person?.name || f.title)}</h2><p>${esc(context)}</p></div><span class="priority-badge ${overdue?'high':'medium'}">${overdue?'High':'Planned'}</span></div>${person?`<p class="followup-reason">${esc(f.title)}</p>`:''}<div class="followup-time">${icon('followups','inline-icon')}<strong>${esc(new Date(f.dueAt).toLocaleString())}</strong></div><div class="followup-actions">${comms}${actions}</div></article>`;
+}
 function renderFollowUps(){
  const items=repo.list('followUps').sort((a,b)=>new Date(a.dueAt)-new Date(b.dueAt));
- const cards=items.map(f=>{const phone=resolvePhone(f);const actions=f.status==='open'?`<button class="button primary" data-followup-action="done" data-id="${esc(f.id)}">Done</button><button class="button" data-followup-action="cancel" data-id="${esc(f.id)}">Cancel</button>`:`<button class="button" data-followup-action="reopen" data-id="${esc(f.id)}">Reopen</button>`;const comms=phone?`<button class="button" data-comm="call" data-id="${esc(f.id)}">Call</button><button class="button" data-comm="whatsapp" data-id="${esc(f.id)}">WhatsApp</button><button class="button" data-comm="share" data-id="${esc(f.id)}">Share</button>`:'';return `<article class="card person-card" data-testid="followup-card" data-status="${esc(f.status)}"><div><strong>${esc(f.title)}</strong><p>${esc(new Date(f.dueAt).toLocaleString())} · ${esc(f.status)}</p>${phone?`<p>${esc(phone)}</p>`:''}</div><div class="page-actions">${actions}${comms}</div></article>`;}).join('');
- app.innerHTML=shell(`<section class="page"><p class="eyebrow">NEXT ACTIONS</p><h1>Follow-ups</h1><p class="lead">Keep only useful next actions. Mark them done, cancel them, or reopen them later.</p><div class="choice-list" data-testid="followup-list">${cards||'<div class="placeholder-card">No follow-ups yet.</div>'}</div><p class="lead" data-testid="followup-status"></p></section>`,'');
+ const endToday=new Date();endToday.setHours(23,59,59,999);
+ const today=items.filter(item=>item.status==='open'&&new Date(item.dueAt)<=endToday);
+ const upcoming=items.filter(item=>item.status==='open'&&new Date(item.dueAt)>endToday);
+ const completed=items.filter(item=>item.status!=='open');
+ const staleProperties=repo.list('properties').filter(property=>Date.now()-new Date(property.updatedAt || property.createdAt).getTime()>90*24*60*60*1000).length;
+ const copy=t().ui;
+ const empty=`<div class="empty-state">${icon('followups')}<h2>${copy.followups}</h2><p>${copy.noFollowups}</p><button class="button" type="button" data-route="after-call">Add a recap</button></div>`;
+ const sections=items.length?`${today.length?`<section class="followup-group"><h2>${copy.today} <span>${today.length}</span></h2><div class="followup-stack">${today.map(followUpCard).join('')}</div></section>`:''}${upcoming.length?`<section class="followup-group"><h2>${copy.upcoming} <span>${upcoming.length}</span></h2><div class="followup-stack">${upcoming.map(followUpCard).join('')}</div></section>`:''}${completed.length?`<section class="followup-group"><h2>${copy.completed} <span>${completed.length}</span></h2><div class="followup-stack completed">${completed.map(followUpCard).join('')}</div></section>`:''}`:empty;
+ app.innerHTML=shell(`<section class="screen-page followups-page"><div class="screen-heading"><div><h1>${copy.followups}</h1><p>${items.filter(item=>item.status==='open').length} pending · ${copy.followupsHint}</p></div><button class="icon-button" type="button" data-route="after-call" aria-label="Add follow-up">${icon('plus')}</button></div><div data-testid="followup-list">${sections}</div><aside class="insight-card">${icon('sparkles','insight-icon')}<div><small>INSIGHT FOR YOU</small><strong>${staleProperties?`${staleProperties} listing${staleProperties===1?'':'s'} need a price refresh`:'Your saved listing prices are current'}</strong><p>${staleProperties?'Reconfirm old asking prices before sharing them.':'Keep recording price changes after owner calls.'}</p></div><button class="button" type="button" data-route="properties">Review now ${icon('arrow')}</button></aside><p class="lead action-status" data-testid="followup-status"></p></section>`,'followups');
  bindShell();
  document.querySelectorAll('[data-followup-action]').forEach(btn=>btn.addEventListener('click',()=>{try{const f=repo.get('followUps',btn.dataset.id);repo.update('followUps',f.id,{status:core.transition(f.status,btn.dataset.followupAction)});renderFollowUps();}catch(error){document.querySelector('[data-testid="followup-status"]').textContent=error.message;}}));
  document.querySelectorAll('[data-comm]').forEach(btn=>btn.addEventListener('click',async()=>{const f=repo.get('followUps',btn.dataset.id);const phone=resolvePhone(f);const status=document.querySelector('[data-testid="followup-status"]');try{if(btn.dataset.comm==='call')comm.call(phone,f.personId||null);else if(btn.dataset.comm==='whatsapp')comm.whatsapp(phone,`Following up: ${f.title}`);else{const mode=await comm.share(shareText(f));status.textContent=mode==='unavailable'?'Sharing is unavailable on this device.':mode==='clipboard'?'Follow-up copied to clipboard.':'Share action opened.';}}catch(error){status.textContent=error.message||'Action could not be opened.';}}));

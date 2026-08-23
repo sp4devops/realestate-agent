@@ -40,6 +40,41 @@ test('Tanglish buyer note works without a model', () => {
   assert.equal(result.requirement.budgetMax, 2000000);
 });
 
+test('everyday Tanglish BHK request keeps the person, precise locality and monthly budget', () => {
+  const result = parse('Ramesh-ku Erode railway station pakkathula 2BHK rent venum. Budget 15k. Family only. Next month move pannuvaaru.');
+  assert.equal(result.kind, 'requirement');
+  assert.equal(result.person.name, 'Ramesh');
+  assert.equal(result.requirement.intent, 'rent');
+  assert.equal(result.requirement.propertyType, '2bhk');
+  assert.deepEqual(result.requirement.locations, ['Erode Railway Station']);
+  assert.equal(result.requirement.budgetMax, 15000);
+  assert.deepEqual(result.requirement.preferences, ['Family only']);
+  assert.equal(result.requirement.timing, 'Next month');
+});
+
+test('budget range and trailing owner language become structured business meaning', () => {
+  const demand = parse('Kumar wants plot in Perundurai, budget ₹25–35 lakh, phone 98765 40001');
+  assert.equal(demand.requirement.budgetMin, 2500000);
+  assert.equal(demand.requirement.budgetMax, 3500000);
+
+  const supply = parse('Nasiyanur side one site available, 7 cent, 38 lakhs, owner Subramani, phone 98765 40002');
+  assert.equal(supply.kind, 'property');
+  assert.equal(supply.person.name, 'Subramani');
+  assert.equal(supply.property.locality, 'Nasiyanur');
+  assert.deepEqual(supply.property.size, { value:7, unit:'cent' });
+  assert.equal(supply.property.price, 3800000);
+});
+
+test('advisor shorthand infers local-market units and keeps matchable preferences', () => {
+  const demand = parse('Ravi wants house in Thindal. Budget max 70. East-facing, minimum 30 ft road. Phone 98765 40003.');
+  assert.equal(demand.requirement.budgetMax, 7000000);
+  assert.deepEqual(demand.requirement.preferences, ['East facing','30-ft road']);
+
+  const supply = parse('Suresh owner house sale in Thindal, owner 65 solraru, east-facing, 40 ft road, negotiable. Phone 98765 40004.');
+  assert.equal(supply.property.price, 6500000);
+  assert.deepEqual(supply.property.attributes, ['East facing','40-ft road','Negotiable']);
+});
+
 test('Tamil property note extracts supply fields and preserves owner phone', () => {
   const result = parse('பெயர் Murugan, Erode நிலம் விற்பனை price 2200000 phone 93456 78901');
   assert.equal(result.kind, 'property');

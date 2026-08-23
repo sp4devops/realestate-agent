@@ -44,3 +44,12 @@ test('ranking sorts higher scoring matches first',()=>{
   assert.equal(ranked[0].propertyId,'p1');
   assert.equal(ranked.length,2);
 });
+
+test('remembered facing and road preferences explain a future match',()=>{
+  const result=evaluate(
+    {...req,preferences:['East facing','30-ft road']},
+    {...prop,attributes:['East facing','40-ft road','Negotiable']}
+  );
+  assert.ok(result.reasons.includes('East facing'));
+  assert.ok(result.reasons.includes('40-ft road meets preference'));
+});

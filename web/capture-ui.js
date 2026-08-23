@@ -11,6 +11,7 @@
   function money(value){ return value == null || value === '' ? '' : String(value); }
   function field(label,name,value,type='text'){ return `<label class="capture-field"><span>${label}</span><input data-testid="field-${name}" name="${name}" type="${type}" value="${esc(value)}" /></label>`; }
   function sizeFields(size){ if(!size) return ''; return `<div class="field-row">${field('Size','sizeValue',size.value,'number')}${field('Unit','sizeUnit',size.unit)}</div>`; }
+  function listValue(values){ return Array.isArray(values) ? values.join(', ') : ''; }
 
   function renderType(){
     app.innerHTML = shell(`<section class="page"><p class="eyebrow">TYPE & SAVE</p><h1>Type & Save</h1><p class="lead">Tell Property Assistant naturally about one buyer, tenant, owner, or property. Parsing works locally without a model.</p><label class="capture-field"><span>Business note</span><textarea data-testid="capture-text" rows="7" placeholder="Example: Arun wants 5 acre land in Perundurai, budget 25 lakh, phone 98765 43210"></textarea></label><div class="page-actions"><button type="button" class="button primary" data-testid="analyze-capture">Review details</button><button type="button" class="button" data-route="home">Cancel</button></div><p class="capture-error" data-testid="capture-error" hidden></p></section>`, '');
@@ -27,8 +28,8 @@
   function reviewBody(parsed){
     const labels=(parsed.uncertain || []).map(key=>uncertaintyLabels[key] || key);
     const uncertain = labels.length ? `<div class="placeholder-card"><strong>Please check these details</strong><p data-testid="uncertain-fields">${esc(labels.join(', '))}</p></div>` : `<div class="placeholder-card"><strong>Looks complete</strong><p>No low-confidence fields were detected by the local rules.</p></div>`;
-    if(parsed.kind==='property') return `${uncertain}<form data-testid="review-form">${field('Owner name','name',parsed.person?.name || '')}${field('Primary phone','primaryPhone',parsed.person?.primaryPhone || '')}${field('Property type','propertyType',parsed.property?.propertyType || '')}${sizeFields(parsed.property?.size)}${field('Locality','locality',parsed.property?.locality || '')}${field('Intent','intent',parsed.property?.intent || 'sale')}${field('Price','price',money(parsed.property?.price),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save property</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
-    return `${uncertain}<form data-testid="review-form">${field('Name','name',parsed.person?.name || '')}${field('Primary phone','primaryPhone',parsed.person?.primaryPhone || '')}${field('Property type','propertyType',parsed.requirement?.propertyType || '')}${sizeFields(parsed.requirement?.size)}${field('Locality','locality',parsed.requirement?.locations?.[0] || '')}${field('Intent','intent',parsed.requirement?.intent || 'buy')}${field('Budget up to','budgetMax',money(parsed.requirement?.budgetMax),'number')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save buyer</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
+    if(parsed.kind==='property') return `${uncertain}<form data-testid="review-form">${field('Owner name','name',parsed.person?.name || '')}${field('Primary phone','primaryPhone',parsed.person?.primaryPhone || '')}${field('Property type','propertyType',parsed.property?.propertyType || '')}${sizeFields(parsed.property?.size)}${field('Locality','locality',parsed.property?.locality || '')}${field('Intent','intent',parsed.property?.intent || 'sale')}${field('Price','price',money(parsed.property?.price),'number')}${field('Attributes (comma separated)','attributes',listValue(parsed.property?.attributes))}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save property</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
+    return `${uncertain}<form data-testid="review-form">${field('Name','name',parsed.person?.name || '')}${field('Primary phone','primaryPhone',parsed.person?.primaryPhone || '')}${field('Property type','propertyType',parsed.requirement?.propertyType || '')}${sizeFields(parsed.requirement?.size)}${field('Locality','locality',parsed.requirement?.locations?.[0] || '')}${field('Intent','intent',parsed.requirement?.intent || 'buy')}<div class="field-row">${field('Budget from','budgetMin',money(parsed.requirement?.budgetMin),'number')}${field('Budget up to','budgetMax',money(parsed.requirement?.budgetMax),'number')}</div>${field('Move / decision timing','timing',parsed.requirement?.timing || '')}${field('Preferences (comma separated)','preferences',listValue(parsed.requirement?.preferences))}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save buyer</button><button class="button" type="button" data-route="type">Edit note</button></div></form>`;
   }
 
   function renderReview(){
@@ -40,34 +41,35 @@
     bindRouteButtons();
     document.querySelector('[data-testid="review-form"]').addEventListener('submit',(event)=>{
       event.preventDefault(); const saveButton=document.querySelector('[data-testid="save-capture"]'); const errorEl=document.querySelector('[data-testid="review-error"]'); saveButton.disabled=true; errorEl.hidden=true;
-      try { const form=new FormData(event.currentTarget); if(parsed.kind==='property') saveProperty(form); else saveRequirement(form); }
+      try { const form=new FormData(event.currentTarget); if(parsed.kind==='property') saveProperty(form,parsed); else saveRequirement(form,parsed); }
       catch(error){ errorEl.hidden=false; errorEl.textContent=error.message || 'Could not save these details.'; saveButton.disabled=false; }
     });
   }
 
   function sizeFromForm(form){ const value=numberOrNull(form.get('sizeValue')); const unit=String(form.get('sizeUnit') || '').trim(); return value == null || !unit ? null : { value, unit }; }
+  function listFromForm(form,name){ return [...new Set(String(form.get(name) || '').split(',').map(value=>value.trim()).filter(Boolean))]; }
   function findPersonByPhone(tx,phone){
     const normalize=window.PropertyAssistantPersistence.normalizePhone; const target=normalize(phone); if(!target)return null;
     return tx.list('people').find(person=>[person.primaryPhone,...(person.alternatePhones || [])].some(value=>normalize(value)===target)) || null;
   }
 
-  function saveRequirement(form){
+  function saveRequirement(form,parsed){
     const repo=window.__PA_REPOSITORY__; const phone=String(form.get('primaryPhone')||'').trim(); const intent=String(form.get('intent')||'buy');
     const result=repo.transact((tx)=>{
       const existing=findPersonByPhone(tx,phone);
       const person=existing || tx.create('people',{ name:String(form.get('name')||'').trim(), role:intent==='rent'||intent==='lease'?'tenant':'buyer', primaryPhone:phone, alternatePhones:[] });
-      const requirement=tx.create('requirements',{ personId:person.id, intent, propertyType:String(form.get('propertyType')||'').trim(), locations:[String(form.get('locality')||'').trim()].filter(Boolean), budgetMin:null, budgetMax:numberOrNull(form.get('budgetMax')), size:sizeFromForm(form) });
+      const requirement=tx.create('requirements',{ personId:person.id, intent, propertyType:String(form.get('propertyType')||'').trim(), locations:[String(form.get('locality')||'').trim()].filter(Boolean), budgetMin:numberOrNull(form.get('budgetMin')), budgetMax:numberOrNull(form.get('budgetMax')), size:sizeFromForm(form), timing:String(form.get('timing')||'').trim(), preferences:listFromForm(form,'preferences'), sourceText:String(parsed?.rawTranscript || parsed?.source || '').trim(), normalizedText:String(parsed?.normalizedTranscript || parsed?.source || '').trim() });
       return {person,requirement,reusedPerson:Boolean(existing)};
     });
     sessionStorage.removeItem(DRAFT_KEY); location.hash=`#/person?id=${encodeURIComponent(result.person.id)}`;
   }
 
-  function saveProperty(form){
+  function saveProperty(form,parsed){
     const repo=window.__PA_REPOSITORY__;
     const result=repo.transact((tx)=>{
       const ownerName=String(form.get('name')||'').trim(); const ownerPhone=String(form.get('primaryPhone')||'').trim();
       const owner=ownerName && ownerPhone ? (findPersonByPhone(tx,ownerPhone) || tx.create('people',{ name:ownerName, role:'owner', primaryPhone:ownerPhone, alternatePhones:[] })) : null;
-      const property=tx.create('properties',{ ownerPersonId:owner?.id || null, intent:String(form.get('intent')||'sale'), propertyType:String(form.get('propertyType')||'').trim(), locality:String(form.get('locality')||'').trim(), price:numberOrNull(form.get('price')), size:sizeFromForm(form) });
+      const property=tx.create('properties',{ ownerPersonId:owner?.id || null, intent:String(form.get('intent')||'sale'), propertyType:String(form.get('propertyType')||'').trim(), locality:String(form.get('locality')||'').trim(), price:numberOrNull(form.get('price')), size:sizeFromForm(form), attributes:listFromForm(form,'attributes'), sourceText:String(parsed?.rawTranscript || parsed?.source || '').trim(), normalizedText:String(parsed?.normalizedTranscript || parsed?.source || '').trim() });
       return {owner,property};
     });
     sessionStorage.removeItem(DRAFT_KEY); location.hash=`#/property?id=${encodeURIComponent(result.property.id)}`;

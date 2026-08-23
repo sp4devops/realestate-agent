@@ -12,6 +12,10 @@
   function assert(condition, message) { if (!condition) throw new Error(message); }
   function nonEmpty(value, field) { assert(typeof value === 'string' && value.trim().length > 0, `${field} is required`); }
   function optionalString(value, field) { assert(value == null || typeof value === 'string', `${field} must be a string`); }
+  function optionalStringArray(value, field) {
+    assert(value == null || Array.isArray(value), `${field} must be an array`);
+    for (const item of value || []) nonEmpty(item, field);
+  }
   function optionalNumber(value, field) { assert(value == null || (typeof value === 'number' && Number.isFinite(value)), `${field} must be a finite number`); }
   function optionalNonNegativeNumber(value, field) { optionalNumber(value, field); assert(value == null || value >= 0, `${field} cannot be negative`); }
   function validDate(value, field) { nonEmpty(value, field); assert(Number.isFinite(Date.parse(value)), `${field} must be a valid date`); }
@@ -52,9 +56,9 @@
   function validateRequirement(record) {
     nonEmpty(record.personId, 'personId'); assert(['buy','rent','lease','sell'].includes(record.intent), 'requirement intent is invalid'); assert(Array.isArray(record.locations || []), 'locations must be an array');
     for (const location of record.locations || []) nonEmpty(location, 'location'); optionalString(record.propertyType, 'propertyType'); optionalNonNegativeNumber(record.budgetMin, 'budgetMin'); optionalNonNegativeNumber(record.budgetMax, 'budgetMax');
-    if (record.budgetMin != null && record.budgetMax != null) assert(record.budgetMin <= record.budgetMax, 'budgetMin cannot exceed budgetMax'); validateSize(record.size);
+    if (record.budgetMin != null && record.budgetMax != null) assert(record.budgetMin <= record.budgetMax, 'budgetMin cannot exceed budgetMax'); validateSize(record.size); optionalStringArray(record.preferences, 'preference'); optionalString(record.timing, 'timing'); optionalString(record.sourceText, 'sourceText'); optionalString(record.normalizedText, 'normalizedText');
   }
-  function validateProperty(record) { assert(['sale','rent','lease'].includes(record.intent), 'property intent is invalid'); nonEmpty(record.propertyType, 'propertyType'); nonEmpty(record.locality, 'locality'); optionalString(record.ownerPersonId, 'ownerPersonId'); optionalNonNegativeNumber(record.price, 'price'); validateSize(record.size); }
+  function validateProperty(record) { assert(['sale','rent','lease'].includes(record.intent), 'property intent is invalid'); nonEmpty(record.propertyType, 'propertyType'); nonEmpty(record.locality, 'locality'); optionalString(record.ownerPersonId, 'ownerPersonId'); optionalNonNegativeNumber(record.price, 'price'); validateSize(record.size); optionalStringArray(record.attributes, 'attribute'); optionalString(record.sourceText, 'sourceText'); optionalString(record.normalizedText, 'normalizedText'); }
   function validateInteraction(record) { assert(['call','message','meeting','site_visit','note','other'].includes(record.kind), 'interaction kind is invalid'); validDate(record.occurredAt, 'occurredAt'); assert(Array.isArray(record.personIds || []), 'personIds must be an array'); optionalString(record.summary, 'summary'); optionalString(record.phone, 'phone'); }
   function validateFollowUp(record) { validDate(record.dueAt, 'dueAt'); assert(['open','done','cancelled'].includes(record.status), 'follow-up status is invalid'); nonEmpty(record.title, 'title'); optionalString(record.personId, 'personId'); optionalString(record.propertyId, 'propertyId'); optionalString(record.posterLeadId, 'posterLeadId'); }
   function validateMatch(record) { nonEmpty(record.requirementId, 'requirementId'); nonEmpty(record.propertyId, 'propertyId'); optionalNumber(record.score, 'score'); assert(record.score == null || (record.score >= 0 && record.score <= 100), 'score must be between 0 and 100'); assert(Array.isArray(record.reasons || []), 'reasons must be an array'); for (const reason of record.reasons || []) nonEmpty(reason, 'match reason'); }
@@ -102,8 +106,13 @@
     const database = freshDatabase(); const source = raw.entities || raw;
     for (const type of ENTITY_TYPES) {
       const records = source[type];
-      if (Array.isArray(records)) for (const record of records) if (record && record.id) database.entities[type][record.id] = clone(record);
-      else if (records && typeof records === 'object') database.entities[type] = clone(records);
+      if (Array.isArray(records)) {
+        for (const record of records) {
+          if (record && record.id) database.entities[type][record.id] = clone(record);
+        }
+      } else if (records && typeof records === 'object') {
+        database.entities[type] = clone(records);
+      }
     }
     database.schemaVersion = CURRENT_SCHEMA_VERSION; return database;
   }
@@ -147,8 +156,8 @@
       const database = load(); if (Object.values(database.entities).some((records) => Object.keys(records).length > 0)) return false; const timestamp = '2026-08-21T00:00:00.000Z';
       database.entities.people['person-suresh'] = { id:'person-suresh', name:'Suresh (Demo)', role:'buyer', primaryPhone:'+91 90000 00001', alternatePhones:['+91 90000 00002'], createdAt:timestamp, updatedAt:timestamp };
       database.entities.people['person-murugan'] = { id:'person-murugan', name:'Murugan (Demo)', role:'owner', primaryPhone:'+91 90000 00003', alternatePhones:[], createdAt:timestamp, updatedAt:timestamp };
-      database.entities.requirements['requirement-suresh'] = { id:'requirement-suresh', personId:'person-suresh', intent:'buy', propertyType:'land', locations:['Erode'], budgetMin:1800000, budgetMax:2500000, createdAt:timestamp, updatedAt:timestamp };
-      database.entities.properties['property-murugan'] = { id:'property-murugan', ownerPersonId:'person-murugan', intent:'sale', propertyType:'land', locality:'Erode', price:2200000, size:{value:1200,unit:'sqft'}, createdAt:timestamp, updatedAt:timestamp };
+      database.entities.requirements['requirement-suresh'] = { id:'requirement-suresh', personId:'person-suresh', intent:'buy', propertyType:'land', locations:['Erode'], budgetMin:1800000, budgetMax:2500000, timing:'Within 30 days', preferences:['East facing','30-ft road'], sourceText:'Suresh needs an east-facing plot in Erode with minimum 30-ft road, budget 18 to 25 lakh.', createdAt:timestamp, updatedAt:timestamp };
+      database.entities.properties['property-murugan'] = { id:'property-murugan', ownerPersonId:'person-murugan', intent:'sale', propertyType:'land', locality:'Erode', price:2200000, size:{value:1200,unit:'sqft'}, attributes:['East facing','40-ft road','Negotiable'], sourceText:'Murugan owner has 1200 sqft east-facing land in Erode for 22 lakh. 40-ft road, negotiable.', createdAt:timestamp, updatedAt:timestamp };
       save(database); return true;
     }
     return { create, get, list, update, remove, transact, migrateAndPersist, seedSynthetic, loadSnapshot: () => clone(load()) };

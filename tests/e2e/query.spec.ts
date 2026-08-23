@@ -76,6 +76,6 @@ test('leaving Ask stops active microphone and does not create results',async({pa
  });
  await page.goto('/#/ask'); await page.getByTestId('start-query-voice').click(); await expect(page.getByTestId('stop-query-voice')).toBeVisible();
  await page.goto('/#/home');
- await expect(page.getByRole('heading',{name:"Today's opportunities"})).toBeVisible();
+ await expect(page.getByRole('heading',{name:/Property Advisor/})).toBeVisible();
  expect(await page.evaluate(()=>(window as any).__askTrackStopped)).toBe(true);
 });

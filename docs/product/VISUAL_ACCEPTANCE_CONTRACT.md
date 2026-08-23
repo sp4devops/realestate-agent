@@ -23,28 +23,38 @@ The implementation must preserve an understandable path through:
 
 1. Splash
 2. Onboarding
-3. Home / Today's Opportunities
+3. Home / Assistant capture
 4. Speak & Save
 5. Type & Save
 6. AI extraction Review
 7. After-call capture prompt/recap
-8. People
-9. Person detail
-10. Property detail
-11. Ask / Search
-12. Search result cards
-13. Matches
-14. Match detail/actions
-15. Poster capture
-16. Poster extraction review
-17. Poster lead detail
-18. Follow-ups / Action Brain
-19. Language / Personalize
-20. Settings / Backup
+8. Requirements
+9. Properties
+10. Contacts / People
+11. Person detail
+12. Property detail
+13. Ask / Search
+14. Search result cards
+15. Matches
+16. Match detail/actions
+17. Poster capture
+18. Poster extraction review
+19. Poster lead detail
+20. Follow-ups / Action Brain
+21. Language / Personalize
+22. Settings / Backup
 
 ## Home contract
 
-Home must emphasize capture and action, not dashboard complexity. Voice and quick typing are prominent entry points. The user should quickly see what needs attention today: useful matches, follow-ups, price/status changes, or unfinished leads.
+Home is the default Assistant surface and must emphasize capture and action, not dashboard complexity. One prominent natural-language composer accepts voice or typing without requiring a form first. The user should quickly see the extracted meaning, useful matches, recent memory, follow-ups, price/status changes, or unfinished leads.
+
+## Memory contract
+
+- Requirements, properties, contacts, interactions, preferences, rejection reasons and follow-ups are connected business memory, not isolated CRM rows.
+- Requirements and Properties provide focused browsable views without displacing Assistant as the default workflow.
+- Original capture text/transcript remains available as evidence while normalized fields power search and matching.
+- Person and property details expose useful related context: what was requested/offered, prior conversations, learned preferences, rejection reasons, next actions and suitable matches.
+- Automatic matching runs from persisted local records and explains why a result is relevant.
 
 ## Capture contract
 
@@ -90,7 +100,7 @@ Changing UI language changes menus, buttons, labels, confirmations, and guidance
 
 ## Navigation contract
 
-Navigation stays minimal. The approved concept centers on Home, Ask, Matches, People, and More, with capture reachable prominently. Desktop may use a side navigation while mobile uses bottom navigation/FAB patterns as appropriate.
+Navigation stays minimal. The primary mobile navigation is Home, Requirements, Properties, Matches and Follow-ups. Home is the Assistant and primary capture surface. Ask/Search is reachable from the persistent header; Contacts, poster capture, after-call recap, language and settings remain reachable as contextual or quick actions. Desktop may use a side navigation while preserving the same information architecture.
 
 ## Automated acceptance expectations
 

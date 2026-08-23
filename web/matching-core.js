@@ -46,6 +46,21 @@
     return { score:0, reason:'Price is outside the allowed tolerance' };
   }
 
+  function preferenceReasons(requirement, property) {
+    const wanted=(requirement.preferences || []).map(value=>String(value).trim()).filter(Boolean);
+    const available=(property.attributes || []).map(value=>String(value).trim()).filter(Boolean);
+    const reasons=[];
+    for(const preference of wanted){
+      const wantedRoad=preference.match(/(\d{1,3})\s*-?ft\s+road/i);
+      if(wantedRoad){
+        const required=Number(wantedRoad[1]);
+        const road=available.map(attribute=>attribute.match(/(\d{1,3})\s*-?ft\s+road/i)).find(Boolean);
+        if(road&&Number(road[1])>=required) reasons.push(`${road[1]}-ft road meets preference`);
+      } else if(available.some(attribute=>sameText(attribute,preference))) reasons.push(preference);
+    }
+    return [...new Set(reasons)];
+  }
+
   function evaluate(requirement, property) {
     const reasons=[];
     if (!requirement || !property) return { eligible:false, score:0, reasons:['Missing requirement or property'] };
@@ -57,6 +72,7 @@
     const price=priceFit(requirement, property);
     score += location.score + price.score;
     reasons.push(location.reason, price.reason);
+    reasons.push(...preferenceReasons(requirement,property));
     const eligible=location.score > 0 && price.score > 0;
     return { eligible, score:eligible ? Math.min(100,score) : 0, reasons };
   }
@@ -72,5 +88,5 @@
     return results.sort((a,b)=>b.score-a.score || a.requirementId.localeCompare(b.requirementId) || a.propertyId.localeCompare(b.propertyId));
   }
 
-  root.PropertyAssistantMatching={ evaluate, rank, intentCompatible, locationFit, priceFit, areNearby };
+  root.PropertyAssistantMatching={ evaluate, rank, intentCompatible, locationFit, priceFit, preferenceReasons, areNearby };
 })(globalThis);

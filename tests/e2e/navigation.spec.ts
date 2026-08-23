@@ -3,10 +3,12 @@ import { test, expect } from '@playwright/test';
 const requiredStaticRoutes = [
   ['splash','Property Assistant'],
   ['onboarding','Welcome'],
+  ['requirements','Requirements'],
+  ['properties','Properties'],
   ['speak','Speak & Save'],
   ['after-call','After-call recap'],
   ['ask','Ask'],
-  ['people','People'],
+  ['people','Contacts'],
   ['matches','Matches'],
   ['poster','Scan Poster'],
   ['poster-review','Poster review'],
@@ -22,7 +24,7 @@ async function seedDemo(page) {
 
 test('all approved shell routes render, including dynamic persistence/capture/match routes', async ({ page }) => {
   await page.goto('/#/home');
-  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Property Advisor/ })).toBeVisible();
   for (const [route, heading] of requiredStaticRoutes) {
     await page.goto(`/#/${route}`);
     await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
@@ -58,8 +60,8 @@ test('all approved shell routes render, including dynamic persistence/capture/ma
 
 test('primary shell navigation is wired with no dead primary controls', async ({ page }) => {
   await page.goto('/#/home');
-  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
-  for (const [testId, heading] of [['nav-ask','Ask'],['nav-matches','Matches'],['nav-people','People']]) {
+  await expect(page.getByRole('heading', { name: /Property Advisor/ })).toBeVisible();
+  for (const [testId, heading] of [['nav-requirements','Requirements'],['nav-properties','Properties'],['nav-matches','Matches'],['nav-followups','Follow-ups']]) {
     await page.getByTestId(testId).click();
     await expect(page.getByRole('heading', { name: heading })).toBeVisible();
   }
@@ -88,7 +90,7 @@ test('display language and input language are independent', async ({ page }) => 
   await displayOptions.getByRole('button', { name: /^தமிழ்/ }).click();
   await expect(page.getByTestId('nav-home')).toContainText('முகப்பு');
   await displayOptions.getByRole('button', { name: /^Tanglish/ }).click();
-  await expect(page.getByTestId('nav-ask')).toContainText('Kelu');
+  await expect(page.getByTestId('nav-requirements')).toContainText('Thevaigal');
   await inputOptions.getByRole('button', { name: /^Tamil/ }).click();
 
   const after = await page.evaluate(() => JSON.stringify((window as any).__PA_SEED__));

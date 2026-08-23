@@ -1,7 +1,7 @@
 (function (root) {
   'use strict';
 
-  const LOCALITIES = ['Erode','Perundurai','Bhavani','Chithode','Coimbatore','Pollachi','Mettupalayam','Chennai','Tambaram','Avadi','Salem','Omalur','Attur','Madurai','Trichy','Tiruppur'];
+  const LOCALITIES = ['Erode Railway Station','Erode Bus Stand','Perundurai Road','Teachers Colony','Erode','Perundurai','Thindal','Nasiyanur','Chennimalai','Vijayamangalam','Pallipalayam','Palayapalayam','Karungalpalayam','Bhavani','Chithode','Coimbatore','Pollachi','Mettupalayam','Chennai','Tambaram','Avadi','Salem','Omalur','Attur','Madurai','Trichy','Tiruppur'];
   const PROPERTY_TYPES = [
     { value:'land', patterns:[/\bland\b/i,/\bplot\b/i,/\bsite\b/i,/\b(?:acre|acres|cent|cents)\b/i,/நிலம்/u,/மனை/u,/\bmanai\b/i,/\bnilam\b/i] },
     { value:'house', patterns:[/\bhouse\b/i,/\bhome\b/i,/வீடு/u,/\bveedu\b/i] },
@@ -26,6 +26,7 @@
     const patterns = [
       { re:/(\d+(?:\.\d+)?)\s*(?:crore|cr)\b/i, mult:10000000 },
       { re:/(\d+(?:\.\d+)?)\s*(?:lakh|lac|lakhs|lacs|l)\b/i, mult:100000 },
+      { re:/(\d+(?:\.\d+)?)\s*k\b/i, mult:1000 },
       { re:/₹\s*([\d,]+)/, mult:1 },
       { re:/(?:budget|price|விலை)\s*(?:is|around|about|under|upto|up to|க்கு|சுமார்)?\s*([\d,]{5,})/i, mult:1 }
     ];
@@ -36,7 +37,25 @@
         if(Number.isFinite(number) && number > 0) return Math.round(number * mult);
       }
     }
+    const shorthand=String(text || '').match(/\b(?:budget\s*(?:max(?:imum)?|upto|up\s+to)?|asking|price|owner)\s*(?:is|:)?\s*₹?\s*(\d{1,3})(?!\d|[.,]\d)/i);
+    if(shorthand){
+      const number=Number(shorthand[1]);
+      if(Number.isFinite(number)&&number>0){
+        const rental=/\b(?:rent|rental|tenant|vaadagai|vadagai)\b/i.test(text) || /வாடகை/u.test(text);
+        return number*(rental?1000:100000);
+      }
+    }
     return null;
+  }
+
+  function parseMoneyRange(text) {
+    const match=String(text || '').match(/₹?\s*(\d+(?:\.\d+)?)\s*(?:-|–|—|to)\s*₹?\s*(\d+(?:\.\d+)?)\s*(crore|cr|lakh|lakhs|lac|lacs|l|k)\b/i);
+    if(!match) return null;
+    const unit=match[3].toLowerCase();
+    const multiplier=unit==='k'?1000:unit==='crore'||unit==='cr'?10000000:100000;
+    const min=Math.round(Number(match[1])*multiplier);
+    const max=Math.round(Number(match[2])*multiplier);
+    return Number.isFinite(min)&&Number.isFinite(max)&&min>0&&min<=max?{min,max}:null;
   }
 
   function parseSize(text) {
@@ -48,11 +67,38 @@
     return { value, unit };
   }
 
+  function parsePreferences(text) {
+    const source=String(text || '');
+    const values=[];
+    if(/\bfamily(?:\s+only)?\b/i.test(source)) values.push('Family only');
+    const furnishing=source.match(/\b(semi[ -]?furnished|unfurnished|fully[ -]?furnished|furnished)\b/i);
+    if(furnishing) values.push(furnishing[1].replace(/[- ]+/g,' ').replace(/\b\w/g,char=>char.toUpperCase()));
+    const facing=source.match(/\b(east|west|north|south)[ -]?facing\b/i);
+    if(facing) values.push(`${facing[1][0].toUpperCase()}${facing[1].slice(1).toLowerCase()} facing`);
+    const road=source.match(/\b(\d{1,3})\s*(?:-?ft|feet|foot)\s+road\b/i);
+    if(road) values.push(`${Number(road[1])}-ft road`);
+    if(/\b(?:2|two)[ -]?wheeler parking\b/i.test(source)) values.push('2-wheeler parking');
+    if(/\b(?:doesn'?t want|do not want|no)\s+(?:an?\s+)?apartments?\b/i.test(source)) values.push('No apartments');
+    if(/\bnegotiab(?:le|ility)\b/i.test(source) || /\bnegotiate\s+pann/i.test(source)) values.push('Negotiable');
+    return [...new Set(values)];
+  }
+
+  function parseTiming(text) {
+    const source=String(text || '');
+    if(/\b(?:next month|adutha maasam)\b/i.test(source)) return 'Next month';
+    const days=source.match(/\b(?:in|within|next)\s+(\d{1,3})\s+days?\b/i);
+    if(days) return `Within ${Number(days[1])} days`;
+    if(/\b(?:immediate|immediately|urgent|asap)\b/i.test(source)) return 'Immediate';
+    return '';
+  }
+
   function detectLocality(text) {
     return LOCALITIES.find(name => new RegExp(`\\b${name}\\b`,'i').test(text)) || null;
   }
 
   function detectPropertyType(text) {
+    const bhk=String(text || '').match(/\b([1-9](?:\.[05])?)\s*bhk\b/i);
+    if(bhk) return `${bhk[1]}bhk`;
     for (const type of PROPERTY_TYPES) if (type.patterns.some(re => re.test(text))) return type.value;
     return null;
   }
@@ -62,8 +108,12 @@
     if (explicit) return explicit[1].trim().replace(/\s+(?:phone|mobile|number|wants|needs|looking|தேவை|venum).*$/i,'').trim();
     const buyer = text.match(/^\s*([A-Za-z][A-Za-z.'-]{1,30})\s+(?:wants|needs|looking)\b/i);
     if (buyer) return buyer[1];
+    const tanglishBuyer=text.match(/^\s*([A-Za-z][A-Za-z.'-]{1,30})\s*(?:-?ku)\b[\s\S]*\b(?:venum|thevai)\b/i);
+    if(tanglishBuyer) return tanglishBuyer[1].replace(/-$/,'');
     const owner = text.match(/^\s*([A-Za-z][A-Za-z.'-]{1,30})\s+(?:owner|has|selling|sells)\b/i);
     if (owner) return owner[1];
+    const trailingOwner=text.match(/\bowner\s+([A-Za-z][A-Za-z.'-]{1,30})\b/i);
+    if(trailingOwner) return trailingOwner[1];
     return null;
   }
 
@@ -83,10 +133,13 @@
     const phone = extractPhone(source);
     const locality = detectLocality(source);
     const propertyType = detectPropertyType(source);
-    const amount = parseMoney(source);
+    const moneyRange = parseMoneyRange(source);
+    const amount = moneyRange?.max ?? parseMoney(source);
     const size = parseSize(source);
     const detected = detectIntentAndKind(source);
     const name = extractName(source);
+    const preferences = parsePreferences(source);
+    const timing = parseTiming(source);
     const uncertain = [];
     if (!locality) uncertain.push('locality');
     if (!propertyType) uncertain.push('propertyType');
@@ -101,8 +154,8 @@
       confidence: Math.max(0.35, 1 - uncertain.length * 0.12),
       uncertain,
       person: { name:name || '', role:detected.role, primaryPhone:phone || '', alternatePhones:[] },
-      requirement: detected.kind === 'requirement' ? { intent:detected.intent, propertyType:propertyType || '', locations:locality?[locality]:[], budgetMin:null, budgetMax:amount, size } : null,
-      property: detected.kind === 'property' ? { intent:detected.intent, propertyType:propertyType || '', locality:locality || '', price:amount, ownerPersonId:null, size } : null
+      requirement: detected.kind === 'requirement' ? { intent:detected.intent, propertyType:propertyType || '', locations:locality?[locality]:[], budgetMin:moneyRange?.min ?? null, budgetMax:amount, size, preferences, timing } : null,
+      property: detected.kind === 'property' ? { intent:detected.intent, propertyType:propertyType || '', locality:locality || '', price:amount, ownerPersonId:null, size, attributes:preferences } : null
     };
   }
 
@@ -128,5 +181,5 @@
     };
   }
 
-  root.PropertyAssistantCapture = { parse, cleanPhone, extractPhone, parseMoney, parseSize, createExtractor };
+  root.PropertyAssistantCapture = { parse, cleanPhone, extractPhone, parseMoney, parseMoneyRange, parseSize, parsePreferences, parseTiming, createExtractor };
 })(globalThis);

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
-const criticalRoutes = ['home','type','ask','matches','people','followups','poster','language','settings'];
+const criticalRoutes = ['home','requirements','properties','type','ask','matches','people','followups','poster','language','settings'];
 const artifactDir = 'p10-artifacts';
 
 function projectSlug(name: string) {
@@ -10,7 +10,7 @@ function projectSlug(name: string) {
 
 test('P10 captures startup, heap and local-storage measurements', async ({ page }, testInfo) => {
   await page.goto('/#/home');
-  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Property Advisor/ })).toBeVisible();
 
   const metrics = await page.evaluate(async () => {
     const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
@@ -104,7 +104,7 @@ test('P10 critical screens have names, focusable controls, visual baselines and 
 
 test('P10 core local workflow remains usable after network is lost', async ({ page, context }) => {
   await page.goto('/#/home');
-  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Property Advisor/ })).toBeVisible();
   await context.setOffline(true);
 
   await page.getByTestId('type-save').click();
@@ -139,5 +139,5 @@ test('P10 microphone/STT absence keeps Type & Save and local persistence usable'
   const saved = await page.evaluate(() => (window as any).__PA_REPOSITORY__.list('people').some((person:any) => person.name === 'Meena'));
   expect(saved).toBe(true);
   await page.evaluate(() => { location.hash = '#/home'; });
-  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Property Advisor/ })).toBeVisible();
 });

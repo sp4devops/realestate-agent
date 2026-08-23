@@ -42,6 +42,17 @@ test('person CRUD survives repository restart and preserves primary/alternate ph
   assert.equal(repo.get('people', created.id), null);
 });
 
+test('source evidence, timing and preferences survive repository restart', () => {
+  const storage=memoryStorage();
+  let repo=deterministicRepo(storage);
+  const buyer=repo.create('people',{id:'memory-buyer',name:'Ramesh',role:'tenant',primaryPhone:'+91 90000 00121',alternatePhones:[]});
+  const requirement=repo.create('requirements',{id:'memory-requirement',personId:buyer.id,intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:15000,timing:'Next month',preferences:['Family only','30-ft road'],sourceText:'Ramesh-ku railway station pakkathula 2BHK rent venum.'});
+  repo=deterministicRepo(storage);
+  assert.equal(repo.get('requirements',requirement.id).sourceText,'Ramesh-ku railway station pakkathula 2BHK rent venum.');
+  assert.equal(repo.get('requirements',requirement.id).timing,'Next month');
+  assert.deepEqual(repo.get('requirements',requirement.id).preferences,['Family only','30-ft road']);
+});
+
 test('duplicate primary/alternate phone identity is rejected', () => {
   const repo = deterministicRepo(memoryStorage());
   assert.throws(() => repo.create('people', {
