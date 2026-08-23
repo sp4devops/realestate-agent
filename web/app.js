@@ -149,6 +149,12 @@ function propertyPriceLabel(property){
   return property.priceBasis&&property.priceBasis.startsWith('per_')&&property.priceBasis!=='per_month'&&total!=null ? `${rate} · ${formatMoney(total)} total` : rate;
 }
 function propertyTitle(property){ return `${titleCase(property?.propertyType || 'Property')} in ${property?.locality || 'Location pending'}`; }
+function personIdentitySummary(person){
+  const roles=(person.roles||[person.role]).map(titleCase).join(' · ');
+  const locations=[...repository.list('requirements').filter(item=>item.personId===person.id).flatMap(item=>item.locations||[]),...repository.list('properties').filter(item=>item.ownerPersonId===person.id).map(item=>item.locality)].filter(Boolean);
+  const location=locations[0]||'Location pending';const phone=person.primaryPhone||'Phone pending';
+  return `${roles} · ${location} · ${phone}`;
+}
 function matchRecordId(requirementId,propertyId){ return `match-${requirementId}-${propertyId}`; }
 function requirementPerson(requirement){ return requirement ? repository.get('people',requirement.personId) : null; }
 function propertyOwner(property){ return property?.ownerPersonId ? repository.get('people',property.ownerPersonId) : null; }
@@ -251,7 +257,7 @@ function renderPeople(){
     const requirements=repository.list('requirements').filter(item=>item.personId===person.id).length;
     const properties=repository.list('properties').filter(item=>item.ownerPersonId===person.id).length;
     const notes=repository.list('interactions').filter(item=>(item.personIds||[]).includes(person.id)).length;
-    return `<article class="memory-card contact-card" data-testid="person-card"><span class="avatar">${initials(person.name)}</span><div><h2>${escapeHtml(person.name)}</h2><p>${(person.roles || [person.role]).map(titleCase).join(' · ')} · ${escapeHtml(person.primaryPhone || 'Phone pending')}</p><small>${requirements} requirement${requirements===1?'':'s'} · ${properties} propert${properties===1?'y':'ies'} · ${notes} remembered note${notes===1?'':'s'}</small></div><button type="button" class="button" data-person-id="${escapeHtml(person.id)}">${t().ui.open}</button></article>`;
+    return `<article class="memory-card contact-card" data-testid="person-card" data-person-id-value="${escapeHtml(person.id)}"><span class="avatar">${initials(person.name)}</span><div><h2>${escapeHtml(person.name)}</h2><p>${escapeHtml(personIdentitySummary(person))}</p><small>${requirements} requirement${requirements===1?'':'s'} · ${properties} propert${properties===1?'y':'ies'} · ${notes} remembered note${notes===1?'':'s'}</small></div><button type="button" class="button" data-person-id="${escapeHtml(person.id)}">${t().ui.open}</button></article>`;
   }).join('');
   return shell(`<section class="screen-page"><div class="screen-heading"><div><h1>Contacts</h1><p>Owners, customers, builders and Property Advisors remembered locally.</p></div><button class="icon-button" type="button" data-route="type" aria-label="Add contact">${icon('plus')}</button></div><div class="memory-list" data-testid="people-list">${cards || `<div class="empty-state">${icon('user')}<h2>No contacts yet</h2><p>Capture a person naturally and their contact will appear here.</p><button class="button primary" type="button" data-route="type">${t().actions.type}</button></div>`}</div></section>`, '');
 }
@@ -348,6 +354,7 @@ function bind(){
   const capture=document.querySelector('[data-testid="home-capture-text"]');
   const save=document.querySelector('[data-testid="home-review-save"]');
   if(capture&&save){
+    window.PropertyAssistantTypingAssist?.attach(capture,{repository,testId:'home-cursor-suggestion'});
     let draft=null;
     const summary=document.querySelector('[data-testid="home-parsed-summary"]');
     const chips=document.querySelector('[data-testid="home-summary-chips"]');

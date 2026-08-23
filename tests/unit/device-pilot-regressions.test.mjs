@@ -23,6 +23,8 @@ test('Android shell uses secure local asset origin, navigation lock and system-b
   assert.match(mainActivity, /isTrustedOrigin/);
   assert.match(mainActivity, /MIXED_CONTENT_NEVER_ALLOW/);
   assert.match(mainActivity, /WindowInsetsCompat\.Type\.systemBars\(\)/);
+  assert.match(mainActivity, /WindowInsetsCompat\.Type\.displayCutout\(\)/);
+  assert.match(mainActivity, /--native-safe-bottom/);
   assert.match(mainActivity, /androidx\.core\.graphics\.Insets/);
   assert.doesNotMatch(mainActivity, /android\.graphics\.Insets|toPlatformInsets\(/);
   assert.match(qualityWorkflow, /lintDebug/);
@@ -72,5 +74,7 @@ test('user-facing shell contains no phase-development placeholder copy', () => {
 
 test('mobile layout protects fixed navigation and hides it while editing', () => {
   assert.match(styles, /safe-area-inset-bottom/);
+  assert.match(styles, /--native-safe-bottom/);
+  assert.match(styles, /left:var\(--safe-left\)/);
   assert.match(styles, /keyboard-open/);
 });

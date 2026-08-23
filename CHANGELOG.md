@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.11.0-rc.5 — 2026-08-23
+
+Pilot usability and real-device repair candidate for the English typed second brain.
+
+- Added explicit same-name identity resolution using stable person IDs plus phone, role and area context, preventing silent merges based on a name alone.
+- Added local Cursor-style completion to the Home and full Type composers; Tab or Right Arrow accepts suggested words, areas and common property-note phrases.
+- Added offline area typeahead to requirement, property and poster review fields using built-in, remembered and pinned areas.
+- Added pinned-area management and included pinned areas in encrypted backup/restore.
+- Reworked Android system-bar inset delivery so the fixed app navigation stays above three-button and gesture navigation areas.
+- Bundled the ML Kit Latin-script OCR model and connected it to the poster adapter for immediate offline English/phone-number recognition without Internet permission.
+
+### Release-candidate limitations
+
+- English typing is the supported capture/search mode. The bundled OCR model targets Latin-script poster text; Tamil OCR remains deferred with the broader multilingual work.
+- OCR accuracy still depends on focus, lighting and text size; poster review and typed correction remain mandatory.
+- Physical-device validation is still required for system insets, camera/gallery OCR, memory/thermal behavior and the full pilot checklist.
+- CI Android APKs use an ephemeral test signing key and are for install/smoke validation only.
+
 ## 0.11.0-rc.4 — 2026-08-23
 
 Focused pilot candidate for proving Property Assistant's second-brain loop with English typing only.

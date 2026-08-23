@@ -1,8 +1,8 @@
 plugins { id 'com.android.application' }
 
 def versionFile = rootProject.file('../VERSION')
-def releaseVersionName = versionFile.exists() ? versionFile.text.trim() : '0.11.0-rc.4'
-def releaseVersionCode = (System.getenv('PA_VERSION_CODE') ?: '14') as Integer
+def releaseVersionName = versionFile.exists() ? versionFile.text.trim() : '0.11.0-rc.5'
+def releaseVersionCode = (System.getenv('PA_VERSION_CODE') ?: '15') as Integer
 def applicationIdValue = System.getenv('PA_APPLICATION_ID') ?: 'ai.propertyassistant.app'
 def applicationLabel = System.getenv('PA_APPLICATION_LABEL') ?: 'Property Assistant'
 
@@ -47,6 +47,8 @@ android {
 dependencies {
   implementation 'androidx.core:core:1.15.0'
   implementation 'androidx.webkit:webkit:1.12.1'
+  // Bundled Latin-script model: available offline immediately, with no model download or Internet permission.
+  implementation 'com.google.mlkit:text-recognition:16.0.1'
 }
 
 tasks.register('syncWebAssets', Sync) {

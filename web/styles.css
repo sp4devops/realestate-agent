@@ -22,8 +22,14 @@
   --line-strong:#cad8d1;
   --shadow:0 10px 30px rgba(17,54,43,.08);
   --shadow-strong:0 18px 44px rgba(17,54,43,.14);
-  --safe-top:env(safe-area-inset-top,0px);
-  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --native-safe-top:0px;
+  --native-safe-right:0px;
+  --native-safe-bottom:0px;
+  --native-safe-left:0px;
+  --safe-top:max(env(safe-area-inset-top,0px),var(--native-safe-top));
+  --safe-right:max(env(safe-area-inset-right,0px),var(--native-safe-right));
+  --safe-bottom:max(env(safe-area-inset-bottom,0px),var(--native-safe-bottom));
+  --safe-left:max(env(safe-area-inset-left,0px),var(--native-safe-left));
 }
 
 *{box-sizing:border-box}
@@ -134,6 +140,24 @@ main{width:min(1080px,100%);margin:0 auto;padding:26px 20px 48px}
 .capture-composer textarea::placeholder{color:#808b86}
 .capture-composer.typing-only{grid-template-columns:minmax(0,1fr);align-items:stretch;padding:4px 10px}
 .capture-composer.typing-only textarea{min-height:96px;max-height:180px;padding:14px 6px;resize:vertical}
+.typing-suggestion{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  width:100%;
+  min-height:44px;
+  margin:-8px 0 14px;
+  padding:9px 12px;
+  border:1px solid #cce9dc;
+  border-radius:13px;
+  color:var(--muted);
+  background:var(--green-50);
+  text-align:left;
+}
+.typing-suggestion span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.typing-suggestion strong{color:var(--green-800)}
+.typing-suggestion small{flex:0 0 auto;color:var(--green-900);font-weight:800}
 .parsed-summary{margin-top:4px}
 .parsed-label{display:flex;align-items:center;gap:7px;color:#173b30;font-size:14px}
 .parsed-label .icon{width:18px;height:18px;color:var(--green-800)}
@@ -398,12 +422,37 @@ main{width:min(1080px,100%);margin:0 auto;padding:26px 20px 48px}
 .field input[type="file"]{padding:10px}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .field-row .capture-field{margin-top:0}
+.capture-field>label{display:block}
+.identity-resolution{margin:16px 0;padding:14px;border:1px solid #f0d9a8;border-radius:16px;background:#fffaf0}
+.identity-resolution>strong{color:#624b1d}
+.identity-resolution>p{margin:6px 0 2px;color:var(--muted);font-size:14px;line-height:1.45}
+.identity-resolution .capture-field{margin-bottom:0}
+.location-field{position:relative}
+.location-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.pin-location-button,.location-option-pin{
+  min-height:48px;
+  padding:9px 12px;
+  border:1px solid #e4c983;
+  border-radius:13px;
+  color:#765514;
+  background:var(--gold-100);
+  font-weight:800;
+}
+.pin-location-button[data-pinned="true"]{color:#fff;background:#a97812}
+.location-options{position:absolute;left:0;right:0;top:100%;z-index:60;overflow:auto;max-height:280px;padding:6px;border:1px solid var(--line-strong);border-radius:15px;background:#fff;box-shadow:var(--shadow-strong)}
+.location-option-row{display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:5px;align-items:center}
+.location-option{min-height:46px;padding:10px;border:0;border-radius:10px;color:var(--text);background:#fff;text-align:left}
+.location-option:hover,.location-option[aria-selected="true"]{background:var(--green-100);color:var(--green-900)}
+.location-option-pin{min-height:42px;padding:6px;font-size:20px}
+.pinned-location-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.pinned-location-chip{display:inline-flex;align-items:center;gap:5px;min-height:40px;padding:6px 7px 6px 12px;border:1px solid #e4c983;border-radius:999px;color:#765514;background:var(--gold-100);font-weight:800}
+.pinned-location-chip button{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:50%;color:#765514;background:rgba(255,255,255,.7);font-size:21px}
 .capture-error{margin-top:14px;padding:12px 14px;border-radius:13px;color:#8b2f25;background:#fff1ef;font-weight:700}
 
 .bottom-nav{
   position:fixed;
-  left:0;
-  right:0;
+  left:var(--safe-left);
+  right:var(--safe-right);
   bottom:0;
   z-index:40;
   display:grid;

@@ -5,9 +5,12 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
@@ -25,6 +28,11 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.webkit.WebViewAssetLoader;
+
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
 import org.json.JSONObject;
 
@@ -48,6 +56,11 @@ public final class MainActivity extends Activity {
   private Uri pendingCameraImageUri;
   private String pendingBackupText;
   private WebView web;
+  private TextRecognizer posterTextRecognizer;
+  private int safeInsetTop;
+  private int safeInsetRight;
+  private int safeInsetBottom;
+  private int safeInsetLeft;
 
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
@@ -55,8 +68,12 @@ public final class MainActivity extends Activity {
 
     web = new WebView(this);
     ViewCompat.setOnApplyWindowInsetsListener(web, (view, windowInsets) -> {
-      Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-      view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+      Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+      safeInsetTop = bars.top;
+      safeInsetRight = bars.right;
+      safeInsetBottom = bars.bottom;
+      safeInsetLeft = bars.left;
+      applySystemInsetsToWeb();
       return windowInsets;
     });
 
@@ -81,6 +98,11 @@ public final class MainActivity extends Activity {
 
       @Override public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
         return assetLoader.shouldInterceptRequest(Uri.parse(url));
+      }
+
+      @Override public void onPageFinished(WebView view, String url) {
+        super.onPageFinished(view, url);
+        applySystemInsetsToWeb();
       }
 
       @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -151,6 +173,68 @@ public final class MainActivity extends Activity {
     @JavascriptInterface public void exportBackup(String fileName, String encryptedText) {
       runOnUiThread(() -> launchBackupExport(fileName, encryptedText));
     }
+
+    @JavascriptInterface public void recognizePoster(String imageDataUrl, String requestId) {
+      startPosterRecognition(imageDataUrl, requestId);
+    }
+  }
+
+  private void applySystemInsetsToWeb() {
+    if (web == null) return;
+    String script = "(function(){var s=document.documentElement.style;"
+        + "s.setProperty('--native-safe-top','" + safeInsetTop + "px');"
+        + "s.setProperty('--native-safe-right','" + safeInsetRight + "px');"
+        + "s.setProperty('--native-safe-bottom','" + safeInsetBottom + "px');"
+        + "s.setProperty('--native-safe-left','" + safeInsetLeft + "px');})();";
+    web.evaluateJavascript(script, null);
+  }
+
+  private synchronized TextRecognizer getPosterTextRecognizer() {
+    if (posterTextRecognizer == null) {
+      posterTextRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+    }
+    return posterTextRecognizer;
+  }
+
+  private void startPosterRecognition(String imageDataUrl, String requestId) {
+    if (requestId == null || requestId.isEmpty()) return;
+    if (imageDataUrl == null || imageDataUrl.length() > 8_000_000) {
+      sendPosterRecognitionResult(requestId, false, "", "Poster image is too large. Retake it closer to the poster.");
+      return;
+    }
+    new Thread(() -> {
+      Bitmap bitmap = null;
+      try {
+        int comma = imageDataUrl.indexOf(',');
+        if (comma < 0 || !imageDataUrl.substring(0, comma).startsWith("data:image/")) {
+          throw new IllegalArgumentException("Poster image format is invalid.");
+        }
+        byte[] bytes = Base64.decode(imageDataUrl.substring(comma + 1), Base64.DEFAULT);
+        bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        if (bitmap == null) throw new IllegalArgumentException("Poster image could not be opened.");
+        final Bitmap recognizedBitmap = bitmap;
+        InputImage image = InputImage.fromBitmap(recognizedBitmap, 0);
+        getPosterTextRecognizer().process(image)
+            .addOnSuccessListener(result -> {
+              String text = result.getText() == null ? "" : result.getText().trim();
+              if (text.isEmpty()) sendPosterRecognitionResult(requestId, false, "", "No readable text was found. Retake the poster in good light or type the text.");
+              else sendPosterRecognitionResult(requestId, true, text, "");
+            })
+            .addOnFailureListener(error -> sendPosterRecognitionResult(requestId, false, "", "Poster reading failed locally. Retake it or type the text."))
+            .addOnCompleteListener(task -> recognizedBitmap.recycle());
+      } catch (Exception error) {
+        if (bitmap != null) bitmap.recycle();
+        sendPosterRecognitionResult(requestId, false, "", error.getMessage() == null ? "Poster image could not be read." : error.getMessage());
+      }
+    }, "property-assistant-ocr").start();
+  }
+
+  private void sendPosterRecognitionResult(String requestId, boolean ok, String text, String error) {
+    runOnUiThread(() -> {
+      if (web == null) return;
+      String payload = "{ok:" + ok + ",text:" + JSONObject.quote(text) + ",error:" + JSONObject.quote(error) + "}";
+      web.evaluateJavascript("window.__PA_POSTER_OCR_RESULT__ && window.__PA_POSTER_OCR_RESULT__(" + JSONObject.quote(requestId) + "," + payload + ")", null);
+    });
   }
 
   private boolean handleNavigation(Uri uri) {
@@ -351,6 +435,10 @@ public final class MainActivity extends Activity {
     pendingGeolocationCallback = null;
     pendingGeolocationOrigin = null;
     pendingBackupText = null;
+    if (posterTextRecognizer != null) {
+      posterTextRecognizer.close();
+      posterTextRecognizer = null;
+    }
     if (web != null) {
       web.removeJavascriptInterface("PropertyAssistantHost");
       web.destroy();
