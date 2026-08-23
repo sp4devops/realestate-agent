@@ -1,8 +1,8 @@
 plugins { id 'com.android.application' }
 
 def versionFile = rootProject.file('../VERSION')
-def releaseVersionName = versionFile.exists() ? versionFile.text.trim() : '0.11.0-rc.3'
-def releaseVersionCode = (System.getenv('PA_VERSION_CODE') ?: '13') as Integer
+def releaseVersionName = versionFile.exists() ? versionFile.text.trim() : '0.11.0-rc.4'
+def releaseVersionCode = (System.getenv('PA_VERSION_CODE') ?: '14') as Integer
 def applicationIdValue = System.getenv('PA_APPLICATION_ID') ?: 'ai.propertyassistant.app'
 def applicationLabel = System.getenv('PA_APPLICATION_LABEL') ?: 'Property Assistant'
 
@@ -50,7 +50,9 @@ dependencies {
 }
 
 tasks.register('syncWebAssets', Copy) {
-  from rootProject.file('../web')
+  from(rootProject.file('../web')) {
+    exclude 'voice-core.js', 'voice-ui.js'
+  }
   into project.file('src/main/assets')
 }
 preBuild.dependsOn syncWebAssets

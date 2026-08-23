@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 await import('../../web/domain-store.js');
-await import('../../web/voice-core.js');
 await import('../../web/query-core.js');
 await import('../../web/backup-core.js');
 

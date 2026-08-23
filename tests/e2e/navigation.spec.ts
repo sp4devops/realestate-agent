@@ -5,7 +5,6 @@ const requiredStaticRoutes = [
   ['onboarding','Welcome'],
   ['requirements','Requirements'],
   ['properties','Properties'],
-  ['speak','Speak & Save'],
   ['after-call','After-call recap'],
   ['ask','Ask'],
   ['people','Contacts'],
@@ -13,7 +12,6 @@ const requiredStaticRoutes = [
   ['poster','Scan Poster'],
   ['poster-review','Poster review'],
   ['followups','Follow-ups'],
-  ['language','Language'],
   ['settings','Settings & Backup']
 ];
 
@@ -66,9 +64,7 @@ test('primary shell navigation is wired with no dead primary controls', async ({
     await expect(page.getByRole('heading', { name: heading, exact: true, level: 1 })).toBeVisible();
   }
   await page.getByTestId('nav-home').click();
-  await page.getByTestId('speak-save').click();
-  await expect(page.getByRole('heading', { name: 'Speak & Save' })).toBeVisible();
-  await page.getByRole('button', { name: 'Use Type & Save instead' }).click();
+  await page.getByTestId('type-save').click();
   await expect(page.getByRole('heading', { name: 'Type & Save' })).toBeVisible();
 });
 
@@ -81,22 +77,23 @@ test('capture shortcuts reach poster and after-call shells', async ({ page }) =>
   await expect(page.getByRole('heading', { name: 'After-call recap' })).toBeVisible();
 });
 
-test('display language and input language are independent', async ({ page }) => {
+test('deferred voice and language deep links fall back to active pilot screens', async ({ page }) => {
+  await page.goto('/#/speak');
+  await expect(page.getByRole('heading', { name: 'Type & Save', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/#\/type$/);
+
   await page.goto('/#/language');
-  const before = await page.evaluate(() => JSON.stringify((window as any).__PA_SEED__));
-  const displayOptions = page.getByTestId('display-language-options');
-  const inputOptions = page.getByTestId('input-language-options');
+  await expect(page.getByRole('heading', { name: 'Settings & Backup', exact: true })).toBeVisible();
+  await expect(page.getByTestId('pilot-mode')).toContainText('English typing');
+  await expect(page).toHaveURL(/#\/settings$/);
+});
 
-  await displayOptions.getByRole('button', { name: /^தமிழ்/ }).click();
-  await expect(page.getByTestId('nav-home')).toContainText('முகப்பு');
-  await displayOptions.getByRole('button', { name: /^Tanglish/ }).click();
-  await expect(page.getByTestId('nav-requirements')).toContainText('Thevaigal');
-  await inputOptions.getByRole('button', { name: /^Tamil/ }).click();
-
-  const after = await page.evaluate(() => JSON.stringify((window as any).__PA_SEED__));
-  expect(after).toBe(before);
-  expect(await page.evaluate(() => localStorage.getItem('pa.displayLanguage'))).toBe('tg');
-  expect(await page.evaluate(() => localStorage.getItem('pa.inputLanguage'))).toBe('ta');
+test('opening the full editor preserves text started on Home', async ({ page }) => {
+  await page.goto('/#/home');
+  const note='Ramesh needs a 2BHK rental in Erode under 15000 per month';
+  await page.getByTestId('home-capture-text').fill(note);
+  await page.getByTestId('type-save').click();
+  await expect(page.getByTestId('capture-text')).toHaveValue(note);
 });
 
 test('fresh install does not inject synthetic people or properties', async ({ page }) => {

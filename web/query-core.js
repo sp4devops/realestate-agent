@@ -7,7 +7,7 @@ const TAMIL_ALIASES=[
 ];
 const TYPE_PATTERNS=[['land',/\b(?:land|plot|site|manai|nilam)\b/i],['house',/\b(?:house|home|veedu)\b/i],['apartment',/\b(?:apartment|flat)\b/i]];
 function normalizeQuery(value){
- let text=root.PropertyAssistantVoice?root.PropertyAssistantVoice.normalizeTranscript(value):String(value||'');
+ let text=String(value||'').normalize('NFKC').trim().replace(/\s+/g,' ');
  for(const [from,to] of TAMIL_ALIASES) text=text.replaceAll(from,to);
  return text;
 }

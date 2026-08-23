@@ -4,11 +4,13 @@ These are known pilot constraints, not promises of production behavior.
 
 - Android CI release candidates are signed with an ephemeral RC key. Production distribution requires a persistent protected signing key.
 - Desktop RC uses Python 3.9+ and the system browser through a loopback-only `127.0.0.1` launcher; a native desktop executable is not yet required for pilot validation.
-- Production local STT and OCR runtimes/weights still require final packaging and representative-device benchmarking.
+- English typing is the only supported capture/search input for this pilot. Voice, Tamil, and Tanglish are deferred and not quality claims of this candidate.
+- Voice source adapters are retained outside the active release bundle, and Android does not request microphone permission.
+- Production OCR runtime/weights still require final packaging and representative-device benchmarking.
 - Approximately 4 GB Android target-device memory, thermal and startup behavior has not yet been physically validated across representative devices.
 - Low-storage/quota exhaustion and interruption during multi-store backup/restore remain device-runtime risks to exercise during pilot hardening.
 - Large image-heavy encrypted backups can create transient memory pressure.
-- Deterministic locality/query vocabulary is intentionally a starter set and should expand from real pilot language.
+- Deterministic English locality/query vocabulary is intentionally a starter set and should expand from real pilot usage.
 - Nearby-locality knowledge and negotiability handling are not comprehensive.
 - Unrestricted cellular call recording is not supported or assumed.
 - Backup passwords are intentionally unrecoverable.

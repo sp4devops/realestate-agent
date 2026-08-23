@@ -61,12 +61,12 @@ test('wrong restore password fails safely without changing local records', async
   expect(after).toBe(before);
 });
 
-test('display-language changes UI while structured memory remains unchanged', async ({ page }) => {
-  await page.goto('/#/language');
+test('settings clearly identifies the focused English typing pilot', async ({ page }) => {
+  await page.goto('/#/settings');
   const before=await page.evaluate(()=>JSON.stringify((window as any).__PA_REPOSITORY__.loadSnapshot()));
-  await page.getByTestId('display-language-options').getByRole('button',{name:/தமிழ்/}).click();
-  await page.goto('/#/home');
-  await expect(page.getByTestId('home-heading')).toContainText('வணக்கம்');
+  await expect(page.getByTestId('pilot-mode')).toContainText('English typing');
+  await expect(page.getByTestId('pilot-mode')).toContainText('Voice and additional languages are deferred');
+  await expect(page.getByRole('button',{name:/Language settings/})).toHaveCount(0);
   const after=await page.evaluate(()=>JSON.stringify((window as any).__PA_REPOSITORY__.loadSnapshot()));
   expect(after).toBe(before);
 });

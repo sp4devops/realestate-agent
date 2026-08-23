@@ -27,7 +27,9 @@
   function normalizedSourceOf(parsed){ return String(parsed?.normalizedTranscript || parsed?.source || '').trim(); }
 
   function renderType(){
-    app.innerHTML = shell(`<section class="page"><p class="eyebrow">TYPE & SAVE</p><h1>Type & Save</h1><p class="lead">Tell Property Assistant naturally about a buyer, tenant, owner, property, price change, rejection or follow-up. Understanding works locally.</p><label class="capture-field"><span>Business note</span><textarea data-testid="capture-text" rows="7" placeholder="Example: Arun wants 5 acre land in Perundurai, budget 25 lakh"></textarea></label><div class="page-actions"><button type="button" class="button primary" data-testid="analyze-capture">Review details</button><button type="button" class="button" data-route="home">Cancel</button></div><p class="capture-error" data-testid="capture-error" hidden></p></section>`, '');
+    const prefill=sessionStorage.getItem('pa.typePrefill') || '';
+    sessionStorage.removeItem('pa.typePrefill');
+    app.innerHTML = shell(`<section class="page"><p class="eyebrow">TYPE & SAVE</p><h1>Type & Save</h1><p class="lead">Type a buyer request, available property, price change, rejection or follow-up in plain English. Property Assistant organizes it locally.</p><label class="capture-field"><span>Business note</span><textarea data-testid="capture-text" rows="7" placeholder="Example: Arun wants 5 acre land in Perundurai, budget 25 lakh">${esc(prefill)}</textarea></label><div class="page-actions"><button type="button" class="button primary" data-testid="analyze-capture">Review details</button><button type="button" class="button" data-route="home">Cancel</button></div><p class="capture-error" data-testid="capture-error" hidden></p></section>`, '');
     bindRouteButtons();
     document.querySelector('[data-testid="analyze-capture"]').addEventListener('click',async()=>{
       const button=document.querySelector('[data-testid="analyze-capture"]'); const text=document.querySelector('[data-testid="capture-text"]').value; const error=document.querySelector('[data-testid="capture-error"]');

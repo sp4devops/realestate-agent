@@ -15,7 +15,11 @@ def build(out_dir: Path) -> tuple[Path, Path]:
     if package_dir.exists():
         shutil.rmtree(package_dir)
     package_dir.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(ROOT / "web", package_dir / "web")
+    shutil.copytree(
+        ROOT / "web",
+        package_dir / "web",
+        ignore=shutil.ignore_patterns("voice-core.js", "voice-ui.js"),
+    )
     shutil.copy2(ROOT / "desktop" / "launcher.py", package_dir / "launcher.py")
     (package_dir / "START_HERE.txt").write_text(
         "Property Assistant desktop release candidate\n\n"

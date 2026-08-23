@@ -8,10 +8,12 @@ const extractionRules = await readFile(new URL('../../android/app/src/main/res/x
 const releaseWorkflow = await readFile(new URL('../../.github/workflows/release-candidates.yml', import.meta.url), 'utf8');
 const qualityWorkflow = await readFile(new URL('../../.github/workflows/quality-gates.yml', import.meta.url), 'utf8');
 const app = await readFile(new URL('../../web/app.js', import.meta.url), 'utf8');
+const index = await readFile(new URL('../../web/index.html', import.meta.url), 'utf8');
 const styles = await readFile(new URL('../../web/styles.css', import.meta.url), 'utf8');
-const voiceUi = await readFile(new URL('../../web/voice-ui.js', import.meta.url), 'utf8');
 const queryUi = await readFile(new URL('../../web/query-ui.js', import.meta.url), 'utf8');
 const settingsUi = await readFile(new URL('../../web/settings-ui.js', import.meta.url), 'utf8');
+const androidBuild = await readFile(new URL('../../android/app/build.gradle', import.meta.url), 'utf8');
+const desktopBuild = await readFile(new URL('../../scripts/build_desktop_rc.py', import.meta.url), 'utf8');
 
 test('Android shell uses secure local asset origin, navigation lock and system-bar insets', () => {
   assert.match(mainActivity, /WebViewAssetLoader/);
@@ -27,12 +29,13 @@ test('Android shell uses secure local asset origin, navigation lock and system-b
   assert.match(manifest, /windowSoftInputMode="adjustResize"/);
 });
 
-test('Android exposes local on-device speech recognition for capture and Ask', () => {
-  assert.match(mainActivity, /createOnDeviceSpeechRecognizer/);
-  assert.match(mainActivity, /EXTRA_PREFER_OFFLINE/);
-  assert.match(mainActivity, /startOnDeviceQuerySpeech/);
-  assert.match(voiceUi, /__PA_ON_DEVICE_STT_RESULT__/);
-  assert.match(queryUi, /__PA_ON_DEVICE_QUERY_STT_RESULT__/);
+test('English typing pilot excludes voice runtime and microphone permission', () => {
+  assert.doesNotMatch(manifest, /RECORD_AUDIO/);
+  assert.doesNotMatch(mainActivity, /SpeechRecognizer|RecognizerIntent|startOnDeviceSpeech|startOnDeviceQuerySpeech/);
+  assert.doesNotMatch(index, /voice-core\.js|voice-ui\.js/);
+  assert.doesNotMatch(queryUi, /MediaRecorder|getUserMedia|query-voice|speech/i);
+  assert.match(androidBuild, /exclude 'voice-core\.js', 'voice-ui\.js'/);
+  assert.match(desktopBuild, /ignore_patterns\("voice-core\.js", "voice-ui\.js"\)/);
 });
 
 test('Android exports encrypted backups through a user-selected document with no storage permission', () => {

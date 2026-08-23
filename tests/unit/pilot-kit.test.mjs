@@ -18,6 +18,8 @@ test('pilot kit includes required operational guidance', async () => {
     assert.ok(content.includes(phrase), `pilot kit must mention ${phrase}`);
   }
   assert.ok(content.includes('without developer'), 'pilot checklist must target independent use');
+  assert.ok(content.includes('english typing'), 'pilot kit must state the supported input mode');
+  assert.ok(content.includes('voice') && content.includes('deferred'), 'pilot kit must state that voice is deferred');
 });
 
 test('synthetic demo database is internally consistent', async () => {

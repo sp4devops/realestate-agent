@@ -1,4 +1,4 @@
-const STORAGE_KEYS = { display: 'pa.displayLanguage', input: 'pa.inputLanguage' };
+const PRODUCT_MODE = window.PropertyAssistantProductMode;
 const app = document.getElementById('app');
 const repository = window.PropertyAssistantPersistence.createRepository(localStorage);
 let bootError = null;
@@ -16,13 +16,13 @@ const displayLanguages = {
     label:'English',
     short:'EN',
     nav:{home:'Home',requirements:'Requirements',properties:'Properties',matches:'Matches',followups:'Follow-ups'},
-    actions:{speak:'Speak & Save',type:'Type & Save',scan:'Scan Poster'},
+    actions:{type:'Type & Save',scan:'Scan Poster'},
     ui:{
       greeting:'Good morning, Property Advisor',
-      greetingHint:"Let's find the right property or person.",
-      captureTitle:'Capture a lead, property or update',
-      captureHint:'Speak or type naturally. I will organize it for you.',
-      capturePlaceholder:'Example: Ramesh needs 2BHK rent in Erode under ₹15k',
+      greetingHint:"Tell me what changed. I will remember it and connect the right people and properties.",
+      captureTitle:'What should I remember?',
+      captureHint:'Type a request, available property, price change, rejection or follow-up in plain English.',
+      capturePlaceholder:'Example: Ramesh needs a 2BHK rental in Erode under ₹15,000 per month',
       understood:'I understood',
       reviewSave:'Review & Save',
       suggested:'Suggested matches',
@@ -55,100 +55,8 @@ const displayLanguages = {
       noMatches:'No useful matches yet. Add one requirement and one property.',
       noFollowups:'Nothing pending. Your follow-up queue is clear.'
     }
-  },
-  ta: {
-    label:'தமிழ்',
-    short:'TA',
-    nav:{home:'முகப்பு',requirements:'தேவைகள்',properties:'சொத்துகள்',matches:'பொருத்தங்கள்',followups:'தொடர்புகள்'},
-    actions:{speak:'பேசி சேமி',type:'தட்டச்சு செய்து சேமி',scan:'போஸ்டர் ஸ்கேன்'},
-    ui:{
-      greeting:'வணக்கம், Property Advisor',
-      greetingHint:'சரியான சொத்து அல்லது நபரை கண்டுபிடிப்போம்.',
-      captureTitle:'தேவை, சொத்து அல்லது மாற்றத்தை பதிவு செய்க',
-      captureHint:'இயல்பாக பேசுங்கள் அல்லது தட்டச்சு செய்யுங்கள். நான் ஒழுங்குபடுத்துகிறேன்.',
-      capturePlaceholder:'உதாரணம்: ரமேஷுக்கு ஈரோட்டில் ₹15k-க்கு 2BHK வாடகை வேண்டும்',
-      understood:'நான் புரிந்துகொண்டது',
-      reviewSave:'சரிபார்த்து சேமி',
-      suggested:'பரிந்துரைக்கப்பட்ட பொருத்தங்கள்',
-      recent:'சமீபத்திய செயல்கள்',
-      quickTools:'விரைவு கருவிகள்',
-      viewAll:'அனைத்தும்',
-      requirements:'தேவைகள்',
-      requirementsHint:'சொத்து தேடும் வாங்குபவர்கள் மற்றும் வாடகையாளர்கள்.',
-      properties:'சொத்துகள்',
-      propertiesHint:'விற்பனை, வாடகை மற்றும் குத்தகை சொத்துகள்.',
-      matches:'பொருத்தங்கள்',
-      matchesHint:'தேவைகளுக்கும் சொத்துகளுக்கும் உள்ள சிறந்த இணைப்புகள்.',
-      followups:'தொடர்புகள்',
-      followupsHint:'அடுத்து தொடர்புகொள்ள வேண்டியவர்கள்.',
-      all:'அனைத்தும்',
-      buyers:'வாங்குபவர்கள்',
-      tenants:'வாடகையாளர்கள்',
-      sale:'விற்பனை',
-      rent:'வாடகை',
-      lease:'குத்தகை',
-      call:'அழை',
-      whatsapp:'WhatsApp',
-      done:'முடிந்தது',
-      open:'திற',
-      today:'இன்று',
-      upcoming:'அடுத்து',
-      completed:'முடிக்கப்பட்டவை',
-      noRequirements:'தேவைகள் இல்லை. வாங்குபவர் அல்லது வாடகையாளரின் தேவையை பதிவு செய்க.',
-      noProperties:'சொத்துகள் இல்லை. உரிமையாளர் அல்லது கிடைக்கும் சொத்தை பதிவு செய்க.',
-      noMatches:'பொருத்தம் இல்லை. ஒரு தேவையும் ஒரு சொத்தும் சேர்க்கவும்.',
-      noFollowups:'நிலுவை இல்லை. தொடர்பு பட்டியல் காலியாக உள்ளது.'
-    }
-  },
-  tg: {
-    label:'Tanglish',
-    short:'Tanglish',
-    nav:{home:'Home',requirements:'Thevaigal',properties:'Properties',matches:'Matches',followups:'Follow-ups'},
-    actions:{speak:'Pesitu Save Pannu',type:'Type Panni Save Pannu',scan:'Poster Scan Pannu'},
-    ui:{
-      greeting:'Vanakkam, Property Advisor',
-      greetingHint:'Correct property illa person-ah find pannalam.',
-      captureTitle:'Lead, property illa update-ah capture pannu',
-      captureHint:'Natural-ah pesu illa type pannu. Naan organize panren.',
-      capturePlaceholder:'Example: Ramesh-ku Erode-la ₹15k-kulla 2BHK rent venum',
-      understood:'Naan purinjukittadhu',
-      reviewSave:'Check panni Save',
-      suggested:'Suggested matches',
-      recent:'Recent activity',
-      quickTools:'Quick tools',
-      viewAll:'Ellam paaru',
-      requirements:'Thevaigal',
-      requirementsHint:'Property thedura buyers and tenants.',
-      properties:'Properties',
-      propertiesHint:'Sale, rent and lease-ku available inventory.',
-      matches:'Matches',
-      matchesHint:'Requirements-um properties-um smart-ah connect aagum.',
-      followups:'Follow-ups',
-      followupsHint:'Aduthu yaarukku contact pannanum.',
-      all:'Ellam',
-      buyers:'Buyers',
-      tenants:'Tenants',
-      sale:'Sale',
-      rent:'Rent',
-      lease:'Lease',
-      call:'Call',
-      whatsapp:'WhatsApp',
-      done:'Done',
-      open:'Open',
-      today:'Innaiku',
-      upcoming:'Upcoming',
-      completed:'Completed',
-      noRequirements:'Requirement illa. Buyer illa tenant enna theduraanga-nu capture pannu.',
-      noProperties:'Property illa. Owner illa available property-ah capture pannu.',
-      noMatches:'Useful match illa. Oru requirement-um property-um add pannu.',
-      noFollowups:'Pending edhuvum illa. Follow-up queue clear.'
-    }
   }
 };
-
-const inputLanguages = [
-  {id:'auto',label:'Auto detect'}, {id:'ta',label:'Tamil'}, {id:'en',label:'English'}, {id:'tg',label:'Tanglish'}
-];
 
 const routes = {
   splash: ['Property Assistant','Private, local-first memory and deal assistant for Property Advisors.'],
@@ -156,11 +64,10 @@ const routes = {
   home: ['Home','Capture new business memory and see what needs attention.'],
   requirements: ['Requirements','People actively looking for a property.'],
   properties: ['Properties','Available property supply.'],
-  speak: ['Speak & Save','Capture a spoken note using on-device speech recognition when available.'],
   type: ['Type & Save','Capture a natural-language business note and review the extracted details before saving.'],
   review: ['Review','Confirm extracted information before saving.'],
   'after-call': ['After-call recap','Quickly capture what changed after a call without recording the call itself.'],
-  ask: ['Ask','Search your local business memory with voice or typing.'],
+  ask: ['Ask','Search your local business memory by typing in English.'],
   people: ['People','Remember Property Advisors, owners, buyers, tenants and contacts.'],
   person: ['Person detail','View contact details and saved requirements.'],
   property: ['Property detail','View structured property facts and related actions.'],
@@ -170,7 +77,6 @@ const routes = {
   'poster-review': ['Poster review','Confirm phone number and extracted details before save.'],
   'poster-lead': ['Poster lead','Review saved poster details and matching opportunities.'],
   followups: ['Follow-ups','See useful next actions without CRM complexity.'],
-  language: ['Language','Display language and speech/input language are separate settings.'],
   settings: ['Settings & Backup','Manage privacy, encrypted backup, restore and personalization.']
 };
 
@@ -185,7 +91,6 @@ const iconPaths = {
   matches:'<path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0L12 5.8l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.4 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/>',
   followups:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>',
   search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
-  microphone:'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/>',
   keyboard:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h.01M11 10h.01M15 10h.01M18 10h.01M7 14h.01M11 14h6"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   pin:'<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
@@ -206,12 +111,10 @@ const seed = Object.freeze({ id:'synthetic-shell-record', phone:'+91 90000 00000
 window.__PA_SEED__ = seed;
 
 function escapeHtml(value){ return String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char])); }
-function getDisplayLanguage(){ return localStorage.getItem(STORAGE_KEYS.display) || 'en'; }
-function getInputLanguage(){ return localStorage.getItem(STORAGE_KEYS.input) || 'auto'; }
 function route(){ return (location.hash.replace(/^#\/?/,'') || 'splash').split('?')[0]; }
 function routeParams(){ const query=location.hash.split('?')[1] || ''; return new URLSearchParams(query); }
 function go(id){ location.hash = `#/${id}`; }
-function t(){ return displayLanguages[getDisplayLanguage()] || displayLanguages.en; }
+function t(){ return displayLanguages.en; }
 
 function button(label, target, className='button secondary'){
   return `<button class="${className}" data-route="${target}" type="button">${label}</button>`;
@@ -288,8 +191,7 @@ function shell(content, active){
     const selected=active===id;
     return `<button type="button" class="nav-item ${selected?'active':''}" data-route="${id}" aria-label="${text.nav[id]}"${selected?' aria-current="page"':''} data-testid="nav-${id}">${icon(iconName,'nav-icon')}<small>${text.nav[id]}</small></button>`;
   }).join('');
-  const language=Object.entries(displayLanguages).map(([id,value])=>`<button type="button" class="quick-language ${getDisplayLanguage()===id?'active':''}" data-quick-language="${id}" aria-pressed="${getDisplayLanguage()===id}">${value.short}</button>`).join('<span aria-hidden="true">|</span>');
-  return `<div class="app-shell"><header class="topbar"><button class="brand" data-route="home" aria-label="Property Assistant home"><span class="brand-mark"><span>P</span></span><span class="brand-copy"><strong>Property Assistant</strong><small>Your local property second brain</small></span></button><div class="topbar-actions"><div class="language-chip" role="group" aria-label="App display language" data-testid="language-chip">${language}</div><button class="icon-button" data-route="ask" type="button" aria-label="Search local memory" data-testid="header-search">${icon('search')}</button></div></header><main>${content}</main><nav class="bottom-nav" aria-label="Primary navigation">${nav}</nav></div>`;
+  return `<div class="app-shell"><header class="topbar"><button class="brand" data-route="home" aria-label="Property Assistant home"><span class="brand-mark"><span>P</span></span><span class="brand-copy"><strong>Property Assistant</strong><small>Your local property second brain</small></span></button><div class="topbar-actions"><button class="icon-button" data-route="ask" type="button" aria-label="Search local memory" data-testid="header-search">${icon('search')}</button></div></header><main>${content}</main><nav class="bottom-nav" aria-label="Primary navigation">${nav}</nav></div>`;
 }
 
 function renderHome(){
@@ -310,7 +212,7 @@ function renderHome(){
     }
     return `<button class="activity-row" type="button" data-route="followups"><span class="avatar gold">${icon('followups')}</span><span><strong>${escapeHtml(item.followup.title)}</strong><small>${new Date(item.followup.dueAt).toLocaleString()}</small></span><span class="status-badge">Pending</span>${icon('arrow')}</button>`;
   }).join('');
-  return shell(`<section class="assistant-intro"><div class="greeting-mark" aria-hidden="true">☀</div><div><h1 data-testid="home-heading">${copy.greeting}</h1><p>${copy.greetingHint}</p></div></section><section class="assistant-capture" aria-labelledby="capture-title"><div class="capture-heading"><span class="capture-person">${icon('user')}</span><div><h2 id="capture-title">${copy.captureTitle}</h2><p>${copy.captureHint}</p></div></div><div class="capture-composer"><button class="mic-button" type="button" data-route="speak" data-testid="speak-save" aria-label="${text.actions.speak}">${icon('microphone','mic-icon')}</button><label class="sr-only" for="home-capture">Natural-language property note</label><textarea id="home-capture" data-testid="home-capture-text" rows="2" placeholder="${copy.capturePlaceholder}"></textarea><button class="keyboard-button" type="button" data-route="type" data-testid="type-save" aria-label="${text.actions.type}">${icon('keyboard')}</button></div><div class="parsed-summary" data-testid="home-parsed-summary" hidden><div class="parsed-label">${icon('sparkles')}<strong>${copy.understood}</strong></div><div class="summary-chips" data-testid="home-summary-chips"></div></div><div class="capture-footer"><button class="detail-button" type="button" data-route="type">${icon('plus')} Add detail</button><button class="button primary save-memory" type="button" data-testid="home-review-save" disabled>${icon('check')} ${copy.reviewSave}</button></div><p class="capture-error" data-testid="home-capture-error" hidden></p></section><section class="home-section"><div class="section-heading"><h2>${copy.suggested}</h2><button data-route="matches" class="text-button">${copy.viewAll} ${icon('arrow')}</button></div><div class="match-scroll" data-testid="home-matches">${matchCards || `<div class="empty-state compact">${icon('matches')}<p>${copy.noMatches}</p><button class="button" type="button" data-route="type">${text.actions.type}</button></div>`}</div></section><section class="home-section"><div class="section-heading"><h2>${copy.recent}</h2><button data-route="requirements" class="text-button">${copy.viewAll} ${icon('arrow')}</button></div><div class="activity-list" data-testid="recent-activity">${activityRows || `<div class="empty-state compact">${icon('sparkles')}<p>Every saved conversation will appear here as useful business memory.</p></div>`}</div></section><section class="home-section quick-tools-section"><div class="section-heading"><h2>${copy.quickTools}</h2></div><div class="quick-actions"><button class="tool-button" type="button" data-route="people">${icon('user')} Contacts</button><button class="tool-button" type="button" data-route="poster">${icon('camera')} ${text.actions.scan}</button><button class="tool-button" type="button" data-route="after-call">${icon('phone')} After-call recap</button><button class="tool-button" type="button" data-route="settings">${icon('settings')} Settings & Backup</button></div></section>`, 'home');
+  return shell(`<section class="assistant-intro"><div class="greeting-mark" aria-hidden="true">☀</div><div><h1 data-testid="home-heading">${copy.greeting}</h1><p>${copy.greetingHint}</p></div></section><section class="assistant-capture" aria-labelledby="capture-title"><div class="capture-heading"><span class="capture-person">${icon('user')}</span><div><h2 id="capture-title">${copy.captureTitle}</h2><p>${copy.captureHint}</p></div></div><div class="capture-composer typing-only"><label class="sr-only" for="home-capture">Natural-language property note in English</label><textarea id="home-capture" data-testid="home-capture-text" rows="4" placeholder="${copy.capturePlaceholder}"></textarea></div><div class="parsed-summary" data-testid="home-parsed-summary" hidden><div class="parsed-label">${icon('sparkles')}<strong>${copy.understood}</strong></div><div class="summary-chips" data-testid="home-summary-chips"></div></div><div class="capture-footer"><button class="detail-button" type="button" data-testid="type-save">${icon('keyboard')} Open full editor</button><button class="button primary save-memory" type="button" data-testid="home-review-save" disabled>${icon('check')} ${copy.reviewSave}</button></div><p class="capture-error" data-testid="home-capture-error" hidden></p></section><section class="home-section"><div class="section-heading"><h2>${copy.suggested}</h2><button data-route="matches" class="text-button">${copy.viewAll} ${icon('arrow')}</button></div><div class="match-scroll" data-testid="home-matches">${matchCards || `<div class="empty-state compact">${icon('matches')}<p>${copy.noMatches}</p><button class="button" type="button" data-route="type">${text.actions.type}</button></div>`}</div></section><section class="home-section"><div class="section-heading"><h2>${copy.recent}</h2><button data-route="requirements" class="text-button">${copy.viewAll} ${icon('arrow')}</button></div><div class="activity-list" data-testid="recent-activity">${activityRows || `<div class="empty-state compact">${icon('sparkles')}<p>Every saved conversation will appear here as useful business memory.</p></div>`}</div></section><section class="home-section quick-tools-section"><div class="section-heading"><h2>${copy.quickTools}</h2></div><div class="quick-actions"><button class="tool-button" type="button" data-route="people">${icon('user')} Contacts</button><button class="tool-button" type="button" data-route="poster">${icon('camera')} ${text.actions.scan}</button><button class="tool-button" type="button" data-route="after-call">${icon('phone')} After-call recap</button><button class="tool-button" type="button" data-route="settings">${icon('settings')} Settings & Backup</button></div></section>`, 'home');
 }
 
 function renderRequirements(){
@@ -385,20 +287,13 @@ function renderProperty(){
   return shell(`<section class="screen-page detail-page"><div class="property-detail-hero"><div class="property-visual large ${escapeHtml(property.propertyType)}">${icon(property.propertyType==='land'?'pin':'properties','property-visual-icon')}</div><div><p class="eyebrow">AVAILABLE ${escapeHtml(property.intent).toUpperCase()}</p><h1 data-testid="property-title">${escapeHtml(property.propertyType)} in ${escapeHtml(property.locality)}</h1><strong class="property-price">${propertyPriceLabel(property)}</strong><p>${titleCase(property.intent)}${size}</p></div></div><div class="detail-grid"><section class="detail-panel"><h2>Owner</h2>${owner?`<button class="linked-memory-row simple" type="button" data-person-id="${escapeHtml(owner.id)}"><span class="avatar">${initials(owner.name)}</span><span><strong>${escapeHtml(owner.name)}</strong><small>${escapeHtml(owner.primaryPhone || 'Phone pending')}</small></span>${icon('arrow')}</button>`:'<p>Owner not linked yet.</p>'}</section><section class="detail-panel"><h2>Memory status</h2><strong>Stored privately on this device</strong><p>Updated ${new Date(property.updatedAt || property.createdAt).toLocaleDateString()}</p></section></div>${attributes?`<section class="detail-panel"><h2>Property attributes</h2><div class="reason-chips">${attributes}</div></section>`:''}${property.sourceText?`<section class="detail-panel"><h2>Original capture</h2><p>${escapeHtml(property.sourceText)}</p></section>`:''}<section class="detail-panel"><div class="section-heading"><h2>Suitable people</h2><button class="text-button" type="button" data-route="matches">${t().ui.viewAll} ${icon('arrow')}</button></div>${buyerRows || '<div class="empty-inline">No suitable requirements yet.</div>'}</section><div class="page-actions">${button('View all properties','properties')}${button('View Matches','matches','button primary')}</div></section>`, 'properties');
 }
 
-function renderLanguage(){
-  const display=getDisplayLanguage(), input=getInputLanguage();
-  const displayOptions=Object.entries(displayLanguages).map(([id,value]) => `<button type="button" class="choice ${display===id?'selected':''}" data-display-language="${id}" aria-pressed="${display===id}"><strong>${value.label}</strong><small>Changes menus, buttons and guidance</small></button>`).join('');
-  const inputOptions=inputLanguages.map(item => `<button type="button" class="choice ${input===item.id?'selected':''}" data-input-language="${item.id}" aria-pressed="${input===item.id}"><strong>${item.label}</strong><small>Speech and typed understanding preference</small></button>`).join('');
-  return shell(`<section class="page"><p class="eyebrow">PERSONALIZE</p><h1>Language</h1><p class="lead">Display language and input understanding are intentionally independent.</p><h2>App display language</h2><div class="choice-list" data-testid="display-language-options">${displayOptions}</div><h2>Voice & typing language</h2><div class="choice-list" data-testid="input-language-options">${inputOptions}</div></section>`, 'settings');
-}
-
 function renderGeneric(id){
   const [title,description]=routes[id] || ['Not found','This screen does not exist.'];
-  const actions={splash:button('Get started','onboarding','button primary'),onboarding:button('Continue to Home','home','button primary'),speak:button('Use Type & Save instead','type','button primary'),type:button('Review example','review','button primary'),review:button('Back to Home','home','button primary'),'after-call':button('Back to Home','home','button primary'),ask:button('Back to Home','home'),matches:button('Open match detail','match'),match:button('Follow up','followups'),poster:button('Review captured poster','poster-review','button primary'),'poster-review':button('Save poster lead','poster-lead','button primary'),'poster-lead':button('View Matches','matches'),followups:button('Back to Home','home'),settings:button('Language','language','button primary')}[id] || button('Back to Home','home');
+  const actions={splash:button('Get started','onboarding','button primary'),onboarding:button('Continue to Home','home','button primary'),type:button('Review example','review','button primary'),review:button('Back to Home','home','button primary'),'after-call':button('Back to Home','home','button primary'),ask:button('Back to Home','home'),matches:button('Open match detail','match'),match:button('Follow up','followups'),poster:button('Review captured poster','poster-review','button primary'),'poster-review':button('Save poster lead','poster-lead','button primary'),'poster-lead':button('View Matches','matches'),followups:button('Back to Home','home'),settings:button('Back to Home','home')}[id] || button('Back to Home','home');
   const trust = id==='splash'
     ? `<div class="welcome-card"><strong>Private by default</strong><p>Capture people, properties and requirements without sending your business memory to a cloud account.</p></div>`
     : id==='onboarding'
-      ? `<div class="welcome-card"><strong>Ready for everyday work</strong><p>Choose your language, capture a note, review the details and save. You can change settings later.</p></div>`
+      ? `<div class="welcome-card"><strong>Ready for everyday work</strong><p>Type a note in English, review what was understood, then save it as connected business memory.</p></div>`
       : `<div class="welcome-card"><strong>Local-first</strong><p>Your core records remain on this device and stay usable without an AI model.</p></div>`;
   const content=`<section class="page"><p class="eyebrow">PROPERTY ASSISTANT</p><h1 data-testid="screen-title">${title}</h1><p class="lead">${description}</p>${trust}<div class="page-actions">${actions}</div></section>`;
   if(id==='splash') return `<div class="splash">${content}</div>`;
@@ -412,19 +307,21 @@ function renderRecovery(){
 
 function render(){
   const id=route();
+  if(id==='speak'){ go('type'); return; }
+  if(id==='language'){ go('settings'); return; }
   if(bootError && id!=='settings') {
     app.innerHTML=renderRecovery();
     bind();
     return;
   }
   try {
-    app.innerHTML = id==='home' ? renderHome() : id==='requirements' ? renderRequirements() : id==='properties' ? renderProperties() : id==='language' ? renderLanguage() : id==='people' ? renderPeople() : id==='person' ? renderPerson() : id==='property' ? renderProperty() : renderGeneric(id);
+    app.innerHTML = id==='home' ? renderHome() : id==='requirements' ? renderRequirements() : id==='properties' ? renderProperties() : id==='people' ? renderPeople() : id==='person' ? renderPerson() : id==='property' ? renderProperty() : renderGeneric(id);
   } catch (error) {
     bootError = error instanceof Error ? error.message : 'Local data could not be opened safely.';
     window.__PA_BOOT_ERROR__ = bootError;
     app.innerHTML=renderRecovery();
   }
-  document.documentElement.lang = getDisplayLanguage()==='ta'?'ta':'en';
+  document.documentElement.lang = PRODUCT_MODE?.uiLanguage || 'en';
   bind();
 }
 
@@ -433,8 +330,6 @@ function bind(){
   document.querySelectorAll('[data-person-id]').forEach(el=>el.addEventListener('click',()=>{ if(el.dataset.personId) location.hash=`#/person?id=${encodeURIComponent(el.dataset.personId)}`; }));
   document.querySelectorAll('[data-property-id]').forEach(el=>el.addEventListener('click',()=>{ location.hash=`#/property?id=${encodeURIComponent(el.dataset.propertyId)}`; }));
   document.querySelectorAll('[data-open-match]').forEach(el=>el.addEventListener('click',()=>{ location.hash=`#/match?id=${encodeURIComponent(el.dataset.openMatch)}`; }));
-  document.querySelectorAll('[data-display-language]').forEach(el=>el.addEventListener('click',()=>setDisplayLanguage(el.dataset.displayLanguage)));
-  document.querySelectorAll('[data-input-language]').forEach(el=>el.addEventListener('click',()=>{ localStorage.setItem(STORAGE_KEYS.input,el.dataset.inputLanguage); render(); }));
   document.querySelectorAll('[data-requirement-filter]').forEach(el=>el.addEventListener('click',()=>{
     const filter=el.dataset.requirementFilter;
     document.querySelectorAll('[data-requirement-filter]').forEach(item=>item.classList.toggle('active',item===el));
@@ -464,19 +359,17 @@ function bind(){
     };
     capture.addEventListener('input',update);
     capture.addEventListener('keydown',event=>{ if((event.ctrlKey||event.metaKey)&&event.key==='Enter'&&!save.disabled) save.click(); });
+    document.querySelector('[data-testid="type-save"]')?.addEventListener('click',()=>{
+      const value=capture.value.trim();
+      if(value) sessionStorage.setItem('pa.typePrefill',value);
+      go('type');
+    });
     save.addEventListener('click',()=>{
       if(!draft?.ok){ error.hidden=false; error.textContent='Add a useful property note before reviewing.'; return; }
       sessionStorage.setItem('pa.captureDraft',JSON.stringify(draft));
       go('review');
     });
   }
-}
-
-function setDisplayLanguage(language){
-  if(!displayLanguages[language]) return;
-  localStorage.setItem(STORAGE_KEYS.display,language);
-  render();
-  setTimeout(()=>window.dispatchEvent(new HashChangeEvent('hashchange')),0);
 }
 
 function updateKeyboardState(){
@@ -489,9 +382,5 @@ function updateKeyboardState(){
 window.visualViewport?.addEventListener('resize', updateKeyboardState);
 window.addEventListener('focusin',()=>setTimeout(updateKeyboardState,60));
 window.addEventListener('focusout',()=>setTimeout(updateKeyboardState,160));
-document.addEventListener('click',event=>{
-  const languageButton=event.target.closest?.('[data-quick-language]');
-  if(languageButton) setDisplayLanguage(languageButton.dataset.quickLanguage);
-});
 window.addEventListener('hashchange',()=>{ window.scrollTo(0,0); render(); });
 window.addEventListener('DOMContentLoaded',()=>{ render(); updateKeyboardState(); });

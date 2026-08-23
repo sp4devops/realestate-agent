@@ -31,11 +31,15 @@ test('local person CRUD survives page reload without a model or network', async 
   await expect(page.getByTestId('people-list')).not.toContainText('Kavitha Buyer (Demo)');
 });
 
-test('display-language changes do not mutate persisted domain records', async ({ page }) => {
+test('English-only pilot mode remains independent from language-neutral domain records', async ({ page }) => {
   await page.goto('/#/people');
   const before = await page.evaluate(() => JSON.stringify(window.__PA_REPOSITORY__.loadSnapshot()));
-  await page.goto('/#/language');
-  await page.getByTestId('display-language-options').getByRole('button', { name: /^தமிழ்/ }).click();
+  await page.evaluate(() => {
+    localStorage.setItem('pa.displayLanguage','ta');
+    localStorage.setItem('pa.inputLanguage','tg');
+  });
+  await page.reload();
+  await expect(page.getByRole('heading',{name:'Contacts',exact:true})).toBeVisible();
   const after = await page.evaluate(() => JSON.stringify(window.__PA_REPOSITORY__.loadSnapshot()));
   expect(after).toBe(before);
 });

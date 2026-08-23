@@ -1,11 +1,12 @@
-# Pilot Onboarding — Privacy, Language and Backup
+# Pilot Onboarding — Privacy, English Typing and Backup
 
 Use this script/checklist with every Property Advisor before the first real pilot session.
 
 ## What the advisor should understand
 
 - Property Assistant is local-first. Core records, search, matching and follow-ups are designed to work without a cloud account or paid AI API.
-- Display language and speech/input language are separate choices. Changing the UI language must not change saved business records.
+- This candidate supports English typing only. Voice, Tamil, and Tanglish are deferred while the core product loop is stabilized.
+- Business records are language-neutral so deferred language features can return later without rewriting saved data.
 - The pilot should not be treated as permission to record cellular calls. After-call recap is a user-entered workflow; unrestricted call recording is not assumed.
 - Poster capture may request camera/gallery and location-related permissions only when those features are used. Continuous location tracking is not part of the product.
 - Communication buttons may open the phone dialer, WhatsApp or the operating-system share sheet. Those external apps have their own privacy behavior.
@@ -28,5 +29,5 @@ Start with `DEMO_DATA.json` and the synthetic capture examples in `PILOT_CHECKLI
 
 - Cloud synchronization is not part of the current pilot.
 - A forgotten backup password cannot be recovered.
-- Local STT/OCR accuracy is not guaranteed across every device/accent/poster.
+- Voice/STT is not part of this pilot candidate. OCR accuracy is not guaranteed across every device/poster.
 - The approximately 4 GB Android target still requires representative physical-device benchmarking before broader release.

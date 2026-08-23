@@ -8,8 +8,8 @@ Use one copy per Property Advisor/session.
 - Date/time:
 - Platform: Android / desktop
 - App version:
-- Display language:
-- Speech/input language:
+- Pilot language: English
+- Capture mode: typing
 - Device model / RAM if known:
 
 ## Basic-flow result
@@ -23,7 +23,7 @@ Mark each as `PASS`, `PASS WITH HELP`, or `FAIL`.
 - Matches/match explanation:
 - Ask/Search:
 - Follow-up create/complete:
-- Display-language switch without data mutation:
+- No voice/language controls or microphone prompt:
 - Encrypted backup creation:
 
 ## Issue report
@@ -46,8 +46,8 @@ For every issue record:
 - Most useful feature:
 - Most confusing screen/word:
 - What did the advisor try to do that the app could not do?
-- Was voice easier than typing for this advisor? Why?
-- Tamil / English / Tanglish quality notes:
+- Was English typing practical for this advisor? Why or why not?
+- English extraction quality notes:
 - Would the advisor use this in daily work? yes/no/unsure
 - What single improvement would make it more useful?
 

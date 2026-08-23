@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-await import('../../web/voice-core.js');
 await import('../../web/query-core.js');
 const {interpret,search}=globalThis.PropertyAssistantQuery;
 const snapshot={entities:{people:{u1:{id:'u1',name:'Suresh',role:'buyer',primaryPhone:'+91 9000000001',alternatePhones:[]},u2:{id:'u2',name:'Murugan',role:'owner',primaryPhone:'+91 9000000003',alternatePhones:[]},u3:{id:'u3',name:'Kumar',role:'buyer',primaryPhone:'+91 9000000004',alternatePhones:[]},u4:{id:'u4',name:'Wide Budget Buyer',role:'buyer',primaryPhone:'+91 9000000005',alternatePhones:[]}},properties:{p1:{id:'p1',ownerPersonId:'u2',intent:'sale',propertyType:'land',locality:'Erode',price:2200000},p2:{id:'p2',ownerPersonId:'u2',intent:'rent',propertyType:'house',locality:'Chennai',price:15000}},requirements:{r1:{id:'r1',personId:'u1',intent:'buy',propertyType:'land',locations:['Erode'],budgetMin:1800000,budgetMax:2500000},r2:{id:'r2',personId:'u4',intent:'buy',propertyType:'land',locations:['Erode'],budgetMin:2000000,budgetMax:4000000}},matches:{m1:{id:'m1',requirementId:'r1',propertyId:'p1',score:100,reasons:['Exact location: Erode']}}}};
@@ -8,17 +7,6 @@ const snapshot={entities:{people:{u1:{id:'u1',name:'Suresh',role:'buyer',primary
 test('interprets natural property query with locality and budget',()=>{
  const q=interpret('show land in Erode under 25 lakh');
  assert.equal(q.entity,'properties'); assert.equal(q.location,'Erode'); assert.equal(q.propertyType,'land'); assert.equal(q.maxPrice,2500000);
-});
-
-test('Tanglish/regional aliases normalize before query interpretation',()=>{
- const q=interpret('Kovai la site show');
- assert.equal(q.location,'Coimbatore'); assert.equal(q.propertyType,'land');
-});
-
-test('Tamil-script property query uses the same structured contract',()=>{
- const q=interpret('ஈரோடு நிலம் 25 லட்சத்துக்கு கீழ்');
- assert.equal(q.location,'Erode'); assert.equal(q.propertyType,'land'); assert.equal(q.maxPrice,2500000);
- const results=search(snapshot,q); assert.deepEqual(results.map(r=>r.id),['p1']);
 });
 
 test('offline local search returns actionable property and person results',()=>{

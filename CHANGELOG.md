@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.11.0-rc.4 — 2026-08-23
+
+Focused pilot candidate for proving Property Assistant's second-brain loop with English typing only.
+
+- Made the Home typing composer the single primary capture path.
+- Kept Capture → Understand → Remember → Match → Act intact, including review-before-save, local persistence, automatic matches and follow-ups.
+- Removed voice capture/search and multilingual controls from the active web, desktop and Android release surfaces.
+- Removed Android microphone permission and native speech-recognizer code from this candidate.
+- Preserved language-neutral domain records, replaceable extraction boundaries and explicit capability flags so voice and multilingual support can return later without redesigning storage.
+- Updated pilot guidance and regression coverage for the reduced scope.
+
+### Release-candidate limitations
+
+- English typing is the only supported capture and search mode in this pilot candidate. Voice, Tamil and Tanglish are deferred, not promised or quality-gated here.
+- CI Android APKs use an ephemeral test signing key and are for install/smoke validation only. Production distribution requires a persistent private signing key supplied through protected secrets.
+- Desktop RC requires Python 3.9+ and opens the local app in the system browser.
+- Production OCR runtime and representative approximately 4 GB Android memory/thermal benchmarking remain broader-release constraints.
+
 ## 0.11.0-rc.2 — 2026-08-22
 
 Device-pilot repair candidate after real Android testing of rc.1.

@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-test('Assistant home understands an everyday Tanglish note before review', async ({ page }) => {
+test('Assistant home understands an everyday English note before review', async ({ page }) => {
   await page.goto('/#/home');
-  const note='Ramesh-ku Erode railway station pakkathula 2BHK rent venum. Budget 15k. Family only. Next month move pannuvaaru. Phone 98765 40101.';
+  const note='Ramesh needs a 2BHK rental near Erode Railway Station. Budget 15k. Family only. Moving next month. Phone 98765 40101.';
   await page.getByTestId('home-capture-text').fill(note);
 
   await expect(page.getByTestId('home-parsed-summary')).toBeVisible();
@@ -92,16 +92,21 @@ test('price changes, reminders and rejection learning update connected memory',a
   expect(memory.matches[0].reasons.join(' ')).toContain('prior narrow-road rejection');
 });
 
-test('core second-brain surfaces change display language without rewriting memory', async ({ page }) => {
+test('legacy language preferences cannot change the English pilot or rewrite memory', async ({ page }) => {
   await page.goto('/#/home');
   await page.evaluate(() => (window as any).__PA_REPOSITORY__.seedSynthetic());
   const before = await page.evaluate(() => JSON.stringify((window as any).__PA_REPOSITORY__.loadSnapshot().entities));
 
-  await page.getByRole('button', { name: 'TA', exact: true }).click();
-  await expect(page.getByTestId('home-heading')).toContainText('வணக்கம்');
-  await expect(page.getByTestId('nav-requirements')).toContainText('தேவைகள்');
+  await page.evaluate(() => {
+    localStorage.setItem('pa.displayLanguage','ta');
+    localStorage.setItem('pa.inputLanguage','tg');
+  });
+  await page.reload();
+  await expect(page.getByTestId('home-heading')).toContainText('Good morning');
+  await expect(page.getByTestId('nav-requirements')).toContainText('Requirements');
+  await expect(page.getByTestId('language-chip')).toHaveCount(0);
   await page.getByTestId('nav-requirements').click();
-  await expect(page.getByRole('heading', { name: 'தேவைகள்', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Requirements', exact: true })).toBeVisible();
 
   const after = await page.evaluate(() => JSON.stringify((window as any).__PA_REPOSITORY__.loadSnapshot().entities));
   expect(after).toBe(before);

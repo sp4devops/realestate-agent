@@ -4,16 +4,20 @@ import { readFile } from 'node:fs/promises';
 
 const app = await readFile(new URL('../../web/app.js', import.meta.url), 'utf8');
 const index = await readFile(new URL('../../web/index.html', import.meta.url), 'utf8');
-const required = ['splash','onboarding','home','requirements','properties','speak','type','review','after-call','ask','people','person','property','matches','match','poster','poster-review','poster-lead','followups','language','settings'];
+const productMode = await readFile(new URL('../../web/product-mode.js', import.meta.url), 'utf8');
+const required = ['splash','onboarding','home','requirements','properties','type','review','after-call','ask','people','person','property','matches','match','poster','poster-review','poster-lead','followups','settings'];
 
 test('P1 route inventory is represented', () => {
   for (const route of required) assert.match(app, new RegExp(`\\b${route.replace('-','\\-')}\\b`));
 });
 
-test('display and input language use separate storage keys', () => {
-  assert.match(app, /pa\.displayLanguage/);
-  assert.match(app, /pa\.inputLanguage/);
-  assert.notEqual('pa.displayLanguage', 'pa.inputLanguage');
+test('pilot mode exposes English typing and explicitly defers voice and multilingual support', () => {
+  assert.match(productMode, /id:'english-typing-pilot'/);
+  assert.match(productMode, /typedCapture:true/);
+  assert.match(productMode, /typedSearch:true/);
+  assert.match(productMode, /voiceCapture:false/);
+  assert.match(productMode, /multilingualUi:false/);
+  assert.doesNotMatch(index, /src="voice-(?:core|ui)\.js"/);
 });
 
 test('production shell never auto-seeds synthetic business records', () => {
@@ -23,7 +27,7 @@ test('production shell never auto-seeds synthetic business records', () => {
 
 test('primary shell presents a property second brain instead of a CRM pipeline', () => {
   assert.match(app, /local property second brain/i);
-  assert.match(app, /Capture a lead, property or update/);
+  assert.match(app, /What should I remember\?/);
   assert.doesNotMatch(app, /sales pipeline|deal stage|lead funnel/i);
 });
 

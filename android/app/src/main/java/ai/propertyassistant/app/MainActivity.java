@@ -6,12 +6,8 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
@@ -36,10 +32,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 
 public final class MainActivity extends Activity {
-  private static final int AUDIO_PERMISSION_REQUEST = 42;
   private static final int LOCATION_PERMISSION_REQUEST = 43;
   private static final int FILE_CHOOSER_REQUEST = 44;
   private static final int BACKUP_EXPORT_REQUEST = 45;
@@ -47,19 +41,13 @@ public final class MainActivity extends Activity {
   private static final String APP_ORIGIN = "https://" + APP_HOST;
   private static final String APP_PATH_PREFIX = "/assets/";
   private static final String APP_URL = APP_ORIGIN + APP_PATH_PREFIX + "index.html#/splash";
-  private static final String SPEECH_CAPTURE = "capture";
-  private static final String SPEECH_QUERY = "query";
 
-  private PermissionRequest pendingPermissionRequest;
-  private String pendingSpeechLanguage;
-  private String pendingSpeechTarget;
   private GeolocationPermissions.Callback pendingGeolocationCallback;
   private String pendingGeolocationOrigin;
   private ValueCallback<Uri[]> pendingFileChooser;
   private Uri pendingCameraImageUri;
   private String pendingBackupText;
   private WebView web;
-  private SpeechRecognizer speechRecognizer;
 
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
@@ -106,7 +94,7 @@ public final class MainActivity extends Activity {
     });
     web.setWebChromeClient(new WebChromeClient() {
       @Override public void onPermissionRequest(PermissionRequest request) {
-        runOnUiThread(() -> handleWebPermissionRequest(request));
+        runOnUiThread(request::deny);
       }
 
       @Override public boolean onShowFileChooser(
@@ -160,24 +148,6 @@ public final class MainActivity extends Activity {
       });
     }
 
-    @JavascriptInterface public boolean hasOnDeviceSpeech() {
-      return isOnDeviceSpeechAvailable();
-    }
-
-    @JavascriptInterface public void startOnDeviceSpeech(String languageTag) {
-      runOnUiThread(() -> requestNativeSpeech(languageTag, SPEECH_CAPTURE));
-    }
-
-    @JavascriptInterface public void startOnDeviceQuerySpeech(String languageTag) {
-      runOnUiThread(() -> requestNativeSpeech(languageTag, SPEECH_QUERY));
-    }
-
-    @JavascriptInterface public void stopOnDeviceSpeech() {
-      runOnUiThread(() -> {
-        if (speechRecognizer != null) speechRecognizer.stopListening();
-      });
-    }
-
     @JavascriptInterface public void exportBackup(String fileName, String encryptedText) {
       runOnUiThread(() -> launchBackupExport(fileName, encryptedText));
     }
@@ -208,89 +178,6 @@ public final class MainActivity extends Activity {
         && "https".equalsIgnoreCase(origin.getScheme())
         && APP_HOST.equalsIgnoreCase(origin.getHost())
         && (origin.getPort() == -1 || origin.getPort() == 443);
-  }
-
-  private void requestNativeSpeech(String languageTag, String target) {
-    if (!isOnDeviceSpeechAvailable()) {
-      sendSpeechResult(target, false, null, "On-device speech recognition is unavailable on this phone.");
-      return;
-    }
-    pendingSpeechLanguage = normalizeLanguageTag(languageTag);
-    pendingSpeechTarget = target;
-    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-      startOnDeviceSpeech(pendingSpeechLanguage, pendingSpeechTarget);
-      return;
-    }
-    requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO }, AUDIO_PERMISSION_REQUEST);
-  }
-
-  private boolean isOnDeviceSpeechAvailable() {
-    return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SpeechRecognizer.isOnDeviceRecognitionAvailable(this);
-  }
-
-  private String normalizeLanguageTag(String languageTag) {
-    if (languageTag == null || languageTag.isBlank() || "auto".equalsIgnoreCase(languageTag)) return "en-IN";
-    return languageTag;
-  }
-
-  private void startOnDeviceSpeech(String languageTag, String target) {
-    if (!isOnDeviceSpeechAvailable()) {
-      sendSpeechResult(target, false, null, "On-device speech recognition is unavailable on this phone.");
-      return;
-    }
-    if (speechRecognizer != null) speechRecognizer.destroy();
-    final String callbackTarget = target;
-    speechRecognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(this);
-    speechRecognizer.setRecognitionListener(new RecognitionListener() {
-      @Override public void onReadyForSpeech(Bundle params) { sendSpeechStatus(callbackTarget, "Listening…"); }
-      @Override public void onBeginningOfSpeech() { }
-      @Override public void onRmsChanged(float rmsdB) { }
-      @Override public void onBufferReceived(byte[] buffer) { }
-      @Override public void onEndOfSpeech() { sendSpeechStatus(callbackTarget, "Processing locally…"); }
-      @Override public void onError(int error) { sendSpeechResult(callbackTarget, false, null, speechErrorMessage(error)); }
-      @Override public void onResults(Bundle results) {
-        ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-        if (matches == null || matches.isEmpty() || matches.get(0).trim().isEmpty()) {
-          sendSpeechResult(callbackTarget, false, null, "I could not hear enough speech. Try again.");
-          return;
-        }
-        sendSpeechResult(callbackTarget, true, matches.get(0).trim(), null);
-      }
-      @Override public void onPartialResults(Bundle partialResults) { }
-      @Override public void onEvent(int eventType, Bundle params) { }
-    });
-
-    Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageTag);
-    intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, languageTag);
-    intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
-    intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
-    intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
-    speechRecognizer.startListening(intent);
-  }
-
-  private String speechErrorMessage(int error) {
-    if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) return "Microphone permission is required for voice capture.";
-    if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) return "I could not hear enough speech. Try again.";
-    if (error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) return "Speech recognition is busy. Please try again.";
-    return "On-device speech recognition could not complete. Try again or use typing.";
-  }
-
-  private void sendSpeechStatus(String target, String message) {
-    if (web == null) return;
-    String callback = SPEECH_QUERY.equals(target) ? "__PA_ON_DEVICE_QUERY_STT_STATUS__" : "__PA_ON_DEVICE_STT_STATUS__";
-    String js = "window." + callback + " && window." + callback + "(" + JSONObject.quote(message) + ")";
-    web.evaluateJavascript(js, null);
-  }
-
-  private void sendSpeechResult(String target, boolean ok, String transcript, String error) {
-    pendingSpeechLanguage = null;
-    pendingSpeechTarget = null;
-    if (web == null) return;
-    String callback = SPEECH_QUERY.equals(target) ? "__PA_ON_DEVICE_QUERY_STT_RESULT__" : "__PA_ON_DEVICE_STT_RESULT__";
-    String payload = "{ok:" + ok + ",transcript:" + (transcript == null ? "null" : JSONObject.quote(transcript)) + ",error:" + (error == null ? "null" : JSONObject.quote(error)) + "}";
-    web.evaluateJavascript("window." + callback + " && window." + callback + "(" + payload + ")", null);
   }
 
   private void launchBackupExport(String fileName, String encryptedText) {
@@ -355,31 +242,6 @@ public final class MainActivity extends Activity {
     } catch (ActivityNotFoundException error) {
       return false;
     }
-  }
-
-  private void handleWebPermissionRequest(PermissionRequest request) {
-    if (!isTrustedOrigin(request.getOrigin())) {
-      request.deny();
-      return;
-    }
-    boolean wantsAudio = false;
-    for (String resource : request.getResources()) {
-      if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(resource)) {
-        wantsAudio = true;
-        break;
-      }
-    }
-    if (!wantsAudio) {
-      request.deny();
-      return;
-    }
-    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-      request.grant(new String[] { PermissionRequest.RESOURCE_AUDIO_CAPTURE });
-      return;
-    }
-    if (pendingPermissionRequest != null) pendingPermissionRequest.deny();
-    pendingPermissionRequest = request;
-    requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO }, AUDIO_PERMISSION_REQUEST);
   }
 
   private void handleGeolocationPermission(String origin, GeolocationPermissions.Callback callback) {
@@ -474,21 +336,6 @@ public final class MainActivity extends Activity {
 
   @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    if (requestCode == AUDIO_PERMISSION_REQUEST) {
-      boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-      if (pendingPermissionRequest != null) {
-        if (granted) pendingPermissionRequest.grant(new String[] { PermissionRequest.RESOURCE_AUDIO_CAPTURE });
-        else pendingPermissionRequest.deny();
-        pendingPermissionRequest = null;
-      }
-      if (pendingSpeechLanguage != null && pendingSpeechTarget != null) {
-        String language = pendingSpeechLanguage;
-        String target = pendingSpeechTarget;
-        if (granted) startOnDeviceSpeech(language, target);
-        else sendSpeechResult(target, false, null, "Microphone permission is required for voice capture.");
-      }
-      return;
-    }
     if (requestCode == LOCATION_PERMISSION_REQUEST && pendingGeolocationCallback != null) {
       boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
       pendingGeolocationCallback.invoke(pendingGeolocationOrigin, granted, false);
@@ -498,14 +345,8 @@ public final class MainActivity extends Activity {
   }
 
   @Override protected void onDestroy() {
-    if (pendingPermissionRequest != null) pendingPermissionRequest.deny();
     if (pendingFileChooser != null) pendingFileChooser.onReceiveValue(null);
     if (pendingGeolocationCallback != null) pendingGeolocationCallback.invoke(pendingGeolocationOrigin, false, false);
-    if (speechRecognizer != null) speechRecognizer.destroy();
-    speechRecognizer = null;
-    pendingPermissionRequest = null;
-    pendingSpeechLanguage = null;
-    pendingSpeechTarget = null;
     pendingFileChooser = null;
     pendingGeolocationCallback = null;
     pendingGeolocationOrigin = null;

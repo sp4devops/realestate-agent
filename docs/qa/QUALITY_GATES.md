@@ -9,6 +9,8 @@
 
 Critical and High defects block phase completion and release.
 
+Current P12 scope is English typing only. Active release checks must prove voice/multilingual controls are absent, Android requests no microphone permission, and the typed core loop remains usable offline. Voice/Tamil/Tanglish quality is not a pilot completion gate until explicitly reactivated.
+
 ## Required checks by change type
 
 | Change | Unit | Integration | E2E | Product review | QA review |
@@ -27,7 +29,7 @@ Critical and High defects block phase completion and release.
 2. Type & Save property → review → save → automatic match appears.
 3. Core Suresh/Murugan scenario produces an explainable possible match and useful call/save actions.
 4. Ask/Search finds a remembered person/property and presents operational cards.
-5. UI language changes while language-neutral stored data remains unchanged.
+5. English-only pilot UI remains stable when legacy language preferences exist, while language-neutral stored data remains unchanged.
 6. AI/model unavailable: local records, lookup, deterministic matching, reminders, navigation remain usable.
 7. Offline mode: critical local flows remain available.
 8. Poster flow: phone-first extraction, distinct poster location and photo GPS, save lead, follow-up/match where applicable.

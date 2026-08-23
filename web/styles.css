@@ -53,7 +53,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   border-bottom:1px solid rgba(221,230,225,.72);
   backdrop-filter:blur(18px);
 }
-.brand,.language-chip,.nav-item,.text-button,.quick-language,.icon-button,.bookmark-button,.more-button,.detail-button,.tool-button,.activity-row{
+.brand,.nav-item,.text-button,.icon-button,.bookmark-button,.more-button,.detail-button,.tool-button,.activity-row{
   border:0;
   background:none;
 }
@@ -75,20 +75,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 .brand-copy strong{font-size:21px;line-height:1.1;letter-spacing:-.02em}
 .brand-copy small{font-size:13px;color:var(--muted);font-weight:500}
 .topbar-actions{display:flex;align-items:center;gap:10px}
-.language-chip{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  min-height:44px;
-  padding:5px 9px;
-  border:1px solid #b9ddcc;
-  border-radius:13px;
-  color:#5d6864;
-  background:#fff;
-}
-.quick-language{min-height:40px;padding:3px 6px;color:#66716c;font-size:13px;border-radius:7px}
-.quick-language.active{color:var(--green-800);font-weight:900}
-.language-chip>span{color:#a6afab;font-size:12px}
 .icon-button{
   display:grid;
   place-items:center;
@@ -146,9 +132,8 @@ main{width:min(1080px,100%);margin:0 auto;padding:26px 20px 48px}
   line-height:1.45;
 }
 .capture-composer textarea::placeholder{color:#808b86}
-.mic-button{display:grid;place-items:center;width:64px;height:64px;border:0;border-radius:50%;color:#fff;background:linear-gradient(145deg,var(--green-700),var(--green-900));box-shadow:0 8px 18px rgba(8,122,87,.27)}
-.mic-icon{width:32px;height:32px}
-.keyboard-button{display:grid;place-items:center;width:46px;height:46px;border:1px solid var(--line);border-radius:14px;color:#1f2b27;background:#fff}
+.capture-composer.typing-only{grid-template-columns:minmax(0,1fr);align-items:stretch;padding:4px 10px}
+.capture-composer.typing-only textarea{min-height:96px;max-height:180px;padding:14px 6px;resize:vertical}
 .parsed-summary{margin-top:4px}
 .parsed-label{display:flex;align-items:center;gap:7px;color:#173b30;font-size:14px}
 .parsed-label .icon{width:18px;height:18px;color:var(--green-800)}
@@ -448,8 +433,6 @@ body.keyboard-open .app-shell{padding-bottom:24px}
   .brand-copy strong{font-size:17px}
   .brand-copy small{display:none}
   .topbar-actions{gap:7px}
-  .language-chip{gap:3px;padding:4px 6px}
-  .quick-language{min-height:38px;padding:3px;font-size:11px}
   .icon-button{width:44px;min-width:44px;height:44px}
   main{padding:20px 14px 36px}
   .assistant-intro{gap:12px;margin-top:4px}
@@ -461,10 +444,8 @@ body.keyboard-open .app-shell{padding-bottom:24px}
   .capture-person{width:44px;height:44px}
   .capture-heading h2{font-size:18px}
   .capture-heading p{font-size:13px}
-  .capture-composer{min-height:74px;margin:15px 0 13px}
-  .mic-button{width:58px;height:58px}
+  .capture-composer{min-height:96px;margin:15px 0 13px}
   .capture-composer textarea{padding:11px 5px;font-size:14px}
-  .keyboard-button{width:42px;height:42px}
   .capture-footer{align-items:stretch}
   .save-memory{min-width:140px}
   .match-scroll{grid-auto-columns:minmax(285px,86vw)}
@@ -498,14 +479,10 @@ body.keyboard-open .app-shell{padding-bottom:24px}
 @media(max-width:390px){
   .brand-copy strong{font-size:15px}
   .brand-mark{width:38px;height:38px;flex-basis:38px}
-  .language-chip{gap:1px}
-  .quick-language{font-size:10px}
   .topbar .icon-button{width:40px;min-width:40px;height:40px}
   .assistant-intro h1{font-size:23px}
   .assistant-capture{padding:14px}
-  .capture-composer{grid-template-columns:54px minmax(0,1fr) 38px;padding:6px}
-  .mic-button{width:52px;height:52px}
-  .keyboard-button{width:38px;height:38px}
+  .capture-composer{padding:6px}
   .capture-footer{flex-direction:column}
   .save-memory{width:100%}
   .detail-button{justify-content:center}
