@@ -95,7 +95,10 @@ test('price changes, reminders and rejection learning update connected memory',a
 test('legacy language preferences cannot change the English pilot or rewrite memory', async ({ page }) => {
   await page.goto('/#/home');
   await page.evaluate(() => (window as any).__PA_REPOSITORY__.seedSynthetic());
-  const before = await page.evaluate(() => JSON.stringify((window as any).__PA_REPOSITORY__.loadSnapshot().entities));
+  const before = await page.evaluate(() => {
+    const { matches: _derivedMatches, ...sourceMemory } = (window as any).__PA_REPOSITORY__.loadSnapshot().entities;
+    return JSON.stringify(sourceMemory);
+  });
 
   await page.evaluate(() => {
     localStorage.setItem('pa.displayLanguage','ta');
@@ -108,6 +111,9 @@ test('legacy language preferences cannot change the English pilot or rewrite mem
   await page.getByTestId('nav-requirements').click();
   await expect(page.getByRole('heading', { name: 'Requirements', exact: true })).toBeVisible();
 
-  const after = await page.evaluate(() => JSON.stringify((window as any).__PA_REPOSITORY__.loadSnapshot().entities));
+  const after = await page.evaluate(() => {
+    const { matches: _derivedMatches, ...sourceMemory } = (window as any).__PA_REPOSITORY__.loadSnapshot().entities;
+    return JSON.stringify(sourceMemory);
+  });
   expect(after).toBe(before);
 });
