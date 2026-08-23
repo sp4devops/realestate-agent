@@ -2,10 +2,13 @@
 
 Use this script/checklist with every Property Advisor before the first real pilot session.
 
+The Splash and Onboarding screens are first-run guidance. After the advisor chooses Continue to Home, later launches on the same app data should open directly on Home.
+
 ## What the advisor should understand
 
 - Property Assistant is local-first. Core records, search, matching and follow-ups are designed to work without a cloud account or paid AI API.
 - This candidate supports English typing only. Voice, Tamil, and Tanglish are deferred while the core product loop is stabilized.
+- If Review is wrong, Edit note must return the advisor's full original draft; saving must survive a relaunch.
 - Business records are language-neutral so deferred language features can return later without rewriting saved data.
 - The pilot should not be treated as permission to record cellular calls. After-call recap is a user-entered workflow; unrestricted call recording is not assumed.
 - Poster capture may request camera/gallery and location-related permissions only when those features are used. Continuous location tracking is not part of the product.

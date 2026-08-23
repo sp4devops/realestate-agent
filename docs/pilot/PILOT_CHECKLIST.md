@@ -5,7 +5,7 @@ This checklist is for a small pilot of approximately five Property Advisors. The
 ## Before giving the app to a Property Advisor
 
 1. Use the P11 Android RC APK or desktop RC package from the retained Release Candidates artifact.
-2. Confirm the app opens to Property Assistant and the primary navigation works.
+2. Confirm the first launch shows onboarding, Continue to Home works, and a later relaunch opens directly on Home.
 3. Explain that pilot data is stored locally on the device. Do not enter sensitive real customer data until the advisor understands backup/export and the current pilot limitations.
 4. Open Settings & Backup. Create one encrypted backup with a password chosen by the advisor and store the backup file separately from the device.
 5. Tell the advisor that the backup password cannot be recovered. Losing both the device data and the password can make the backup unusable.
@@ -19,6 +19,8 @@ The Property Advisor should be able to do these without developer help:
 - Type & Save a buyer requirement.
 - Type & Save a property/owner note.
 - Review and correct extracted fields before save.
+- From Review, choose Edit note and confirm the complete original draft returns.
+- Save the corrected note, relaunch, and confirm the remembered record is still present.
 - Open People and inspect a saved person.
 - Open Matches and inspect why a requirement/property match was suggested.
 - Search/Ask for locally stored information.

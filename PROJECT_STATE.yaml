@@ -4,46 +4,49 @@ repository: sp4devops/realestate-agent
 status: needs_device_retest
 active_phase: P12
 active_phase_name: Property Advisor pilot readiness
-last_verified_commit: 025930d74e85187e72b23129ddf9f328ec10920e
-last_updated: 2026-08-22T03:55:00+05:30
+last_verified_commit: bfb4563aa814dd6590b3995ca381789554af3862
+last_updated: 2026-08-23T11:58:41+05:30
 active_pr: 13
 active_branch: ai/p12-pilot-readiness
 
 ci_gate:
   status: green_functional_head
-  verified_head_sha: 025930d74e85187e72b23129ddf9f328ec10920e
+  verified_head_sha: bfb4563aa814dd6590b3995ca381789554af3862
   workflow_name: Quality Gates + Release Candidates
-  quality_workflow_run_id: 32532219717
-  quality_workflow_run_number: 334
-  release_workflow_run_id: 32532219709
-  release_workflow_run_number: 53
+  quality_workflow_run_id: 32622809337
+  quality_workflow_run_number: 436
+  release_workflow_run_id: 32622809304
+  release_workflow_run_number: 155
   workflow_status: completed
   workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: Repaired rc.2 functional HEAD is green. Physical Android re-test is still required because rc.1 exposed device-only layout and microphone defects that hosted CI did not detect. Documentation commits move the PR HEAD, so exact-head CI must run again before any eventual merge.
+  note: The repaired 0.11.0-rc.4 English typing-only functional head passed every required job, including 101 Playwright cases with one intentional viewport skip, Android build/lint/tests, signed APK verification with deferred voice assets absent, desktop packaging/smoke and the required summary. This state/handoff commit will move PR HEAD and therefore requires its own exact-head workflows before handoff.
 
 review_gates:
   code_review:
     status: pass
     blocking_findings: 0
-    note: Reviewed Android WebViewAssetLoader origin, system-bar inset handling, adjustResize, permission-minimal on-device SpeechRecognizer bridge, parser fixes, size persistence and regression coverage. No Internet permission or cloud dependency was added; no Critical/High code finding remains.
+    note: Post-repair review of bfb4563aa814dd6590b3995ca381789554af3862 found no Critical, High or Medium issue. Typed place aliases and synchronized Android asset staging closed the prior findings. Product-mode capability flags remain descriptive compiled-build metadata until deferred adapters are reactivated; this is Low and nonblocking.
   qa_review:
-    status: pending_device_retest
+    status: pass_with_device_validation_pending
     blocking_findings: 0
-    note: Automated Quality Gates #334 and Release Candidates #53 pass. rc.1 physical-device findings were repaired and converted to regressions, but status-bar/navigation insets and native on-device microphone behavior must be confirmed on the user's Android device before P12 can return to merge-ready.
+    note: Post-repair review confirmed draft restoration, typed save-after-reload persistence, onboarding-once behavior, English-only active fixtures, empty Ask guidance and voice-free packaging. Hosted automation is complete; physical Android install/launch, keyboard/insets and device integrations remain runtime validation rather than an unresolved code defect.
   product_guardrail_review:
     status: pass
     blocking_findings: 0
-    note: Internal phase-development copy was removed from user-facing screens. Property Advisor terminology, local-first/private-by-default behavior and Capture-Understand-Remember-Match-Act remain intact with no CRM/cloud/paid-service expansion.
+    note: The active product is an English typing-only local second brain, not a CRM. Capture-Understand-Remember-Match-Follow up is intact; voice and multilingual UI/input are absent from release surfaces but language-neutral memory and adapter seams remain.
 
 product_contract:
-  core_loop: [capture, understand, remember, match, act]
+  core_loop: [capture, understand, remember, match, follow_up]
   primary_user_term: Property Advisor
   internal_legal_term: Real Estate Agent
   platforms_now: [android, desktop]
   platforms_later: [ios]
-  launch_languages: [Tamil, English, Tanglish]
+  current_pilot_languages: [English]
+  current_pilot_input_modes: [typing]
+  deferred_capabilities: [voice, Tamil, Tanglish, multilingual_ui, multilingual_understanding]
+  preserved_reactivation_seams: [language_neutral_records, review_before_save, replaceable_input_adapters, shared_matching, shared_search]
   local_first: true
   model_optional_for_core_workflows: true
   target_android_ram_gb: 4
@@ -53,12 +56,12 @@ phases:
   P1: {name: Application skeleton and navigation, status: done}
   P2: {name: Local domain model and persistence, status: done}
   P3: {name: Type capture and structured extraction, status: done}
-  P4: {name: Voice capture and multilingual understanding, status: done}
+  P4: {name: Voice capture and multilingual understanding, status: done, current_pilot_mode: disabled}
   P5: {name: Matching and action brain, status: done}
   P6: {name: Ask/search and operational result cards, status: done}
   P7: {name: Poster capture and OCR lead flow, status: done}
   P8: {name: After-call recap follow-ups and communication actions, status: done}
-  P9: {name: Backup restore settings language and privacy hardening, status: done}
+  P9: {name: Backup restore settings language and privacy hardening, status: done, multilingual_ui_current_pilot: disabled}
   P10: {name: Performance accessibility resilience and offline QA, status: done}
   P11: {name: Android APK and desktop release candidates, status: done}
   P12: {name: Property Advisor pilot readiness, status: in_progress}
@@ -69,54 +72,68 @@ current_tasks:
     owner: ai-agent
     description: Build self-service pilot checklist, synthetic demo dataset, privacy/backup onboarding, feedback template, known-limitations sheet and rollback/recovery guidance.
   - id: P12-T2
-    status: needs_device_retest
+    status: deferred_by_scope_change
     owner: ai-agent
-    description: Re-test 0.11.0-rc.2 on the physical Android device for status/navigation insets, keyboard behavior, Speak & Save microphone flow and the exact Perundurai acreage capture regression before restoring merge-ready status.
+    description: The earlier rc.2 physical voice/Tamil/Tanglish re-test is superseded by the explicit English typing-only pilot decision; retain its history but do not make it a current completion gate.
+  - id: P12-T3
+    status: done
+    owner: ai-agent
+    description: Refocus 0.11.0-rc.4 on the typed second-brain loop, remove active voice/language UI and microphone permission, preserve reactivation seams, repair reviewer findings and obtain exact-head CI plus three independent approvals.
+  - id: P12-T4
+    status: needs_device_retest
+    owner: user-and-ai-agent
+    description: Install and exercise 0.11.0-rc.4 on a representative Android phone for first/returning launch, typed capture/edit/save/reload, automatic match, follow-up, keyboard/insets, camera/gallery, location denial, backup document flow and communication intents.
   - id: P4-T3
     status: deferred
     owner: ai-agent
-    description: Select, package and benchmark a production local STT runtime on representative target hardware before broader release if the platform on-device recognizer does not meet Tamil/Tanglish quality requirements.
+    description: Select, package and benchmark a production local STT runtime only when voice and multilingual input are explicitly reactivated after core-product validation.
   - id: P7-T3
     status: deferred
     owner: ai-agent
-    description: Select, package and benchmark production local OCR runtime on representative target hardware before broader release.
+    description: Select, package and benchmark a production local OCR runtime on representative target hardware before broader release.
 
 blockers:
-  - Physical Android confirmation of rc.2 device-only fixes is required before P12 can be called pilot-ready or merge-ready.
+  - Physical Android validation of the 0.11.0-rc.4 English typing-only candidate is required before P12 is called pilot-ready or merge-ready.
 
 known_constraints:
   - Cash build-cost target is zero until product validation/revenue threshold.
   - No paid AI APIs or cloud dependency should be introduced merely for convenience.
   - CI Android RC uses an ephemeral signing key; production distribution requires a persistent protected signing key.
-  - Android on-device speech recognition availability and Tamil/Tanglish quality depend on the recognizer installed on the physical phone; no Internet permission is requested.
   - Desktop RC requires Python 3.9+ and uses a loopback-only system-browser launcher.
   - Production OCR runtime and approximately 4 GB Android physical-device memory/thermal benchmarking remain broader-release constraints.
+  - Product-mode capability flags describe this compiled pilot; packaging/runtime activation must be wired when deferred adapters return.
+  - Direct Call/WhatsApp actions from Ask/person cards are a later enhancement; current Match and Follow-up screens provide the operational actions.
 
 last_checks:
-  - check: rc.1 physical Android test
-    result: fail
-    evidence: User screenshots showed status/header overlap, bottom navigation collision, keyboard collision, internal phase copy, microphone start failure and incorrect parsing of "Tsk wants 5 acre in perundurai". These findings invalidated the earlier P12 merge-ready assessment.
-  - check: rc.2 parser regression
+  - check: rc.4 local verification
     result: pass
-    evidence: Exact note regression now resolves Tsk as name, Perundurai as locality, land as property type and 5 acre as structured size while leaving phone and budget uncertain instead of inventing them.
-  - check: rc.2 Quality Gates
+    evidence: Harness, JavaScript syntax, diff checks and desktop packaged smoke passed. Node ran 84 active unit tests successfully and explicitly skipped three deferred multilingual-only fixtures.
+  - check: rc.4 initial exact-head CI
+    result: repaired
+    evidence: Quality Gates #432 found one over-broad E2E assertion that treated legitimate derived-match recalculation as source-memory mutation. The assertion was narrowed to source records; Quality Gates #434 and Release Candidates #153 then passed on 449e765ebb0a8786c1ba1a7b225ecdef4d025b97.
+  - check: independent review repair loop
     result: pass
-    evidence: Quality Gates #334 (32532219717) completed successfully for 025930d74e85187e72b23129ddf9f328ec10920e with Harness, JS/unit/lint/type, Playwright, Android build/tests and Required gate summary all green.
-  - check: rc.2 Release Candidates
+    evidence: Review found draft loss on Edit note, missing typed-save reload proof, incremental Android voice-asset risk, English place aliases stranded behind voice code, onboarding repeated on every cold start, one Tanglish E2E fixture and contradictory empty Ask copy. All were repaired with focused regressions.
+  - check: rc.4 post-review Quality Gates
     result: pass
-    evidence: Release Candidates #53 (32532219709) completed successfully for 025930d74e85187e72b23129ddf9f328ec10920e with signed Android rc.2 build, signature/content verification, desktop smoke/archive verification and artifact uploads.
-  - check: code reviewer
+    evidence: Quality Gates #436 (32622809337) completed successfully for bfb4563aa814dd6590b3995ca381789554af3862; Detect, Harness, JS/unit/lint/type, Playwright, Android build/tests and Required gate summary all passed.
+  - check: rc.4 post-review Release Candidates
     result: pass
-    evidence: No Critical/High code finding remains in Android inset handling, secure asset origin, native speech bridge, parser, review/save size flow or mobile keyboard layout.
-  - check: product guardrail reviewer
+    evidence: Release Candidates #155 (32622809304) completed successfully for bfb4563aa814dd6590b3995ca381789554af3862; signed Android rc.4 verification, explicit absence of packaged voice assets, desktop build/smoke/archive and artifact uploads passed.
+  - check: post-repair code reviewer
     result: pass
-    evidence: User-facing engineering placeholder copy was removed and local-first/private-by-default constraints remain preserved.
-  - check: QA reviewer
-    result: pending
-    evidence: Automated gates pass, but physical-device rc.2 confirmation is still required for the device-specific defects that escaped hosted CI.
+    evidence: No Critical, High or Medium finding remains; one Low note records that product-mode flags are descriptive compiled-build metadata until deferred capability activation is implemented.
+  - check: post-repair QA reviewer
+    result: pass
+    evidence: No Critical, High, Medium or Low automated QA finding remains. Physical-device integrations and layout remain explicitly pending.
+  - check: post-repair product guardrail reviewer
+    result: pass
+    evidence: English typing-only second-brain scope, local-first privacy, deferred capability seams, returning-advisor simplicity and the full Capture-Understand-Remember-Match-Follow up loop all pass.
 
 next_actions:
-  - Run Quality Gates and Release Candidates on the exact documentation HEAD.
-  - Provide the resulting 0.11.0-rc.2 Android APK for physical-device retest.
-  - Re-test status/header spacing, bottom navigation/system navigation separation, keyboard editing, Speak & Save permission/recognition, and "Tsk wants 5 acre in perundurai" review output.
-  - Only after physical-device confirmation, restore QA reviewer PASS and P12 ready_for_merge, rerun exact-head gates if state changes, and request fresh explicit merge authorization for PR #13.
+  - Run Quality Gates and Release Candidates on the exact state/handoff documentation HEAD.
+  - Provide the resulting 0.11.0-rc.4 Android APK and desktop release candidate.
+  - On a representative Android phone, test first launch and returning launch, Home typing, Review and Edit note draft preservation, save/relaunch persistence, matching, follow-up, keyboard/system insets and absence of any microphone prompt.
+  - Exercise camera/gallery, deny location, export/restore an encrypted synthetic backup, and open Call/WhatsApp/Share intents.
+  - After physical validation, run the approximately five-Property-Advisor checklist and collect reproducible feedback.
+  - Only after device confirmation may P12 become pilot-ready/merge-ready; PR #13 still requires fresh explicit user authorization before merge.

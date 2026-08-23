@@ -2,6 +2,53 @@
 
 Append-only session history. New entries go at the top beneath this introduction or at the end; do not rewrite historical facts.
 
+## 2026-08-23 11:58 IST — P12 refocused on the English typed second brain
+
+**Branch:** ai/p12-pilot-readiness
+
+**PR:** #13 — Property Advisor second brain and pilot readiness
+
+**Product decision:**
+
+- Locked the current candidate to English UI and typing-only capture/search.
+- Deferred voice, Tamil, Tanglish and multilingual UI/understanding without removing language-neutral records, review-before-save, replaceable input/model adapters or shared search/matching/follow-up contracts.
+- Reaffirmed Property Assistant as a local-first second brain for a Property Advisor, not a CRM: Capture → Understand → Remember → Match → Follow up.
+
+**Implementation evidence:**
+
+- Added compiled product-mode metadata and removed voice/language controls from active routes, Home, Ask and Settings.
+- Removed Android microphone permission, speech runtime and voice bridge; all WebView media permission requests are denied.
+- Excluded dormant voice source from Android/desktop packages. Android staging now uses Gradle Sync, and Release Candidates fails if voice runtime files appear in the APK.
+- Made English typing the prominent Home composer and preserved Home → editor and Review → Edit note drafts until save/cancel.
+- Added first-time-only onboarding so returning advisors open on Home.
+- Kept typed local capture, structured review, language-neutral persistence, automatic explained matching, Ask and follow-ups intact.
+- Restored common local place aliases in typed-query normalization without loading voice code.
+- Redirected historical voice/language deep links to supported Type/Settings screens.
+- Bumped the build to 0.11.0-rc.4 and updated pilot/product/QA documentation.
+
+**Failure-and-repair loop:**
+
+- Quality Gates #432 correctly found an over-broad language-preference E2E assertion: boot generated a legitimate derived match, so whole-database equality was the wrong invariant. Source-memory equality replaced it.
+- Quality Gates #434 and Release Candidates #153 then passed on 449e765ebb0a8786c1ba1a7b225ecdef4d025b97.
+- Independent review found one High draft-loss defect plus Medium/Low gaps in typed reload proof, onboarding return behavior, multilingual E2E scope, English place aliases, Android incremental packaging, empty Ask copy and QA baseline documentation.
+- Repaired every finding and added focused unit/E2E/release checks.
+
+**Final functional CI evidence:**
+
+- Exact functional SHA: bfb4563aa814dd6590b3995ca381789554af3862.
+- Quality Gates #436 / run 32622809337: terminal success. Detect, Harness, 84 active unit tests with three deferred multilingual skips, Playwright 101 pass with one intentional viewport skip, Android build/tests and Required summary all passed.
+- Release Candidates #155 / run 32622809304: terminal success. Signed Android rc.4 verification, explicit absence of packaged voice assets, desktop build/smoke/archive and artifact uploads passed.
+
+**Post-repair reviewer gates:**
+
+- Senior Code Reviewer: PASS — no Critical, High or Medium finding. Low note: product-mode flags are compiled-build metadata until deferred capability activation is wired.
+- Senior QA Reviewer: PASS — draft restore, typed save/reload, onboarding-once, English active fixtures, empty Ask and voice-free packaging are covered; physical-device runtime checks remain.
+- Product/UX Guardrail Reviewer: PASS — second-brain positioning, English typing scope, local-first privacy, returning-advisor simplicity and deferral seams all pass.
+
+**State:** implementation and hosted gates are complete. P12 remains needs_device_retest until rc.4 is installed and exercised on a representative Android phone for launch/onboarding persistence, typed capture/edit/save/reload, match/follow-up, keyboard/insets, integrations and absence of microphone prompts.
+
+**Merge rule:** PR #13 must not be merged without physical-device confirmation and fresh explicit user authorization.
+
 ## 2026-08-22 00:24 IST — P8 After-call recap, follow-ups and communication actions complete
 
 **Branch:** `ai/p8-after-call-communication-actions`
