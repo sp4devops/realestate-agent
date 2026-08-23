@@ -50,7 +50,7 @@ test('core second-brain surfaces change display language without rewriting memor
   await page.evaluate(() => (window as any).__PA_REPOSITORY__.seedSynthetic());
   const before = await page.evaluate(() => JSON.stringify((window as any).__PA_REPOSITORY__.loadSnapshot().entities));
 
-  await page.getByRole('button', { name: 'TA' }).click();
+  await page.getByRole('button', { name: 'TA', exact: true }).click();
   await expect(page.getByTestId('home-heading')).toContainText('வணக்கம்');
   await expect(page.getByTestId('nav-requirements')).toContainText('தேவைகள்');
   await page.getByTestId('nav-requirements').click();
