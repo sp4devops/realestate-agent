@@ -26,7 +26,7 @@ Acceptance: create/read/update/delete survives restart; primary/alternate phone 
 
 Deliverables: Type & Save flow; deterministic parser/fallback; model adapter interface; extraction review/correction card.
 
-Current pilot acceptance: English typed fixtures map to validated structured records; uncertain values can be corrected; no-model path remains usable; E2E saves a buyer and property. Older multilingual parser fixtures may remain as non-promised regression coverage.
+Current pilot acceptance: English typed fixtures map to validated structured records; uncertain values can be corrected; no-model path remains usable; E2E saves a buyer and property. Older multilingual parser fixtures may remain only as explicitly deferred, non-gating regression references.
 
 ## P4 — Voice capture and multilingual understanding (historical; disabled for current pilot)
 

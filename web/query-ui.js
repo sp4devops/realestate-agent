@@ -18,7 +18,8 @@ function runQuery(text){
  const value=String(text||'').trim();
  const summary=document.querySelector('[data-testid="query-summary"]');
  if(!value){
-  renderResults([]);
+  const box=document.querySelector('[data-testid="query-results"]');
+  if(box)box.innerHTML='';
   if(summary){summary.hidden=false;summary.textContent='Type what you want to find first.';}
   return [];
  }

@@ -74,6 +74,10 @@ jobs:
           test -x "$aapt"
           "$apksigner" verify --verbose "$apk"
           unzip -l "$apk" | grep -q 'assets/index.html'
+          if unzip -l "$apk" | grep -Eq 'assets/(voice-core|voice-ui)\.js'; then
+            echo "Deferred voice runtime was packaged in the Android candidate" >&2
+            exit 1
+          fi
           badging="$($aapt dump badging "$apk")"
           grep -Fq "package: name='$PA_APPLICATION_ID'" <<< "$badging"
           grep -Fq "versionCode='$PA_VERSION_CODE'" <<< "$badging"

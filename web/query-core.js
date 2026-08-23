@@ -1,6 +1,10 @@
 (function(root){
 'use strict';
 const PLACES=['Erode Railway Station','Erode Bus Stand','Perundurai Road','Teachers Colony','Erode','Perundurai','Thindal','Nasiyanur','Chennimalai','Vijayamangalam','Pallipalayam','Palayapalayam','Karungalpalayam','Bhavani','Chithode','Coimbatore','Pollachi','Mettupalayam','Chennai','Tambaram','Avadi','Salem','Omalur','Attur','Madurai','Trichy','Tiruppur'];
+const PLACE_ALIASES=[
+ [/\b(?:erodu|eerodu)\b/gi,'Erode'],[/\bkovai\b/gi,'Coimbatore'],[/\bmadras\b/gi,'Chennai'],
+ [/\b(?:tiruchirappalli)\b/gi,'Trichy'],[/\b(?:tirupur|thiruppur)\b/gi,'Tiruppur']
+];
 const TAMIL_ALIASES=[
  ['ஈரோடு','Erode'],['கோயம்புத்தூர்','Coimbatore'],['கோவை','Coimbatore'],['சென்னை','Chennai'],['சேலம்','Salem'],['மதுரை','Madurai'],['திருச்சி','Trichy'],['திருப்பூர்','Tiruppur'],
  ['நிலம்','land'],['மனை','land'],['வீடு','house'],['பிளாட்','apartment'],['அபார்ட்மெண்ட்','apartment'],['வாடகை','rent'],['லட்சம்','lakh'],['லட்சத்துக்கு','lakh'],['கோடி','crore']
@@ -8,6 +12,7 @@ const TAMIL_ALIASES=[
 const TYPE_PATTERNS=[['land',/\b(?:land|plot|site|manai|nilam)\b/i],['house',/\b(?:house|home|veedu)\b/i],['apartment',/\b(?:apartment|flat)\b/i]];
 function normalizeQuery(value){
  let text=String(value||'').normalize('NFKC').trim().replace(/\s+/g,' ');
+ for(const [pattern,to] of PLACE_ALIASES) text=text.replace(pattern,to);
  for(const [from,to] of TAMIL_ALIASES) text=text.replaceAll(from,to);
  return text;
 }

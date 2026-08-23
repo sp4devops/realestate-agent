@@ -10,10 +10,22 @@ test('Type & Save extracts, allows correction, and saves a buyer locally', async
   await page.getByTestId('save-capture').click();
   await expect(page.getByTestId('person-name')).toHaveText('Arun Kumar');
   await expect(page.getByTestId('primary-phone')).toHaveText('+91 98765 43210');
+  await page.reload();
+  await expect(page.getByTestId('person-name')).toHaveText('Arun Kumar');
   const saved = await page.evaluate(() => window.__PA_REPOSITORY__.list('requirements').find(item => item.personId && window.__PA_REPOSITORY__.get('people', item.personId)?.name === 'Arun Kumar'));
   expect(saved.propertyType).toBe('land');
   expect(saved.locations).toEqual(['Erode']);
   expect(saved.budgetMax).toBe(2500000);
+});
+
+test('Edit note returns to the full original draft without losing work', async ({ page }) => {
+  const note='Ramesh needs a 2BHK rental near Erode Railway Station. Budget 15,000 per month. Moving next month.';
+  await page.goto('/#/type');
+  await page.getByTestId('capture-text').fill(note);
+  await page.getByTestId('analyze-capture').click();
+  await expect(page.getByRole('heading', { name: 'Check what I understood' })).toBeVisible();
+  await page.getByTestId('edit-capture-note').click();
+  await expect(page.getByTestId('capture-text')).toHaveValue(note);
 });
 
 test('Type & Save saves a property and preserves its owner contact without AI', async ({ page }) => {
@@ -55,7 +67,7 @@ test('invalid reviewed buyer details do not leave an orphan person', async ({ pa
 
 test('phone-less requirement is remembered as a provisional contact',async({page})=>{
   await page.goto('/#/type');
-  await page.getByTestId('capture-text').fill('Ramesh-ku Erode railway station pakkathula 2BHK rent venum. Budget 15,000. Next month move pannuvaaru.');
+  await page.getByTestId('capture-text').fill('Ramesh needs a 2BHK rental near Erode Railway Station. Budget 15,000 per month. Moving next month.');
   await page.getByTestId('analyze-capture').click();
   await expect(page.getByTestId('field-primaryPhone')).toHaveValue('');
   await page.getByTestId('save-capture').click();

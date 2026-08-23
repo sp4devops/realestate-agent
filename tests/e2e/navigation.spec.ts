@@ -88,6 +88,18 @@ test('deferred voice and language deep links fall back to active pilot screens',
   await expect(page).toHaveURL(/#\/settings$/);
 });
 
+test('onboarding is shown once and returning advisors open on Home', async ({ page }) => {
+  await page.goto('/#/splash');
+  await page.getByRole('button', { name: 'Get started' }).click();
+  await expect(page.getByRole('heading', { name: 'Welcome', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Continue to Home' }).click();
+  await expect(page.getByTestId('home-heading')).toContainText('Property Advisor');
+
+  await page.goto('/#/splash');
+  await expect(page).toHaveURL(/#\/home$/);
+  await expect(page.getByTestId('home-heading')).toContainText('Property Advisor');
+});
+
 test('opening the full editor preserves text started on Home', async ({ page }) => {
   await page.goto('/#/home');
   const note='Ramesh needs a 2BHK rental in Erode under 15000 per month';

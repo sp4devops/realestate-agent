@@ -1,4 +1,5 @@
 const PRODUCT_MODE = window.PropertyAssistantProductMode;
+const ONBOARDING_KEY = 'pa.onboardingComplete';
 const app = document.getElementById('app');
 const repository = window.PropertyAssistantPersistence.createRepository(localStorage);
 let bootError = null;
@@ -289,7 +290,7 @@ function renderProperty(){
 
 function renderGeneric(id){
   const [title,description]=routes[id] || ['Not found','This screen does not exist.'];
-  const actions={splash:button('Get started','onboarding','button primary'),onboarding:button('Continue to Home','home','button primary'),type:button('Review example','review','button primary'),review:button('Back to Home','home','button primary'),'after-call':button('Back to Home','home','button primary'),ask:button('Back to Home','home'),matches:button('Open match detail','match'),match:button('Follow up','followups'),poster:button('Review captured poster','poster-review','button primary'),'poster-review':button('Save poster lead','poster-lead','button primary'),'poster-lead':button('View Matches','matches'),followups:button('Back to Home','home'),settings:button('Back to Home','home')}[id] || button('Back to Home','home');
+  const actions={splash:button('Get started','onboarding','button primary'),onboarding:'<button class="button primary" data-route="home" data-onboarding-complete type="button">Continue to Home</button>',type:button('Review example','review','button primary'),review:button('Back to Home','home','button primary'),'after-call':button('Back to Home','home','button primary'),ask:button('Back to Home','home'),matches:button('Open match detail','match'),match:button('Follow up','followups'),poster:button('Review captured poster','poster-review','button primary'),'poster-review':button('Save poster lead','poster-lead','button primary'),'poster-lead':button('View Matches','matches'),followups:button('Back to Home','home'),settings:button('Back to Home','home')}[id] || button('Back to Home','home');
   const trust = id==='splash'
     ? `<div class="welcome-card"><strong>Private by default</strong><p>Capture people, properties and requirements without sending your business memory to a cloud account.</p></div>`
     : id==='onboarding'
@@ -307,6 +308,7 @@ function renderRecovery(){
 
 function render(){
   const id=route();
+  if(id==='splash' && localStorage.getItem(ONBOARDING_KEY)==='1'){ go('home'); return; }
   if(id==='speak'){ go('type'); return; }
   if(id==='language'){ go('settings'); return; }
   if(bootError && id!=='settings') {
@@ -326,7 +328,10 @@ function render(){
 }
 
 function bind(){
-  document.querySelectorAll('[data-route]').forEach(el=>el.addEventListener('click',()=>go(el.dataset.route)));
+  document.querySelectorAll('[data-route]').forEach(el=>el.addEventListener('click',()=>{
+    if(el.hasAttribute('data-onboarding-complete')) localStorage.setItem(ONBOARDING_KEY,'1');
+    go(el.dataset.route);
+  }));
   document.querySelectorAll('[data-person-id]').forEach(el=>el.addEventListener('click',()=>{ if(el.dataset.personId) location.hash=`#/person?id=${encodeURIComponent(el.dataset.personId)}`; }));
   document.querySelectorAll('[data-property-id]').forEach(el=>el.addEventListener('click',()=>{ location.hash=`#/property?id=${encodeURIComponent(el.dataset.propertyId)}`; }));
   document.querySelectorAll('[data-open-match]').forEach(el=>el.addEventListener('click',()=>{ location.hash=`#/match?id=${encodeURIComponent(el.dataset.openMatch)}`; }));

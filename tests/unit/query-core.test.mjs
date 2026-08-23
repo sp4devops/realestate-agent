@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 await import('../../web/query-core.js');
 const {interpret,search}=globalThis.PropertyAssistantQuery;
-const snapshot={entities:{people:{u1:{id:'u1',name:'Suresh',role:'buyer',primaryPhone:'+91 9000000001',alternatePhones:[]},u2:{id:'u2',name:'Murugan',role:'owner',primaryPhone:'+91 9000000003',alternatePhones:[]},u3:{id:'u3',name:'Kumar',role:'buyer',primaryPhone:'+91 9000000004',alternatePhones:[]},u4:{id:'u4',name:'Wide Budget Buyer',role:'buyer',primaryPhone:'+91 9000000005',alternatePhones:[]}},properties:{p1:{id:'p1',ownerPersonId:'u2',intent:'sale',propertyType:'land',locality:'Erode',price:2200000},p2:{id:'p2',ownerPersonId:'u2',intent:'rent',propertyType:'house',locality:'Chennai',price:15000}},requirements:{r1:{id:'r1',personId:'u1',intent:'buy',propertyType:'land',locations:['Erode'],budgetMin:1800000,budgetMax:2500000},r2:{id:'r2',personId:'u4',intent:'buy',propertyType:'land',locations:['Erode'],budgetMin:2000000,budgetMax:4000000}},matches:{m1:{id:'m1',requirementId:'r1',propertyId:'p1',score:100,reasons:['Exact location: Erode']}}}};
+const snapshot={entities:{people:{u1:{id:'u1',name:'Suresh',role:'buyer',primaryPhone:'+91 9000000001',alternatePhones:[]},u2:{id:'u2',name:'Murugan',role:'owner',primaryPhone:'+91 9000000003',alternatePhones:[]},u3:{id:'u3',name:'Kumar',role:'buyer',primaryPhone:'+91 9000000004',alternatePhones:[]},u4:{id:'u4',name:'Wide Budget Buyer',role:'buyer',primaryPhone:'+91 9000000005',alternatePhones:[]}},properties:{p1:{id:'p1',ownerPersonId:'u2',intent:'sale',propertyType:'land',locality:'Erode',price:2200000},p2:{id:'p2',ownerPersonId:'u2',intent:'rent',propertyType:'house',locality:'Chennai',price:15000},p3:{id:'p3',ownerPersonId:'u2',intent:'sale',propertyType:'land',locality:'Coimbatore',price:2000000}},requirements:{r1:{id:'r1',personId:'u1',intent:'buy',propertyType:'land',locations:['Erode'],budgetMin:1800000,budgetMax:2500000},r2:{id:'r2',personId:'u4',intent:'buy',propertyType:'land',locations:['Erode'],budgetMin:2000000,budgetMax:4000000}},matches:{m1:{id:'m1',requirementId:'r1',propertyId:'p1',score:100,reasons:['Exact location: Erode']}}}};
 
 test('interprets natural property query with locality and budget',()=>{
  const q=interpret('show land in Erode under 25 lakh');
@@ -12,6 +12,12 @@ test('interprets natural property query with locality and budget',()=>{
 test('offline local search returns actionable property and person results',()=>{
  const props=search(snapshot,interpret('land in Erode under 25 lakh')); assert.equal(props.length,1); assert.equal(props[0].id,'p1');
  const people=search(snapshot,interpret('find Suresh contact')); assert.equal(people.length,1); assert.equal(people[0].kind,'person');
+});
+
+test('typed search normalizes common English place aliases without the voice runtime',()=>{
+ const query=interpret('land in Kovai under 25 lakh');
+ assert.equal(query.location,'Coimbatore');
+ assert.deepEqual(search(snapshot,query).map(result=>result.id),['p3']);
 });
 
 test('property-specific filters do not leak unrelated people',()=>{

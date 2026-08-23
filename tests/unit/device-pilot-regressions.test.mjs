@@ -34,8 +34,10 @@ test('English typing pilot excludes voice runtime and microphone permission', ()
   assert.doesNotMatch(mainActivity, /SpeechRecognizer|RecognizerIntent|startOnDeviceSpeech|startOnDeviceQuerySpeech/);
   assert.doesNotMatch(index, /voice-core\.js|voice-ui\.js/);
   assert.doesNotMatch(queryUi, /MediaRecorder|getUserMedia|query-voice|speech/i);
+  assert.match(androidBuild, /tasks\.register\('syncWebAssets', Sync\)/);
   assert.match(androidBuild, /exclude 'voice-core\.js', 'voice-ui\.js'/);
   assert.match(desktopBuild, /ignore_patterns\("voice-core\.js", "voice-ui\.js"\)/);
+  assert.match(releaseWorkflow, /Deferred voice runtime was packaged/);
 });
 
 test('Android exports encrypted backups through a user-selected document with no storage permission', () => {

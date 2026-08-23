@@ -29,6 +29,7 @@ test('empty Ask input shows guidance instead of dumping all local memory',async(
   await page.getByTestId('run-query').click();
   await expect(page.getByTestId('query-summary')).toHaveText('Type what you want to find first.');
   await expect(page.getByTestId('query-result-card')).toHaveCount(0);
+  await expect(page.getByText(/No local results found/)).toHaveCount(0);
 });
 
 test('Ask exposes typing only in the focused pilot',async({page})=>{
