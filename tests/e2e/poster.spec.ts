@@ -42,6 +42,42 @@ test('local OCR adapter preserves original image outside domain storage and keep
  expect(result.image).toEqual({size:10,type:'image/png',name:'poster.png'});
 });
 
+test('one-shot GPS preserves corrected poster phone, area and text through save',async({page,context})=>{
+ await context.grantPermissions(['geolocation']); await context.setGeolocation({latitude:11.3410,longitude:77.7172});
+ await page.addInitScript(()=>{(window as any).__PA_LOCAL_OCR__={recognize:async()=>({text:'Wrong text. Location: Chennai. Contact 9123456789'})};});
+ await page.goto('/#/poster');
+ await page.getByTestId('poster-image').setInputFiles({name:'poster.png',mimeType:'image/png',buffer:Buffer.from('fake-image')});
+ await page.getByTestId('read-poster').click();
+ await page.getByTestId('poster-phone').fill('9345678901');
+ await page.getByTestId('poster-location').fill('Perundurai');
+ await page.getByTestId('poster-review-text').fill('Corrected land poster in Perundurai. Call 9345678901');
+ await page.getByTestId('get-capture-location').click();
+ await expect(page.getByTestId('capture-location')).toContainText('11.341');
+ await expect(page.getByTestId('poster-phone')).toHaveValue('9345678901');
+ await expect(page.getByTestId('poster-location')).toHaveValue('Perundurai');
+ await expect(page.getByTestId('poster-review-text')).toHaveValue('Corrected land poster in Perundurai. Call 9345678901');
+ await page.getByTestId('save-poster-lead').click();
+ const lead=await page.evaluate(()=>Object.values((window as any).__PA_REPOSITORY__.loadSnapshot().entities.posterLeads).find((item:any)=>item.phone==='9345678901') as any);
+ expect(lead).toMatchObject({phone:'9345678901',posterLocation:'Perundurai',ocrText:'Corrected land poster in Perundurai. Call 9345678901'});
+ expect(lead.captureLocation).toContain('11.341');
+});
+
+test('typed fallback keeps a selected poster image with the saved lead',async({page})=>{
+ await page.goto('/#/poster');
+ await page.getByTestId('poster-image').setInputFiles({name:'typed-fallback.png',mimeType:'image/png',buffer:Buffer.from('typed-image')});
+ await page.getByTestId('poster-text').fill('Land in Erode. Contact 9876543210');
+ await page.getByTestId('use-poster-text').click();
+ await expect(page.getByTestId('poster-preview')).toBeVisible();
+ await page.getByTestId('save-poster-lead').click();
+ await expect(page.getByTestId('saved-poster-image')).toHaveText('Saved locally');
+ const stored=await page.evaluate(async()=>{
+  const lead=Object.values((window as any).__PA_REPOSITORY__.loadSnapshot().entities.posterLeads).find((item:any)=>item.phone==='9876543210') as any;
+  const image=await (window as any).PropertyAssistantPosterImages.get(lead.imageRef);
+  return {imageRef:lead.imageRef,name:image?.name,size:image?.size};
+ });
+ expect(stored.imageRef).toMatch(/^poster-image-/);expect(stored.name).toBe('typed-fallback.png');expect(stored.size).toBe(11);
+});
+
 test('GPS permission denial is recoverable and saving remains available',async({page,context})=>{
  await context.clearPermissions();
  await page.goto('/#/poster');

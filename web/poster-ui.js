@@ -34,6 +34,8 @@ async function readPoster(){
 function useTypedText(){
  const status=document.querySelector('[data-testid="poster-status"]'); const text=document.querySelector('[data-testid="poster-text"]').value;
  if(!text.trim()){status.textContent='Add the visible poster text first.';return;}
+ const file=document.querySelector('[data-testid="poster-image"]').files?.[0];
+ if(file){draft.imageBlob=file;draft.imageName=file.name||'poster-image';}
  const parsed=window.PropertyAssistantPoster.extract(text);draft.ocrText=parsed.text;draft.phone=parsed.primaryPhone;draft.posterLocation=parsed.posterLocation;draft.capturedAt=draft.capturedAt||new Date().toISOString();location.hash='#/poster-review';
 }
 function renderReview(){
@@ -48,6 +50,9 @@ function renderReview(){
 function captureGpsOnce(){
  const status=document.querySelector('[data-testid="poster-review-status"]');
  if(!navigator.geolocation){status.textContent='Location is unavailable. You can save without GPS.';return;}
+ draft.phone=document.querySelector('[data-testid="poster-phone"]').value;
+ draft.posterLocation=document.querySelector('[data-testid="poster-location"]').value.trim()||null;
+ draft.ocrText=document.querySelector('[data-testid="poster-review-text"]').value;
  status.textContent='Getting location once…';
  navigator.geolocation.getCurrentPosition(pos=>{draft.captureLocation=JSON.stringify({lat:Number(pos.coords.latitude.toFixed(6)),lng:Number(pos.coords.longitude.toFixed(6))});renderReview();},()=>{status.textContent='Location permission was not available. You can save without GPS.';},{enableHighAccuracy:false,maximumAge:0,timeout:5000});
 }

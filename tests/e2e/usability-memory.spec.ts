@@ -32,7 +32,7 @@ test('Create a new person never reuses a sole name-only match',async({page})=>{
   location.hash='#/review';
  });
  await expect(page.getByTestId('identity-resolution')).toBeVisible();
- await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
+ await expect(page.getByTestId('field-targetPerson')).toHaveValue('__create_new_person__');
  await page.getByTestId('save-capture').click();
  const people=await page.evaluate(()=>(window as any).__PA_REPOSITORY__.list('people').filter((person:any)=>person.name==='Ramesh'));
  expect(people).toHaveLength(2);
@@ -49,7 +49,7 @@ test('a new phone still requires an explicit same-name identity choice',async({p
   location.hash='#/review';
  });
  await expect(page.getByTestId('field-targetPerson').locator('option')).toHaveCount(3);
- await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
+ await expect(page.getByTestId('field-targetPerson')).toHaveValue('__create_new_person__');
  await page.getByTestId('save-capture').click();
  const result=await page.evaluate(()=>({people:(window as any).__PA_REPOSITORY__.list('people'),pending:(window as any).__PA_REPOSITORY__.get('people','pending-ramesh')}));
  expect(result.people.filter((person:any)=>person.name==='Ramesh')).toHaveLength(3);
@@ -70,7 +70,7 @@ for(const kind of ['followup','interaction'] as const){
    sessionStorage.setItem('pa.captureDraft',JSON.stringify(draft));location.hash='#/review';
   },kind);
   await expect(page.getByTestId('identity-resolution')).toContainText('More than one saved person has this name');
-  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
+  await expect(page.getByTestId('field-targetPerson')).toHaveValue('__create_new_person__');
   await page.getByTestId('field-targetPerson').selectOption('ramesh-two');
   await page.getByTestId('save-capture').click();
   const people=await page.evaluate(()=>(window as any).__PA_REPOSITORY__.list('people').filter((person:any)=>person.name==='Ramesh'));
@@ -86,6 +86,54 @@ test('Cursor-style completion accepts an area with Tab',async({page})=>{
  await composer.press('Tab');
  await expect(composer).toHaveValue('Ramesh wants land in Perundurai');
 });
+
+test('tapping a Cursor-style completion keeps focus in the composer',async({page})=>{
+ await page.goto('/#/home');
+ const composer=page.getByTestId('home-capture-text');
+ await composer.fill('Ramesh wants land in Peru');
+ await page.getByTestId('home-cursor-suggestion').click();
+ await expect(composer).toHaveValue('Ramesh wants land in Perundurai');
+ await expect(composer).toBeFocused();
+});
+
+const identityDrafts={
+ requirement:{ok:true,kind:'requirement',source:'Ramesh wants land in Erode',person:{name:'Ramesh',primaryPhone:'9876540002'},requirement:{intent:'buy',propertyType:'land',locations:['Erode']},uncertain:[]},
+ property:{ok:true,kind:'property',source:'Ramesh has land in Erode',person:{name:'Ramesh',primaryPhone:'9876540002'},property:{intent:'sale',propertyType:'land',locality:'Erode',price:2000000,priceBasis:'total',attributes:[]},uncertain:[]},
+ followup:{ok:true,kind:'followup',source:'Follow up Ramesh tomorrow',person:{name:'Ramesh',primaryPhone:'9876540002'},followUp:{title:'Follow up Ramesh',dueText:'Tomorrow'},uncertain:[]},
+ interaction:{ok:true,kind:'interaction',source:'Ramesh prefers Erode',person:{name:'Ramesh',primaryPhone:'9876540002'},interaction:{summary:'Ramesh prefers Erode',learnedPreferences:['Erode']},uncertain:[]}
+} as const;
+
+for(const kind of Object.keys(identityDrafts) as Array<keyof typeof identityDrafts>){
+ test(`${kind} create-new choice never silently reuses an existing phone`,async({page})=>{
+  await page.goto('/#/type');
+  await page.evaluate(({draft})=>{
+   (window as any).__PA_REPOSITORY__.create('people',{id:'saved-ramesh',name:'Saved Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'9876540002',alternatePhones:[],identityStatus:'confirmed'});
+   sessionStorage.setItem('pa.captureDraft',JSON.stringify(draft));location.hash='#/review';
+  },{draft:identityDrafts[kind]});
+  await page.getByTestId('field-targetPerson').selectOption({label:'Create a new person'});
+  await page.getByTestId('save-capture').click();
+  await expect(page.getByTestId('review-error')).toContainText('already saved for Saved Ramesh');
+  const state=await page.evaluate(()=>({people:(window as any).__PA_REPOSITORY__.list('people'),requirements:(window as any).__PA_REPOSITORY__.list('requirements'),properties:(window as any).__PA_REPOSITORY__.list('properties'),followUps:(window as any).__PA_REPOSITORY__.list('followUps'),interactions:(window as any).__PA_REPOSITORY__.list('interactions')}));
+  expect(state.people).toHaveLength(1);
+  expect(state.requirements).toHaveLength(0);expect(state.properties).toHaveLength(0);expect(state.followUps).toHaveLength(0);expect(state.interactions).toHaveLength(0);
+ });
+
+ test(`${kind} explicit saved-person choice preserves a different captured phone as alternate`,async({page})=>{
+  await page.goto('/#/type');
+  await page.evaluate(({draft})=>{
+   (window as any).__PA_REPOSITORY__.create('people',{id:'saved-ramesh',name:'Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'9876540001',alternatePhones:[],identityStatus:'confirmed'});
+   sessionStorage.setItem('pa.captureDraft',JSON.stringify(draft));location.hash='#/review';
+  },{draft:identityDrafts[kind]});
+  await page.getByTestId('field-targetPerson').selectOption('saved-ramesh');
+  await page.getByTestId('save-capture').click();
+  const saved=await page.evaluate(()=>{
+   const person=(window as any).__PA_REPOSITORY__.get('people','saved-ramesh');
+   return {people:(window as any).__PA_REPOSITORY__.list('people').length,alternatePhones:person.alternatePhones.map((phone:string)=>(window as any).PropertyAssistantPersistence.normalizePhone(phone))};
+  });
+  expect(saved.people).toBe(1);
+  expect(saved.alternatePhones).toContain('9876540002');
+ });
+}
 
 test('area typeahead supports prefix selection and local pinning',async({page})=>{
  await page.goto('/#/type');

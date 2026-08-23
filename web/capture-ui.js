@@ -3,6 +3,7 @@
 
   const DRAFT_KEY = 'pa.captureDraft';
   const TYPE_PREFILL_KEY = 'pa.typePrefill';
+  const CREATE_PERSON_VALUE = '__create_new_person__';
   const app = document.getElementById('app');
   const extractor = window.PropertyAssistantCapture.createExtractor();
   const uncertaintyLabels = { locality:'Location', propertyType:'Property type', primaryPhone:'Primary phone (can stay pending)', name:'Name', budgetMax:'Budget', price:'Price', targetProperty:'Property to update', targetPerson:'Person', dueAt:'Follow-up time' };
@@ -85,7 +86,7 @@
     const candidates=identityCandidates(parsed);if(!candidates.length)return '';
     const duplicate=candidates.length>1;
     const selected=suggestedPersonId(parsed);
-    const options=[`<option value="">Create a new person</option>`,...candidates.map(person=>`<option value="${esc(person.id)}"${person.id===selected?' selected':''}>${esc(personIdentityLabel(person))}</option>`)].join('');
+    const options=[`<option value="${CREATE_PERSON_VALUE}"${selected?'':' selected'}>Create a new person</option>`,...candidates.map(person=>`<option value="${esc(person.id)}"${person.id===selected?' selected':''}>${esc(personIdentityLabel(person))}</option>`)].join('');
     return `<div class="identity-resolution" data-testid="identity-resolution"><strong>${duplicate?'More than one saved person has this name':'A saved person may match'}</strong><p>${duplicate?'Choose using phone, role and area. Names alone never identify a person.':'Confirm whether this is the saved person or create a separate contact.'}</p><label class="capture-field"><span>${label}</span><select data-testid="field-${name}" name="${name}">${options}</select></label></div>`;
   }
   function suggestedPropertyId(parsed){
@@ -163,13 +164,25 @@
   }
   function upsertPerson(tx,{id='',name='',phone='',role='other'}){
     const cleanName=String(name || '').trim(); const cleanPhone=String(phone || '').trim();
-    const explicitlySelected=Boolean(id); let person=explicitlySelected?tx.get('people',id):findPerson(tx,{phone:cleanPhone,name:cleanName});
+    const normalize=window.PropertyAssistantPersistence.normalizePhone;
+    const createNew=id===CREATE_PERSON_VALUE; const selectedId=createNew?'':id;
+    const explicitlySelected=Boolean(selectedId); const phoneMatch=findPerson(tx,{phone:cleanPhone});
+    if(createNew&&phoneMatch) throw new Error(`That phone is already saved for ${phoneMatch.name}. Choose that saved person or use a different number.`);
+    let person=explicitlySelected?tx.get('people',selectedId):(createNew?null:phoneMatch);
+    if(explicitlySelected&&!person) throw new Error('The selected person no longer exists. Review the identity choice again.');
     if(!person && !cleanName) throw new Error('Add a name or choose an existing person.');
     if(person){
       const roles=[...new Set([...(person.roles || [person.role]),role])];
       const patch={roles,role:person.role==='other'&&role!=='other'?role:person.role};
       if(cleanName&&!explicitlySelected) patch.name=cleanName;
-      if(cleanPhone&&!window.PropertyAssistantPersistence.normalizePhone(person.primaryPhone)){ patch.primaryPhone=cleanPhone; patch.identityStatus='confirmed'; }
+      const normalizedPhone=normalize(cleanPhone); const normalizedPrimary=normalize(person.primaryPhone);
+      const normalizedAlternates=(person.alternatePhones || []).map(normalize);
+      if(cleanPhone&&!normalizedPrimary){ patch.primaryPhone=cleanPhone; patch.identityStatus='confirmed'; }
+      else if(normalizedPhone&&normalizedPhone!==normalizedPrimary&&!normalizedAlternates.includes(normalizedPhone)){
+        const conflict=tx.list('people').find(other=>other.id!==person.id&&[other.primaryPhone,...(other.alternatePhones || [])].some(value=>normalize(value)===normalizedPhone));
+        if(conflict) throw new Error(`That phone is already saved for ${conflict.name}. Choose the correct saved person.`);
+        patch.alternatePhones=[...(person.alternatePhones || []),cleanPhone];
+      }
       return tx.update('people',person.id,patch);
     }
     return tx.create('people',{name:cleanName,role,roles:[role],primaryPhone:cleanPhone,identityStatus:cleanPhone?'confirmed':'phone_pending',alternatePhones:[]});

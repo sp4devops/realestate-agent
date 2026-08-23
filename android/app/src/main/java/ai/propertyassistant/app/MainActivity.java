@@ -42,6 +42,8 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 public final class MainActivity extends Activity {
+  private static final int POSTER_MAX_DIMENSION = 2048;
+  private static final long POSTER_MAX_PIXELS = 4_000_000L;
   private static final int LOCATION_PERMISSION_REQUEST = 43;
   private static final int FILE_CHOOSER_REQUEST = 44;
   private static final int BACKUP_EXPORT_REQUEST = 45;
@@ -213,7 +215,7 @@ public final class MainActivity extends Activity {
           throw new IllegalArgumentException("Poster image format is invalid.");
         }
         byte[] bytes = Base64.decode(imageDataUrl.substring(comma + 1), Base64.DEFAULT);
-        bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        bitmap = decodePosterBitmap(bytes);
         if (bitmap == null) throw new IllegalArgumentException("Poster image could not be opened.");
         final Bitmap recognizedBitmap = bitmap;
         InputImage image = InputImage.fromBitmap(recognizedBitmap, 0);
@@ -235,6 +237,26 @@ public final class MainActivity extends Activity {
         sendPosterRecognitionResult(requestId, false, "", error.getMessage() == null ? "Poster image could not be read." : error.getMessage());
       }
     }, "property-assistant-ocr").start();
+  }
+
+  private static Bitmap decodePosterBitmap(byte[] bytes) {
+    BitmapFactory.Options bounds = new BitmapFactory.Options();
+    bounds.inJustDecodeBounds = true;
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
+
+    int sampleSize = 1;
+    while (bounds.outWidth / sampleSize > POSTER_MAX_DIMENSION
+        || bounds.outHeight / sampleSize > POSTER_MAX_DIMENSION
+        || ((long) Math.max(1, bounds.outWidth / sampleSize)
+            * Math.max(1, bounds.outHeight / sampleSize)) > POSTER_MAX_PIXELS) {
+      sampleSize *= 2;
+    }
+
+    BitmapFactory.Options decoded = new BitmapFactory.Options();
+    decoded.inSampleSize = sampleSize;
+    decoded.inPreferredConfig = Bitmap.Config.ARGB_8888;
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, decoded);
   }
 
   private void sendPosterRecognitionResult(String requestId, boolean ok, String text, String error) {

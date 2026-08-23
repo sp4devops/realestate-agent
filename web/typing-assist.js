@@ -31,7 +31,7 @@ function attach(input,{repository,host,testId='typing-suggestion'}={}){
    const hint=document.createElement('small');hint.textContent='Tab to complete';suggestion.replaceChildren(value,hint);suggestion.setAttribute('aria-label',`Complete ${current.candidate}`);
   }else suggestion.replaceChildren();
  };
- const accept=()=>{if(!current)return false;input.setRangeText(current.candidate,current.start,input.value.length,'end');input.dispatchEvent(new Event('input',{bubbles:true}));return true;};
+ const accept=()=>{if(!current)return false;input.setRangeText(current.candidate,current.start,input.value.length,'end');input.dispatchEvent(new Event('input',{bubbles:true}));input.focus({preventScroll:true});return true;};
  const keydown=event=>{if(current&&(event.key==='Tab'||event.key==='ArrowRight')&&input.selectionStart===input.value.length&&input.selectionEnd===input.value.length){event.preventDefault();accept();}};
  input.addEventListener('input',render);input.addEventListener('focus',render);input.addEventListener('keydown',keydown);suggestion.addEventListener('click',accept);render();
  return ()=>{input.removeEventListener('input',render);input.removeEventListener('focus',render);input.removeEventListener('keydown',keydown);suggestion.remove();};
