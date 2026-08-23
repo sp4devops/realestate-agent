@@ -1,11 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 await import('../../web/poster-core.js');
-const {extractPhones,extractPosterLocation,extract,createOcrService}=globalThis.PropertyAssistantPoster;
+const {extractPhones,recoverOcrPhone,extractPosterLocation,extract,createOcrService}=globalThis.PropertyAssistantPoster;
 
 test('phone-first extraction normalizes Indian mobile numbers and preserves order',()=>{
  const phones=extractPhones('Call +91 98765-43210 or 91234 56789');
  assert.deepEqual(phones,['9876543210','9123456789']);
+});
+
+test('phone-first extraction accepts common poster punctuation',()=>{
+ assert.deepEqual(extractPhones('Contact: (98765) 43210'),['9876543210']);
+ assert.deepEqual(extractPhones('Mobile 98765.43210'),['9876543210']);
+});
+
+test('OCR-confused phone characters are recovered only when one valid number is unambiguous',()=>{
+ assert.equal(recoverOcrPhone('Call: 9B765-43210'),'9876543210');
+ const recovered=extract('LAND FOR SALE\nCall: 9B765-43210');
+ assert.equal(recovered.primaryPhone,'9876543210');
+ assert.equal(recovered.phoneNeedsReview,true);
+ assert.equal(recoverOcrPhone('SALE S0123-456-789'),null);
 });
 
 test('poster location extraction stays separate from capture GPS',()=>{

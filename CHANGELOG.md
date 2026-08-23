@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.0-rc.6 — 2026-08-23
+
+Focused physical-device repair for Android layout and poster OCR.
+
+- Converted Android physical-pixel system-bar insets to CSS pixels before applying them to the WebView, removing the oversized status/navigation gaps seen on high-density phones.
+- Added a bounded grayscale/high-contrast OCR retry when the first offline pass cannot find a valid Indian mobile number.
+- Preserved more detail while preparing poster images for local OCR and accepted common phone punctuation.
+- Added conservative recovery for OCR-confused phone characters. Recovered numbers are shown with an explicit check-before-save warning; ambiguous guesses remain blank.
+- Added regression coverage for high-density insets, noisy poster numbers and the review warning.
+
+### Remaining device gate
+
+- Reinstall rc.6 and confirm the header/navigation spacing in both three-button and gesture modes.
+- Retest the same poster plus one clear and one low-contrast poster; manually compare every recovered phone number before saving.
+
 ## 0.11.0-rc.5 — 2026-08-23
 
 Pilot usability and real-device repair candidate for the English typed second brain.

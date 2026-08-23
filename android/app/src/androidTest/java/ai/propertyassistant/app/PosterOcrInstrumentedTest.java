@@ -1,6 +1,7 @@
 package ai.propertyassistant.app;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -22,6 +23,12 @@ import java.util.concurrent.TimeUnit;
 
 @RunWith(AndroidJUnit4.class)
 public final class PosterOcrInstrumentedTest {
+  @Test public void physicalInsetsAreConvertedToCssPixelsAtDeviceDensity() {
+    assertEquals(28, MainActivity.toCssPixels(84, 3f));
+    assertEquals(40, MainActivity.toCssPixels(120, 3f));
+    assertEquals(0, MainActivity.toCssPixels(-4, 3f));
+  }
+
   @Test public void bundledModelRecognizesPosterPhoneWithoutNetwork() throws Exception {
     Bitmap poster = Bitmap.createBitmap(1400, 420, Bitmap.Config.ARGB_8888);
     Canvas canvas = new Canvas(poster);

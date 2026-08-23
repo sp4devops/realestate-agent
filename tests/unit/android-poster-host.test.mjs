@@ -35,6 +35,10 @@ test('Android release bundles an offline OCR engine and connects it to the web a
  assert.match(activity,/inJustDecodeBounds = true/);
  assert.match(activity,/POSTER_MAX_DIMENSION = 2048/);
  assert.match(activity,/POSTER_MAX_PIXELS = 4_000_000L/);
+ assert.match(activity,/enhancePosterForOcr/);
+ assert.match(activity,/containsIndianMobile/);
+ assert.match(activity,/Tasks\.await/);
+ assert.match(activity,/POSTER_OCR_PASS_TIMEOUT_SECONDS = 12L/);
  assert.match(activity,/__PA_POSTER_OCR_RESULT__/);
  assert.match(posterCore,/recognizeWithAndroid/);
  assert.match(posterCore,/prepareImageDataUrl/);

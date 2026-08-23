@@ -25,6 +25,8 @@ test('Android shell uses secure local asset origin, navigation lock and system-b
   assert.match(mainActivity, /WindowInsetsCompat\.Type\.systemBars\(\)/);
   assert.match(mainActivity, /WindowInsetsCompat\.Type\.displayCutout\(\)/);
   assert.match(mainActivity, /--native-safe-bottom/);
+  assert.match(mainActivity, /getDisplayMetrics\(\)\.density/);
+  assert.match(mainActivity, /physicalPixels \/ Math\.max\(1f, density\)/);
   assert.match(mainActivity, /androidx\.core\.graphics\.Insets/);
   assert.doesNotMatch(mainActivity, /android\.graphics\.Insets|toPlatformInsets\(/);
   assert.match(qualityWorkflow, /lintDebug/);
@@ -77,4 +79,5 @@ test('mobile layout protects fixed navigation and hides it while editing', () =>
   assert.match(styles, /--native-safe-bottom/);
   assert.match(styles, /left:var\(--safe-left\)/);
   assert.match(styles, /keyboard-open/);
+  assert.doesNotMatch(mainActivity, /--native-safe-top','" \+ safeInsetTop/);
 });

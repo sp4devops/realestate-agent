@@ -1,8 +1,8 @@
 plugins { id 'com.android.application' }
 
 def versionFile = rootProject.file('../VERSION')
-def releaseVersionName = versionFile.exists() ? versionFile.text.trim() : '0.11.0-rc.5'
-def releaseVersionCode = (System.getenv('PA_VERSION_CODE') ?: '15') as Integer
+def releaseVersionName = versionFile.exists() ? versionFile.text.trim() : '0.11.0-rc.6'
+def releaseVersionCode = (System.getenv('PA_VERSION_CODE') ?: '16') as Integer
 def applicationIdValue = System.getenv('PA_APPLICATION_ID') ?: 'ai.propertyassistant.app'
 def applicationLabel = System.getenv('PA_APPLICATION_LABEL') ?: 'Property Assistant'
 

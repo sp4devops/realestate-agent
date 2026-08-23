@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 const repo=window.__PA_REPOSITORY__;
-function freshDraft(){return {imageBlob:null,imageName:null,ocrText:'',phone:null,posterLocation:null,captureLocation:null,capturedAt:null,leadId:null};}
+function freshDraft(){return {imageBlob:null,imageName:null,ocrText:'',phone:null,phoneNeedsReview:false,posterLocation:null,captureLocation:null,capturedAt:null,leadId:null};}
 let draft=freshDraft();
 let ocrGeneration=0;
 let previewUrl=null;
@@ -27,7 +27,7 @@ async function readPoster(){
   const result=await window.PropertyAssistantPoster.createOcrService().recognize(file);
   if(generation!==ocrGeneration||route()!=='poster')return;
   if(!result.ok){status.textContent=result.error;return;}
-  draft.ocrText=result.text;draft.phone=result.primaryPhone;draft.posterLocation=result.posterLocation;location.hash='#/poster-review';
+  draft.ocrText=result.text;draft.phone=result.primaryPhone;draft.phoneNeedsReview=result.phoneNeedsReview;draft.posterLocation=result.posterLocation;location.hash='#/poster-review';
  }catch(error){if(generation===ocrGeneration&&route()==='poster')status.textContent=error?.message||'Poster could not be read locally. Use the typed poster text fallback.';}
  finally{if(button.isConnected)button.disabled=false;}
 }
@@ -36,12 +36,15 @@ function useTypedText(){
  if(!text.trim()){status.textContent='Add the visible poster text first.';return;}
  const file=document.querySelector('[data-testid="poster-image"]').files?.[0];
  if(file){draft.imageBlob=file;draft.imageName=file.name||'poster-image';}
- const parsed=window.PropertyAssistantPoster.extract(text);draft.ocrText=parsed.text;draft.phone=parsed.primaryPhone;draft.posterLocation=parsed.posterLocation;draft.capturedAt=draft.capturedAt||new Date().toISOString();location.hash='#/poster-review';
+ const parsed=window.PropertyAssistantPoster.extract(text);draft.ocrText=parsed.text;draft.phone=parsed.primaryPhone;draft.phoneNeedsReview=parsed.phoneNeedsReview;draft.posterLocation=parsed.posterLocation;draft.capturedAt=draft.capturedAt||new Date().toISOString();location.hash='#/poster-review';
 }
 function renderReview(){
  clearPreview();if(draft.imageBlob)previewUrl=URL.createObjectURL(draft.imageBlob);
  const preview=previewUrl?`<img class="poster-preview" data-testid="poster-preview" src="${esc(previewUrl)}" alt="Selected poster to compare with recognized text" />`:'';
  app.innerHTML=shell(`<section class="page"><p class="eyebrow">REVIEW POSTER</p><h1>Poster review</h1><p class="lead">Confirm the extracted details before saving. Poster location and photo GPS stay separate.</p>${preview}<label class="field"><span>Phone number</span><input data-testid="poster-phone" value="${esc(draft.phone||'')}" inputmode="tel" /></label><div class="capture-field location-field"><label for="poster-location">Poster says area / location</label><div class="location-input-row"><input id="poster-location" data-testid="poster-location" value="${esc(draft.posterLocation||'')}" role="combobox" aria-autocomplete="list" aria-controls="poster-location-options" aria-expanded="false" autocomplete="off" /><button class="pin-location-button" type="button" data-testid="pin-poster-location">☆ Pin area</button></div><div class="location-options" id="poster-location-options" role="listbox" aria-label="Area suggestions" hidden></div></div><label class="field"><span>Recognized poster text</span><textarea rows="5" data-testid="poster-review-text">${esc(draft.ocrText||'')}</textarea></label><div class="placeholder-card"><strong>Original image</strong><p>${draft.imageBlob?`${esc(draft.imageName||'poster-image')} · saved locally with this lead`:'No image attached; text-only lead.'}</p><strong>Photo taken at</strong><p data-testid="capture-location">${draft.captureLocation?esc(draft.captureLocation):'Not captured. GPS is optional.'}</p></div><div class="page-actions"><button class="button" type="button" data-testid="get-capture-location">Use current location once</button><button class="button primary" type="button" data-testid="save-poster-lead">Save poster lead</button></div><p class="lead" data-testid="poster-review-status"></p></section>`,'');
+ if(draft.phoneNeedsReview){
+  document.querySelector('[data-testid="poster-phone"]')?.insertAdjacentHTML('afterend','<small data-testid="poster-phone-warning">Some phone characters were unclear. Check this number against the photo before saving.</small>');
+ }
  bindShell();
  window.PropertyAssistantLocations?.bindTypeahead(document.querySelector('[data-testid="poster-location"]'),{repository:repo,list:document.getElementById('poster-location-options'),pinButton:document.querySelector('[data-testid="pin-poster-location"]')});
  document.querySelector('[data-testid="get-capture-location"]').addEventListener('click',captureGpsOnce);

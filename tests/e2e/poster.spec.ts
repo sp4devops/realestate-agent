@@ -17,6 +17,15 @@ test('typed poster fallback saves phone-first lead and creates follow-up without
  expect(Object.values((persisted as any).entities.followUps).some((f:any)=>String(f.title).includes('9876543210'))).toBe(true);
 });
 
+test('OCR-confused phone digits are recovered with an explicit review warning',async({page})=>{
+ await page.addInitScript(()=>{(window as any).__PA_LOCAL_OCR__={recognize:async()=>({text:'LAND FOR SALE\nHighway\nCall: 9B765-43210'})};});
+ await page.goto('/#/poster');
+ await page.getByTestId('poster-image').setInputFiles({name:'noisy-poster.png',mimeType:'image/png',buffer:Buffer.from('noisy-image')});
+ await page.getByTestId('read-poster').click();
+ await expect(page.getByTestId('poster-phone')).toHaveValue('9876543210');
+ await expect(page.getByTestId('poster-phone-warning')).toContainText('Check this number');
+});
+
 test('local OCR adapter preserves original image outside domain storage and keeps poster place separate from one-shot GPS',async({page,context})=>{
  await context.grantPermissions(['geolocation']); await context.setGeolocation({latitude:11.3410,longitude:77.7172});
  await page.addInitScript(()=>{(window as any).__PA_LOCAL_OCR__={recognize:async()=>({text:'House for rent. Location: Chennai. Contact 9123456789'})};});
