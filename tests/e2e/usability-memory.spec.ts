@@ -24,6 +24,60 @@ test('same-name people are resolved by stable identity instead of silently merge
  expect(result.linked[0].personId).toBe('ramesh-perundurai');
 });
 
+test('Create a new person never reuses a sole name-only match',async({page})=>{
+ await page.goto('/#/type');
+ await page.evaluate(()=>{
+  (window as any).__PA_REPOSITORY__.create('people',{id:'existing-ramesh',name:'Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'',alternatePhones:[],identityStatus:'phone_pending'});
+  sessionStorage.setItem('pa.captureDraft',JSON.stringify({ok:true,kind:'requirement',source:'Ramesh wants land in Erode',person:{name:'Ramesh'},requirement:{intent:'buy',propertyType:'land',locations:['Erode']},uncertain:[]}));
+  location.hash='#/review';
+ });
+ await expect(page.getByTestId('identity-resolution')).toBeVisible();
+ await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
+ await page.getByTestId('save-capture').click();
+ const people=await page.evaluate(()=>(window as any).__PA_REPOSITORY__.list('people').filter((person:any)=>person.name==='Ramesh'));
+ expect(people).toHaveLength(2);
+ expect(people.map((person:any)=>person.id)).toContain('existing-ramesh');
+});
+
+test('a new phone still requires an explicit same-name identity choice',async({page})=>{
+ await page.goto('/#/type');
+ await page.evaluate(()=>{
+  const repo=(window as any).__PA_REPOSITORY__;
+  repo.create('people',{id:'pending-ramesh',name:'Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'',alternatePhones:[],identityStatus:'phone_pending'});
+  repo.create('people',{id:'other-ramesh',name:'Ramesh',role:'owner',roles:['owner'],primaryPhone:'9876540001',alternatePhones:[],identityStatus:'confirmed'});
+  sessionStorage.setItem('pa.captureDraft',JSON.stringify({ok:true,kind:'requirement',source:'Ramesh 9876540002 wants land in Erode',person:{name:'Ramesh',primaryPhone:'9876540002'},requirement:{intent:'buy',propertyType:'land',locations:['Erode']},uncertain:[]}));
+  location.hash='#/review';
+ });
+ await expect(page.getByTestId('field-targetPerson').locator('option')).toHaveCount(3);
+ await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
+ await page.getByTestId('save-capture').click();
+ const result=await page.evaluate(()=>({people:(window as any).__PA_REPOSITORY__.list('people'),pending:(window as any).__PA_REPOSITORY__.get('people','pending-ramesh')}));
+ expect(result.people.filter((person:any)=>person.name==='Ramesh')).toHaveLength(3);
+ expect(result.pending.primaryPhone).toBe('');
+ expect(result.people.some((person:any)=>person.primaryPhone==='9876540002')).toBe(true);
+});
+
+for(const kind of ['followup','interaction'] as const){
+ test(`${kind} capture disambiguates duplicate names before linking`,async({page})=>{
+  await page.goto('/#/type');
+  await page.evaluate((captureKind)=>{
+   const repo=(window as any).__PA_REPOSITORY__;
+   repo.create('people',{id:'ramesh-one',name:'Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'9876540011',alternatePhones:[],identityStatus:'confirmed'});
+   repo.create('people',{id:'ramesh-two',name:'Ramesh',role:'owner',roles:['owner'],primaryPhone:'9876540012',alternatePhones:[],identityStatus:'confirmed'});
+   const draft=captureKind==='followup'
+    ?{ok:true,kind:captureKind,source:'Follow up Ramesh tomorrow',person:{name:'Ramesh'},followUp:{title:'Follow up Ramesh',dueText:'Tomorrow'},uncertain:[]}
+    :{ok:true,kind:captureKind,source:'Ramesh rejected this property',person:{name:'Ramesh'},interaction:{summary:'Ramesh rejected this property',learnedPreferences:[]},uncertain:[]};
+   sessionStorage.setItem('pa.captureDraft',JSON.stringify(draft));location.hash='#/review';
+  },kind);
+  await expect(page.getByTestId('identity-resolution')).toContainText('More than one saved person has this name');
+  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
+  await page.getByTestId('field-targetPerson').selectOption('ramesh-two');
+  await page.getByTestId('save-capture').click();
+  const people=await page.evaluate(()=>(window as any).__PA_REPOSITORY__.list('people').filter((person:any)=>person.name==='Ramesh'));
+  expect(people).toHaveLength(2);
+ });
+}
+
 test('Cursor-style completion accepts an area with Tab',async({page})=>{
  await page.goto('/#/home');
  const composer=page.getByTestId('home-capture-text');

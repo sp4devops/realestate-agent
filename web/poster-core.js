@@ -56,7 +56,7 @@ function createOcrService(){
     const text=typeof result==='string'?result:result?.text;
     if(!text||!String(text).trim())return {ok:false,error:'No readable text was found. You can type the poster text and continue.'};
     return {ok:true,...extract(text)};
-   }catch(_){return {ok:false,error:'Poster reading failed locally. You can type the poster text and continue.'};}
+   }catch(error){const detail=String(error?.message || 'Poster reading failed locally.').trim();return {ok:false,error:`${detail} You can type the poster text and continue.`};}
  }};
 }
 root.PropertyAssistantPoster={normalizeText,extractPhones,extractPosterLocation,extract,prepareImageDataUrl,recognizeWithAndroid,createOcrService};

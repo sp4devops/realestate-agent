@@ -29,6 +29,6 @@ test('Cursor-style typing assist completes people, property terms and area prefi
  assert.equal(globalThis.PropertyAssistantTypingAssist.completionFor('Meet Ram',repo).candidate,'Ramesh');
  assert.equal(globalThis.PropertyAssistantTypingAssist.completionFor('Needs land in Peru',repo).candidate,'Perundurai');
  assert.equal(globalThis.PropertyAssistantTypingAssist.completionFor('Needs 2B',repo).candidate,'2BHK');
- assert.equal(globalThis.PropertyAssistantTypingAssist.completionFor('Ramesh wants',repo).candidate,'wants a 2BHK in');
+ assert.equal(globalThis.PropertyAssistantTypingAssist.completionFor('Ramesh wants',repo),null);
  assert.equal(globalThis.PropertyAssistantTypingAssist.completionFor('Complete sentence.',repo),null);
 });

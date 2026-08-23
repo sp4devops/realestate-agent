@@ -10,6 +10,7 @@ Pilot usability and real-device repair candidate for the English typed second br
 - Added pinned-area management and included pinned areas in encrypted backup/restore.
 - Reworked Android system-bar inset delivery so the fixed app navigation stays above three-button and gesture navigation areas.
 - Bundled the ML Kit Latin-script OCR model and connected it to the poster adapter for immediate offline English/phone-number recognition without Internet permission.
+- Added a local image preview before poster save; on-device image OCR is Android-only while desktop keeps the typed-text fallback.
 
 ### Release-candidate limitations
 

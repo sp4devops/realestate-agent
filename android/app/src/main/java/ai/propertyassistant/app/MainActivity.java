@@ -57,6 +57,7 @@ public final class MainActivity extends Activity {
   private String pendingBackupText;
   private WebView web;
   private TextRecognizer posterTextRecognizer;
+  private volatile boolean destroyed;
   private int safeInsetTop;
   private int safeInsetRight;
   private int safeInsetBottom;
@@ -190,6 +191,7 @@ public final class MainActivity extends Activity {
   }
 
   private synchronized TextRecognizer getPosterTextRecognizer() {
+    if (destroyed) return null;
     if (posterTextRecognizer == null) {
       posterTextRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
     }
@@ -198,6 +200,7 @@ public final class MainActivity extends Activity {
 
   private void startPosterRecognition(String imageDataUrl, String requestId) {
     if (requestId == null || requestId.isEmpty()) return;
+    if (destroyed) return;
     if (imageDataUrl == null || imageDataUrl.length() > 8_000_000) {
       sendPosterRecognitionResult(requestId, false, "", "Poster image is too large. Retake it closer to the poster.");
       return;
@@ -214,7 +217,12 @@ public final class MainActivity extends Activity {
         if (bitmap == null) throw new IllegalArgumentException("Poster image could not be opened.");
         final Bitmap recognizedBitmap = bitmap;
         InputImage image = InputImage.fromBitmap(recognizedBitmap, 0);
-        getPosterTextRecognizer().process(image)
+        TextRecognizer recognizer = getPosterTextRecognizer();
+        if (recognizer == null) {
+          recognizedBitmap.recycle();
+          return;
+        }
+        recognizer.process(image)
             .addOnSuccessListener(result -> {
               String text = result.getText() == null ? "" : result.getText().trim();
               if (text.isEmpty()) sendPosterRecognitionResult(requestId, false, "", "No readable text was found. Retake the poster in good light or type the text.");
@@ -231,7 +239,7 @@ public final class MainActivity extends Activity {
 
   private void sendPosterRecognitionResult(String requestId, boolean ok, String text, String error) {
     runOnUiThread(() -> {
-      if (web == null) return;
+      if (destroyed || web == null) return;
       String payload = "{ok:" + ok + ",text:" + JSONObject.quote(text) + ",error:" + JSONObject.quote(error) + "}";
       web.evaluateJavascript("window.__PA_POSTER_OCR_RESULT__ && window.__PA_POSTER_OCR_RESULT__(" + JSONObject.quote(requestId) + "," + payload + ")", null);
     });
@@ -429,21 +437,26 @@ public final class MainActivity extends Activity {
   }
 
   @Override protected void onDestroy() {
+    destroyed = true;
     if (pendingFileChooser != null) pendingFileChooser.onReceiveValue(null);
     if (pendingGeolocationCallback != null) pendingGeolocationCallback.invoke(pendingGeolocationOrigin, false, false);
     pendingFileChooser = null;
     pendingGeolocationCallback = null;
     pendingGeolocationOrigin = null;
     pendingBackupText = null;
-    if (posterTextRecognizer != null) {
-      posterTextRecognizer.close();
-      posterTextRecognizer = null;
-    }
+    closePosterTextRecognizer();
     if (web != null) {
       web.removeJavascriptInterface("PropertyAssistantHost");
       web.destroy();
       web = null;
     }
     super.onDestroy();
+  }
+
+  private synchronized void closePosterTextRecognizer() {
+    if (posterTextRecognizer != null) {
+      posterTextRecognizer.close();
+      posterTextRecognizer = null;
+    }
   }
 }

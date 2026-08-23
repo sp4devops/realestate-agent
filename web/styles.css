@@ -54,7 +54,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   justify-content:space-between;
   gap:14px;
   min-height:78px;
-  padding:calc(10px + var(--safe-top)) max(16px,calc((100vw - 1120px)/2)) 10px;
+  padding:calc(10px + var(--safe-top)) max(16px,var(--safe-right),calc((100vw - 1120px)/2)) 10px max(16px,var(--safe-left),calc((100vw - 1120px)/2));
   background:rgba(255,255,255,.96);
   border-bottom:1px solid rgba(221,230,225,.72);
   backdrop-filter:blur(18px);
@@ -94,7 +94,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   box-shadow:0 5px 16px rgba(28,57,48,.08);
 }
 
-main{width:min(1080px,100%);margin:0 auto;padding:26px 20px 48px}
+main{width:min(1080px,100%);margin:0 auto;padding:26px max(20px,var(--safe-right)) 48px max(20px,var(--safe-left))}
+.poster-preview{display:block;width:100%;max-height:360px;margin:0 0 18px;border:1px solid var(--line);border-radius:18px;background:var(--surface-soft);object-fit:contain}
 .assistant-intro{display:flex;align-items:center;gap:16px;margin:8px 0 24px}
 .greeting-mark{display:grid;place-items:center;width:54px;height:54px;border-radius:50%;background:var(--gold-100);color:#e7a300;font-size:30px}
 .assistant-intro h1{font-size:clamp(26px,4vw,34px);line-height:1.15;margin:0 0 5px;letter-spacing:-.03em}
@@ -476,14 +477,14 @@ body.keyboard-open .app-shell{padding-bottom:24px}
 .splash .page{width:min(680px,100%);padding:34px;border-radius:28px;background:#fff;box-shadow:var(--shadow-strong)}
 
 @media(max-width:720px){
-  .topbar{min-height:70px;padding-left:12px;padding-right:12px;gap:8px}
+  .topbar{min-height:70px;padding-left:max(12px,var(--safe-left));padding-right:max(12px,var(--safe-right));gap:8px}
   .brand{gap:8px}
   .brand-mark{width:42px;height:42px;flex-basis:42px}
   .brand-copy strong{font-size:17px}
   .brand-copy small{display:none}
   .topbar-actions{gap:7px}
   .icon-button{width:44px;min-width:44px;height:44px}
-  main{padding:20px 14px 36px}
+  main{padding:20px max(14px,var(--safe-right)) 36px max(14px,var(--safe-left))}
   .assistant-intro{gap:12px;margin-top:4px}
   .greeting-mark{width:48px;height:48px;font-size:26px}
   .assistant-intro h1{font-size:25px}
@@ -548,7 +549,7 @@ body.keyboard-open .app-shell{padding-bottom:24px}
 
 @media(min-width:960px){
   .app-shell{padding-left:220px;padding-bottom:24px}
-  .topbar{margin-left:-220px;padding-left:24px;padding-right:24px}
+  .topbar{margin-left:-220px;padding-left:max(24px,var(--safe-left));padding-right:max(24px,var(--safe-right))}
   main{padding-top:34px}
   .bottom-nav{left:20px;right:auto;top:104px;bottom:auto;width:180px;min-height:0;grid-template-columns:1fr;gap:5px;padding:10px;border:1px solid var(--line);border-radius:21px;box-shadow:var(--shadow)}
   .nav-item{position:relative;flex-direction:row;justify-content:flex-start;gap:12px;min-height:52px;padding:0 14px}

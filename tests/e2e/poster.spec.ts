@@ -24,6 +24,7 @@ test('local OCR adapter preserves original image outside domain storage and keep
  await page.getByTestId('poster-image').setInputFiles({name:'poster.png',mimeType:'image/png',buffer:Buffer.from('fake-image')});
  await page.getByTestId('read-poster').click();
  await expect(page.getByTestId('poster-phone')).toHaveValue('9123456789');
+ await expect(page.getByTestId('poster-preview')).toBeVisible();
  await expect(page.getByTestId('poster-location')).toHaveValue('Chennai');
  await page.getByTestId('get-capture-location').click();
  await expect(page.getByTestId('capture-location')).toContainText('11.341');
@@ -59,6 +60,24 @@ test('OCR unavailable is a recoverable user-facing state',async({page})=>{
  await page.getByTestId('read-poster').click();
  await expect(page.getByTestId('poster-status')).toContainText('Local OCR is unavailable');
  await expect(page.getByTestId('poster-text')).toBeEditable();
+});
+
+test('OCR completion does not interrupt navigation away from poster capture',async({page})=>{
+ await page.addInitScript(()=>{(window as any).__PA_LOCAL_OCR__={recognize:()=>new Promise(resolve=>setTimeout(()=>resolve({text:'Land in Erode. Call 9876543210'}),150))};});
+ await page.goto('/#/poster');
+ await page.getByTestId('poster-image').setInputFiles({name:'poster.png',mimeType:'image/png',buffer:Buffer.from('fake-image')});
+ await page.getByTestId('read-poster').click();
+ await page.goto('/#/people');
+ await page.waitForTimeout(250);
+ await expect(page).toHaveURL(/#\/people$/);
+});
+
+test('OCR keeps actionable local failure guidance',async({page})=>{
+ await page.addInitScript(()=>{(window as any).__PA_LOCAL_OCR__={recognize:async()=>{throw new Error('No readable text was found. Retake the poster in good light or type the text.');}};});
+ await page.goto('/#/poster');
+ await page.getByTestId('poster-image').setInputFiles({name:'poster.png',mimeType:'image/png',buffer:Buffer.from('fake-image')});
+ await page.getByTestId('read-poster').click();
+ await expect(page.getByTestId('poster-status')).toContainText('Retake the poster in good light');
 });
 
 test('a new poster flow cannot inherit the previous lead image or GPS evidence',async({page,context})=>{

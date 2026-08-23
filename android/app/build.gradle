@@ -23,6 +23,7 @@ android {
     versionName releaseVersionName
     resValue 'string', 'app_name', applicationLabel
     resValue 'string', 'app_version_label', releaseVersionName
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
   }
 
   signingConfigs {
@@ -51,6 +52,8 @@ dependencies {
   implementation 'androidx.webkit:webkit:1.12.1'
   // Bundled Latin-script model: available offline immediately, with no model download or Internet permission.
   implementation 'com.google.mlkit:text-recognition:16.0.1'
+  androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+  androidTestImplementation 'androidx.test:runner:1.6.2'
 }
 
 tasks.register('syncWebAssets', Sync) {

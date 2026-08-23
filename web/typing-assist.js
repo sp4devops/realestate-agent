@@ -1,7 +1,7 @@
 (function(root){
 'use strict';
 
-const BASE_WORDS=['available','available in','apartment','area','budget','budget up to','buyer','cent','contact','follow-up','house','land','land available in','lakh','lease','location','negotiable','needs','needs a 2BHK in','owner','owner has land available in','Perundurai','property','rent','sale','tenant','wants','wants a 2BHK in','WhatsApp','1BHK','2BHK','3BHK','4BHK'];
+const BASE_WORDS=['available','apartment','area','budget','buyer','cent','contact','follow-up','house','land','lakh','lease','location','negotiable','needs','owner','Perundurai','property','rent','sale','tenant','wants','WhatsApp','1BHK','2BHK','3BHK','4BHK'];
 function unique(values){const seen=new Set();return (values||[]).filter(value=>{const key=String(value||'').toLowerCase();if(!key||seen.has(key))return false;seen.add(key);return true;});}
 function candidates(repository){
  const values=[...BASE_WORDS];
@@ -26,7 +26,10 @@ function attach(input,{repository,host,testId='typing-suggestion'}={}){
  const render=()=>{
   current=completionFor(input.value,repository);
   suggestion.hidden=!current;
-  if(current){suggestion.innerHTML=`<span>${current.typed}<strong>${current.suffix}</strong></span><small>Tab to complete</small>`;suggestion.setAttribute('aria-label',`Complete ${current.candidate}`);}
+  if(current){
+   const value=document.createElement('span');value.append(document.createTextNode(current.typed));const suffix=document.createElement('strong');suffix.textContent=current.suffix;value.append(suffix);
+   const hint=document.createElement('small');hint.textContent='Tab to complete';suggestion.replaceChildren(value,hint);suggestion.setAttribute('aria-label',`Complete ${current.candidate}`);
+  }else suggestion.replaceChildren();
  };
  const accept=()=>{if(!current)return false;input.setRangeText(current.candidate,current.start,input.value.length,'end');input.dispatchEvent(new Event('input',{bubbles:true}));return true;};
  const keydown=event=>{if(current&&(event.key==='Tab'||event.key==='ArrowRight')&&input.selectionStart===input.value.length&&input.selectionEnd===input.value.length){event.preventDefault();accept();}};

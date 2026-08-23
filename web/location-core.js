@@ -58,26 +58,27 @@ function bindTypeahead(input,{repository,storage=root.localStorage,list,pinButto
   if(!pinButton)return;
   const pinned=isPinned(input.value,storage);pinButton.dataset.pinned=String(pinned);pinButton.textContent=pinned?'★ Pinned area':'☆ Pin area';pinButton.disabled=!clean(input.value);
  };
- const choose=location=>{input.value=location;input.dispatchEvent(new Event('input',{bubbles:true}));list.hidden=true;active=-1;refreshPin();};
+ const hide=()=>{list.hidden=true;active=-1;input.setAttribute('aria-expanded','false');input.removeAttribute('aria-activedescendant');};
+ const choose=location=>{input.value=location;input.dispatchEvent(new Event('input',{bubbles:true}));hide();refreshPin();};
  const render=()=>{
   visible=suggest(input.value,{repository,storage});list.replaceChildren();active=-1;
-  for(const item of visible){
+  for(const [index,item] of visible.entries()){
    const row=document.createElement('div');row.className='location-option-row';
-   const option=document.createElement('button');option.type='button';option.className='location-option';option.setAttribute('role','option');option.textContent=item.location;option.addEventListener('mousedown',event=>event.preventDefault());option.addEventListener('click',()=>choose(item.location));
+   const option=document.createElement('button');option.type='button';option.id=`${list.id || 'location-options'}-option-${index}`;option.className='location-option';option.setAttribute('role','option');option.textContent=item.location;option.addEventListener('mousedown',event=>event.preventDefault());option.addEventListener('click',()=>choose(item.location));
    const pinControl=document.createElement('button');pinControl.type='button';pinControl.className='location-option-pin';pinControl.setAttribute('aria-label',`${item.pinned?'Unpin':'Pin'} ${item.location}`);pinControl.textContent=item.pinned?'★':'☆';pinControl.addEventListener('mousedown',event=>event.preventDefault());pinControl.addEventListener('click',()=>{item.pinned?unpin(item.location,storage):pin(item.location,storage);render();refreshPin();});
    row.append(option,pinControl);list.append(row);
   }
-  list.hidden=visible.length===0;refreshPin();
+  list.hidden=visible.length===0;input.setAttribute('aria-expanded',String(visible.length>0));input.removeAttribute('aria-activedescendant');refreshPin();
  };
  const keydown=event=>{
-  if(event.key==='Escape'){list.hidden=true;return;}
+  if(event.key==='Escape'){hide();return;}
   if(event.key==='ArrowDown'||event.key==='ArrowUp'){
    if(list.hidden)render();if(!visible.length)return;event.preventDefault();active=(active+(event.key==='ArrowDown'?1:-1)+visible.length)%visible.length;
    [...list.querySelectorAll('[role="option"]')].forEach((option,index)=>option.setAttribute('aria-selected',String(index===active)));
-   list.querySelectorAll('[role="option"]')[active]?.scrollIntoView({block:'nearest'});
+   const activeOption=list.querySelectorAll('[role="option"]')[active];if(activeOption){input.setAttribute('aria-activedescendant',activeOption.id);activeOption.scrollIntoView({block:'nearest'});}
   }else if(event.key==='Enter'&&active>=0&&visible[active]){event.preventDefault();choose(visible[active].location);}
  };
- const blur=()=>setTimeout(()=>{list.hidden=true;active=-1;},120);
+ const blur=()=>setTimeout(hide,120);
  const togglePin=()=>{const value=clean(input.value);if(!value)return;isPinned(value,storage)?unpin(value,storage):pin(value,storage);render();refreshPin();};
  input.addEventListener('input',render);input.addEventListener('focus',render);input.addEventListener('keydown',keydown);input.addEventListener('blur',blur);pinButton?.addEventListener('click',togglePin);refreshPin();
  return ()=>{input.removeEventListener('input',render);input.removeEventListener('focus',render);input.removeEventListener('keydown',keydown);input.removeEventListener('blur',blur);pinButton?.removeEventListener('click',togglePin);};
