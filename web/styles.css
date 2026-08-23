@@ -86,7 +86,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   color:#5d6864;
   background:#fff;
 }
-.quick-language{min-height:32px;padding:3px 4px;color:#66716c;font-size:13px;border-radius:7px}
+.quick-language{min-height:40px;padding:3px 6px;color:#66716c;font-size:13px;border-radius:7px}
 .quick-language.active{color:var(--green-800);font-weight:900}
 .language-chip>span{color:#a6afab;font-size:12px}
 .icon-button{
@@ -395,7 +395,7 @@ main{width:min(1080px,100%);margin:0 auto;padding:26px 20px 48px}
 .choice small{color:var(--muted)}
 .field,.capture-field{display:grid;gap:8px;margin:16px 0;color:var(--green-950);font-weight:800}
 .field span,.capture-field span{display:block}
-.field input,.field textarea,.capture-field input,.capture-field textarea{
+.field input,.field textarea,.field select,.capture-field input,.capture-field textarea,.capture-field select{
   width:100%;
   min-height:48px;
   padding:12px 14px;
@@ -409,7 +409,7 @@ main{width:min(1080px,100%);margin:0 auto;padding:26px 20px 48px}
   line-height:1.45;
 }
 .field textarea,.capture-field textarea{min-height:140px;resize:vertical}
-.field input:focus,.field textarea:focus,.capture-field input:focus,.capture-field textarea:focus{border-color:var(--green-800);box-shadow:0 0 0 3px rgba(8,122,87,.1)}
+.field input:focus,.field textarea:focus,.field select:focus,.capture-field input:focus,.capture-field textarea:focus,.capture-field select:focus{border-color:var(--green-800);box-shadow:0 0 0 3px rgba(8,122,87,.1)}
 .field input[type="file"]{padding:10px}
 .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .field-row .capture-field{margin-top:0}
@@ -431,7 +431,7 @@ main{width:min(1080px,100%);margin:0 auto;padding:26px 20px 48px}
   transition:opacity .16s ease,transform .16s ease;
 }
 .nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;min-height:58px;padding:4px;color:#65716c;border-radius:13px}
-.nav-item small{max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:10px;white-space:nowrap}
+.nav-item small{max-width:100%;overflow:visible;font-size:10px;line-height:1.05;text-align:center;white-space:normal}
 .nav-item.active{color:var(--green-800);font-weight:850}
 .nav-item.active::before{content:"";position:absolute;align-self:center;width:42px;height:3px;margin-top:-61px;border-radius:3px;background:var(--green-800)}
 .nav-icon{width:25px;height:25px}
@@ -449,7 +449,7 @@ body.keyboard-open .app-shell{padding-bottom:24px}
   .brand-copy small{display:none}
   .topbar-actions{gap:7px}
   .language-chip{gap:3px;padding:4px 6px}
-  .quick-language{padding:3px;font-size:11px}
+  .quick-language{min-height:38px;padding:3px;font-size:11px}
   .icon-button{width:44px;min-width:44px;height:44px}
   main{padding:20px 14px 36px}
   .assistant-intro{gap:12px;margin-top:4px}

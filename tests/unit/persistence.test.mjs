@@ -42,6 +42,15 @@ test('person CRUD survives repository restart and preserves primary/alternate ph
   assert.equal(repo.get('people', created.id), null);
 });
 
+test('phone-pending people remain valid and can gain another business role later',()=>{
+  const storage=memoryStorage(); let repo=deterministicRepo(storage);
+  const person=repo.create('people',{id:'pending-ramesh',name:'Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'',identityStatus:'phone_pending',alternatePhones:[]});
+  repo.update('people',person.id,{roles:['buyer','owner'],primaryPhone:'+91 98765 43210',identityStatus:'confirmed'});
+  repo=deterministicRepo(storage);
+  assert.equal(repo.get('people',person.id).primaryPhone,'+91 98765 43210');
+  assert.deepEqual(repo.get('people',person.id).roles,['buyer','owner']);
+});
+
 test('source evidence, timing and preferences survive repository restart', () => {
   const storage=memoryStorage();
   let repo=deterministicRepo(storage);
@@ -88,10 +97,12 @@ test('poster follow-ups reference an existing lead and protect it from dangling 
   assert.throws(() => repo.remove('posterLeads', lead.id), /still referenced/);
 });
 
-test('migration upgrades legacy array collections to schema version 1', () => {
+test('migration upgrades legacy array collections to the current schema', () => {
   const migrated = migrate({ people: [{ id:'legacy-person', name:'Legacy Demo', role:'buyer', primaryPhone:'+91 90000 00999', alternatePhones:[] }], properties: [] });
   assert.equal(migrated.schemaVersion, CURRENT_SCHEMA_VERSION);
   assert.equal(migrated.entities.people['legacy-person'].name, 'Legacy Demo');
+  assert.deepEqual(migrated.entities.people['legacy-person'].roles,['buyer']);
+  assert.equal(migrated.entities.people['legacy-person'].identityStatus,'confirmed');
   for (const type of ENTITY_TYPES) assert.ok(migrated.entities[type]);
 });
 

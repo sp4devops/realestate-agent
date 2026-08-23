@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+await import('../../web/capture-parser.js');
 await import('../../web/after-call-core.js');
 const core=globalThis.PropertyAssistantAfterCall;
 
@@ -18,6 +19,11 @@ test('recap does not require phone or follow-up',()=>{
  assert.equal(interaction.phone,null);
  assert.deepEqual(interaction.personIds,[]);
  assert.equal(followUp,null);
+});
+
+test('recap promotes explicit and rejection-derived preferences into structured memory',()=>{
+ const {interaction}=core.buildRecords({summary:'Rejected because road was too narrow. Wants east-facing with minimum 30 ft road.'});
+ assert.deepEqual(interaction.learnedPreferences,['East facing','30-ft road']);
 });
 
 test('invalid phone and empty summary are rejected',()=>{

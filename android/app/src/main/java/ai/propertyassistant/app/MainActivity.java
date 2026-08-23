@@ -24,6 +24,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -66,7 +67,7 @@ public final class MainActivity extends Activity {
 
     web = new WebView(this);
     ViewCompat.setOnApplyWindowInsetsListener(web, (view, windowInsets) -> {
-      android.graphics.Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).toPlatformInsets();
+      Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
       view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
       return windowInsets;
     });

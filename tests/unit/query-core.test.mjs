@@ -38,6 +38,7 @@ test('role-only people queries do not invent transaction filters',()=>{
  const owners=interpret('find owners');
  assert.equal(owners.personRole,'owner'); assert.equal(owners.intent,null);
  assert.deepEqual(search(snapshot,owners).map(r=>r.id),['u2']);
+ assert.deepEqual(search(snapshot,interpret('find sellers')).map(r=>r.id),['u2']);
 });
 
 test('explicit buyer queries filter through linked requirements',()=>{

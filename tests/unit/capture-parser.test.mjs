@@ -65,6 +65,40 @@ test('budget range and trailing owner language become structured business meanin
   assert.equal(supply.property.price, 3800000);
 });
 
+test('size ranges and per-unit land prices remain explicit instead of corrupting totals', () => {
+  const demand=parse('Kumar wants residential plot in Perundurai, size 1,500-2,500 sqft, budget ₹25-35 lakh');
+  assert.deepEqual(demand.requirement.size,{minValue:1500,maxValue:2500,unit:'sqft'});
+
+  const supply=parse('2 acre land available near Chennimalai, ₹55 lakh/acre, owner negotiable.');
+  assert.equal(supply.kind,'property');
+  assert.equal(supply.person.name,'');
+  assert.equal(supply.property.price,5500000);
+  assert.equal(supply.property.priceBasis,'per_acre');
+  assert.deepEqual(supply.property.size,{value:2,unit:'acre'});
+  assert.ok(supply.property.attributes.includes('Negotiable'));
+});
+
+test('updates, rejection memory and reminders route to explicit structured intents',()=>{
+  const price=parse('Price changed to 68 lakhs');
+  assert.equal(price.kind,'property_update');
+  assert.equal(price.propertyUpdate.price,6800000);
+  assert.ok(price.uncertain.includes('targetProperty'));
+
+  const reminder=parse('Call Suresh Tuesday');
+  assert.equal(reminder.kind,'followup');
+  assert.equal(reminder.person.name,'Suresh');
+  assert.equal(reminder.followUp.dueText,'Tuesday');
+
+  const visit=parse('Priya visiting tomorrow');
+  assert.equal(visit.kind,'followup');
+  assert.equal(visit.person.name,'Priya');
+  assert.equal(visit.followUp.channel,'Site visit');
+
+  const rejection=parse('Ramesh rejected this because road too narrow');
+  assert.equal(rejection.kind,'interaction');
+  assert.deepEqual(rejection.interaction.learnedPreferences,['Wider road required']);
+});
+
 test('advisor shorthand infers local-market units and keeps matchable preferences', () => {
   const demand = parse('Ravi wants house in Thindal. Budget max 70. East-facing, minimum 30 ft road. Phone 98765 40003.');
   assert.equal(demand.requirement.budgetMax, 7000000);

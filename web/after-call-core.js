@@ -16,7 +16,9 @@ function validateRecap(input){
 }
 function buildRecords(input,now=()=>new Date().toISOString()){
  const value=validateRecap(input); const occurredAt=now();
- const interaction={kind:'call',occurredAt,personIds:value.personId?[value.personId]:[],summary:value.summary,phone:value.phone};
+ const learnedPreferences=root.PropertyAssistantCapture?.parsePreferences(value.summary) || [];
+ if(/\broad (?:was |is )?too narrow\b/i.test(value.summary)&&!learnedPreferences.some(item=>/ft road/i.test(item))) learnedPreferences.push('Wider road required');
+ const interaction={kind:'call',occurredAt,personIds:value.personId?[value.personId]:[],summary:value.summary,phone:value.phone,learnedPreferences:[...new Set(learnedPreferences)]};
  const followUp=value.dueAt?{dueAt:new Date(value.dueAt).toISOString(),status:'open',title:value.phone?`Follow up after call · ${value.phone}`:'Follow up after call',personId:value.personId||null}:null;
  return {interaction,followUp};
 }

@@ -6,6 +6,7 @@ const mainActivity = await readFile(new URL('../../android/app/src/main/java/ai/
 const manifest = await readFile(new URL('../../android/app/src/main/AndroidManifest.xml', import.meta.url), 'utf8');
 const extractionRules = await readFile(new URL('../../android/app/src/main/res/xml/data_extraction_rules.xml', import.meta.url), 'utf8');
 const releaseWorkflow = await readFile(new URL('../../.github/workflows/release-candidates.yml', import.meta.url), 'utf8');
+const qualityWorkflow = await readFile(new URL('../../.github/workflows/quality-gates.yml', import.meta.url), 'utf8');
 const app = await readFile(new URL('../../web/app.js', import.meta.url), 'utf8');
 const styles = await readFile(new URL('../../web/styles.css', import.meta.url), 'utf8');
 const voiceUi = await readFile(new URL('../../web/voice-ui.js', import.meta.url), 'utf8');
@@ -20,6 +21,9 @@ test('Android shell uses secure local asset origin, navigation lock and system-b
   assert.match(mainActivity, /isTrustedOrigin/);
   assert.match(mainActivity, /MIXED_CONTENT_NEVER_ALLOW/);
   assert.match(mainActivity, /WindowInsetsCompat\.Type\.systemBars\(\)/);
+  assert.match(mainActivity, /androidx\.core\.graphics\.Insets/);
+  assert.doesNotMatch(mainActivity, /android\.graphics\.Insets|toPlatformInsets\(/);
+  assert.match(qualityWorkflow, /lintDebug/);
   assert.match(manifest, /windowSoftInputMode="adjustResize"/);
 });
 

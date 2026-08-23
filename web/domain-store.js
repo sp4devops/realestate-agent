@@ -2,7 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'pa.domain.v1';
-  const CURRENT_SCHEMA_VERSION = 1;
+  const CURRENT_SCHEMA_VERSION = 2;
   const ENTITY_TYPES = ['people','contacts','requirements','properties','interactions','followUps','matches','posterLeads'];
   const PERSON_ROLES = new Set(['buyer','seller','owner','tenant','property_advisor','other']);
 
@@ -30,15 +30,32 @@
     if (size == null) return;
     assert(size && typeof size === 'object' && !Array.isArray(size), 'size must be an object');
     optionalNonNegativeNumber(size.value, 'size.value');
-    assert(size.value != null && size.value > 0, 'size.value must be greater than zero');
+    optionalNonNegativeNumber(size.minValue, 'size.minValue');
+    optionalNonNegativeNumber(size.maxValue, 'size.maxValue');
+    const hasValue=size.value != null;
+    const hasRange=size.minValue != null || size.maxValue != null;
+    assert(hasValue || hasRange, 'size needs a value or range');
+    assert(!hasValue || size.value > 0, 'size.value must be greater than zero');
+    assert(size.minValue == null || size.minValue > 0, 'size.minValue must be greater than zero');
+    assert(size.maxValue == null || size.maxValue > 0, 'size.maxValue must be greater than zero');
+    if(size.minValue != null && size.maxValue != null) assert(size.minValue <= size.maxValue, 'size.minValue cannot exceed size.maxValue');
     nonEmpty(size.unit, 'size.unit');
+    assert(['sqft','cent','acre'].includes(size.unit), 'size.unit is invalid');
   }
 
   function validatePerson(record) {
     nonEmpty(record.name, 'name');
     assert(PERSON_ROLES.has(record.role), 'role is invalid');
-    nonEmpty(record.primaryPhone, 'primaryPhone');
-    assert(normalizePhone(record.primaryPhone), 'primaryPhone must be a valid Indian mobile number');
+    if(record.roles != null){
+      assert(Array.isArray(record.roles) && record.roles.length > 0, 'roles must be a non-empty array');
+      for(const role of record.roles) assert(PERSON_ROLES.has(role), 'roles contains an invalid role');
+      assert(new Set(record.roles).size===record.roles.length, 'roles must be unique');
+      assert(record.roles.includes(record.role), 'roles must include role');
+    }
+    optionalString(record.primaryPhone, 'primaryPhone');
+    if(String(record.primaryPhone || '').trim()) assert(normalizePhone(record.primaryPhone), 'primaryPhone must be a valid Indian mobile number');
+    if(record.identityStatus != null) assert(['confirmed','phone_pending'].includes(record.identityStatus), 'identityStatus is invalid');
+    assert(String(record.primaryPhone || '').trim() || record.identityStatus==='phone_pending', 'phone-less person must be marked phone_pending');
     assert(Array.isArray(record.alternatePhones || []), 'alternatePhones must be an array');
     const alternates = record.alternatePhones || [];
     const normalizedAlternates=[];
@@ -49,18 +66,19 @@
       normalizedAlternates.push(normalized);
     }
     assert(new Set(normalizedAlternates).size === normalizedAlternates.length, 'alternatePhones must be unique');
-    assert(!normalizedAlternates.includes(normalizePhone(record.primaryPhone)), 'primaryPhone cannot also be alternate');
+    const normalizedPrimary=normalizePhone(record.primaryPhone);
+    assert(!normalizedPrimary || !normalizedAlternates.includes(normalizedPrimary), 'primaryPhone cannot also be alternate');
   }
 
   function validateContact(record) { nonEmpty(record.personId, 'personId'); assert(['phone','whatsapp','email','other'].includes(record.kind), 'contact kind is invalid'); nonEmpty(record.value, 'value'); assert(typeof record.isPrimary === 'boolean', 'isPrimary must be boolean'); }
   function validateRequirement(record) {
     nonEmpty(record.personId, 'personId'); assert(['buy','rent','lease','sell'].includes(record.intent), 'requirement intent is invalid'); assert(Array.isArray(record.locations || []), 'locations must be an array');
     for (const location of record.locations || []) nonEmpty(location, 'location'); optionalString(record.propertyType, 'propertyType'); optionalNonNegativeNumber(record.budgetMin, 'budgetMin'); optionalNonNegativeNumber(record.budgetMax, 'budgetMax');
-    if (record.budgetMin != null && record.budgetMax != null) assert(record.budgetMin <= record.budgetMax, 'budgetMin cannot exceed budgetMax'); validateSize(record.size); optionalStringArray(record.preferences, 'preference'); optionalString(record.timing, 'timing'); optionalString(record.sourceText, 'sourceText'); optionalString(record.normalizedText, 'normalizedText');
+    if (record.budgetMin != null && record.budgetMax != null) assert(record.budgetMin <= record.budgetMax, 'budgetMin cannot exceed budgetMax'); validateSize(record.size); optionalStringArray(record.preferences, 'preference'); optionalStringArray(record.preferenceEvidence, 'preferenceEvidence'); optionalString(record.timing, 'timing'); optionalString(record.sourceText, 'sourceText'); optionalString(record.normalizedText, 'normalizedText');
   }
-  function validateProperty(record) { assert(['sale','rent','lease'].includes(record.intent), 'property intent is invalid'); nonEmpty(record.propertyType, 'propertyType'); nonEmpty(record.locality, 'locality'); optionalString(record.ownerPersonId, 'ownerPersonId'); optionalNonNegativeNumber(record.price, 'price'); validateSize(record.size); optionalStringArray(record.attributes, 'attribute'); optionalString(record.sourceText, 'sourceText'); optionalString(record.normalizedText, 'normalizedText'); }
-  function validateInteraction(record) { assert(['call','message','meeting','site_visit','note','other'].includes(record.kind), 'interaction kind is invalid'); validDate(record.occurredAt, 'occurredAt'); assert(Array.isArray(record.personIds || []), 'personIds must be an array'); optionalString(record.summary, 'summary'); optionalString(record.phone, 'phone'); }
-  function validateFollowUp(record) { validDate(record.dueAt, 'dueAt'); assert(['open','done','cancelled'].includes(record.status), 'follow-up status is invalid'); nonEmpty(record.title, 'title'); optionalString(record.personId, 'personId'); optionalString(record.propertyId, 'propertyId'); optionalString(record.posterLeadId, 'posterLeadId'); }
+  function validateProperty(record) { assert(['sale','rent','lease'].includes(record.intent), 'property intent is invalid'); nonEmpty(record.propertyType, 'propertyType'); nonEmpty(record.locality, 'locality'); optionalString(record.ownerPersonId, 'ownerPersonId'); optionalNonNegativeNumber(record.price, 'price'); if(record.priceBasis != null) assert(['total','per_month','per_acre','per_cent','per_sqft'].includes(record.priceBasis), 'priceBasis is invalid'); validateSize(record.size); optionalStringArray(record.attributes, 'attribute'); optionalString(record.sourceText, 'sourceText'); optionalString(record.normalizedText, 'normalizedText'); }
+  function validateInteraction(record) { assert(['call','message','meeting','site_visit','note','other'].includes(record.kind), 'interaction kind is invalid'); validDate(record.occurredAt, 'occurredAt'); assert(Array.isArray(record.personIds || []), 'personIds must be an array'); optionalString(record.propertyId, 'propertyId'); optionalStringArray(record.learnedPreferences, 'learnedPreference'); optionalString(record.summary, 'summary'); optionalString(record.phone, 'phone'); }
+  function validateFollowUp(record) { validDate(record.dueAt, 'dueAt'); assert(['open','done','cancelled'].includes(record.status), 'follow-up status is invalid'); nonEmpty(record.title, 'title'); optionalString(record.personId, 'personId'); optionalString(record.propertyId, 'propertyId'); optionalString(record.posterLeadId, 'posterLeadId'); optionalString(record.sourceText, 'sourceText'); }
   function validateMatch(record) { nonEmpty(record.requirementId, 'requirementId'); nonEmpty(record.propertyId, 'propertyId'); optionalNumber(record.score, 'score'); assert(record.score == null || (record.score >= 0 && record.score <= 100), 'score must be between 0 and 100'); assert(Array.isArray(record.reasons || []), 'reasons must be an array'); for (const reason of record.reasons || []) nonEmpty(reason, 'match reason'); }
   function validatePosterLead(record) { nonEmpty(record.phone, 'phone'); optionalString(record.imageRef, 'imageRef'); optionalString(record.posterLocation, 'posterLocation'); optionalString(record.captureLocation, 'captureLocation'); optionalString(record.ocrText, 'ocrText'); validDate(record.capturedAt, 'capturedAt'); }
 
@@ -70,7 +88,7 @@
     const has = (entityType, id) => id == null || Boolean(database.entities[entityType][id]);
     if (type === 'contacts' || type === 'requirements') assert(has('people', record.personId), `${type} personId does not exist`);
     if (type === 'properties') assert(has('people', record.ownerPersonId), 'property ownerPersonId does not exist');
-    if (type === 'interactions') for (const id of record.personIds || []) assert(has('people', id), 'interaction personId does not exist');
+    if (type === 'interactions') { for (const id of record.personIds || []) assert(has('people', id), 'interaction personId does not exist'); assert(has('properties', record.propertyId), 'interaction propertyId does not exist'); }
     if (type === 'followUps') { assert(has('people', record.personId), 'follow-up personId does not exist'); assert(has('properties', record.propertyId), 'follow-up propertyId does not exist'); assert(has('posterLeads', record.posterLeadId), 'follow-up posterLeadId does not exist'); }
     if (type === 'matches') { assert(has('requirements', record.requirementId), 'match requirementId does not exist'); assert(has('properties', record.propertyId), 'match propertyId does not exist'); }
   }
@@ -114,6 +132,14 @@
         database.entities[type] = clone(records);
       }
     }
+    for(const person of Object.values(database.entities.people)){
+      if(!Array.isArray(person.roles)) person.roles=[person.role];
+      if(person.identityStatus == null) person.identityStatus=normalizePhone(person.primaryPhone)?'confirmed':'phone_pending';
+      if(person.primaryPhone == null) person.primaryPhone='';
+    }
+    for(const property of Object.values(database.entities.properties)){
+      if(property.priceBasis == null) property.priceBasis=property.intent==='rent'?'per_month':'total';
+    }
     database.schemaVersion = CURRENT_SCHEMA_VERSION; return database;
   }
 
@@ -133,7 +159,7 @@
         if (Object.values(database.entities.contacts).some((r) => r.personId === id)) return true; if (Object.values(database.entities.requirements).some((r) => r.personId === id)) return true; if (Object.values(database.entities.properties).some((r) => r.ownerPersonId === id)) return true; if (Object.values(database.entities.interactions).some((r) => (r.personIds || []).includes(id))) return true; if (Object.values(database.entities.followUps).some((r) => r.personId === id)) return true;
       }
       if (type === 'requirements' && Object.values(database.entities.matches).some((r) => r.requirementId === id)) return true;
-      if (type === 'properties') { if (Object.values(database.entities.matches).some((r) => r.propertyId === id)) return true; if (Object.values(database.entities.followUps).some((r) => r.propertyId === id)) return true; }
+      if (type === 'properties') { if (Object.values(database.entities.matches).some((r) => r.propertyId === id)) return true; if (Object.values(database.entities.followUps).some((r) => r.propertyId === id)) return true; if (Object.values(database.entities.interactions).some((r) => r.propertyId === id)) return true; }
       if (type === 'posterLeads' && Object.values(database.entities.followUps).some((r) => r.posterLeadId === id)) return true; return false;
     }
     function transactionApi(database) {
@@ -154,10 +180,10 @@
     function migrateAndPersist() { const database = load(); save(database); return database.schemaVersion; }
     function seedSynthetic() {
       const database = load(); if (Object.values(database.entities).some((records) => Object.keys(records).length > 0)) return false; const timestamp = '2026-08-21T00:00:00.000Z';
-      database.entities.people['person-suresh'] = { id:'person-suresh', name:'Suresh (Demo)', role:'buyer', primaryPhone:'+91 90000 00001', alternatePhones:['+91 90000 00002'], createdAt:timestamp, updatedAt:timestamp };
-      database.entities.people['person-murugan'] = { id:'person-murugan', name:'Murugan (Demo)', role:'owner', primaryPhone:'+91 90000 00003', alternatePhones:[], createdAt:timestamp, updatedAt:timestamp };
+      database.entities.people['person-suresh'] = { id:'person-suresh', name:'Suresh (Demo)', role:'buyer', roles:['buyer'], identityStatus:'confirmed', primaryPhone:'+91 90000 00001', alternatePhones:['+91 90000 00002'], createdAt:timestamp, updatedAt:timestamp };
+      database.entities.people['person-murugan'] = { id:'person-murugan', name:'Murugan (Demo)', role:'owner', roles:['owner'], identityStatus:'confirmed', primaryPhone:'+91 90000 00003', alternatePhones:[], createdAt:timestamp, updatedAt:timestamp };
       database.entities.requirements['requirement-suresh'] = { id:'requirement-suresh', personId:'person-suresh', intent:'buy', propertyType:'land', locations:['Erode'], budgetMin:1800000, budgetMax:2500000, timing:'Within 30 days', preferences:['East facing','30-ft road'], sourceText:'Suresh needs an east-facing plot in Erode with minimum 30-ft road, budget 18 to 25 lakh.', createdAt:timestamp, updatedAt:timestamp };
-      database.entities.properties['property-murugan'] = { id:'property-murugan', ownerPersonId:'person-murugan', intent:'sale', propertyType:'land', locality:'Erode', price:2200000, size:{value:1200,unit:'sqft'}, attributes:['East facing','40-ft road','Negotiable'], sourceText:'Murugan owner has 1200 sqft east-facing land in Erode for 22 lakh. 40-ft road, negotiable.', createdAt:timestamp, updatedAt:timestamp };
+      database.entities.properties['property-murugan'] = { id:'property-murugan', ownerPersonId:'person-murugan', intent:'sale', propertyType:'land', locality:'Erode', price:2200000, priceBasis:'total', size:{value:1200,unit:'sqft'}, attributes:['East facing','40-ft road','Negotiable'], sourceText:'Murugan owner has 1200 sqft east-facing land in Erode for 22 lakh. 40-ft road, negotiable.', createdAt:timestamp, updatedAt:timestamp };
       save(database); return true;
     }
     return { create, get, list, update, remove, transact, migrateAndPersist, seedSynthetic, loadSnapshot: () => clone(load()) };

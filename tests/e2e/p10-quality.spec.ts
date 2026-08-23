@@ -54,7 +54,7 @@ test('P10 critical screens have names, focusable controls, visual baselines and 
 
     const audit = await page.evaluate(() => {
       const buttons = [...document.querySelectorAll('button:not([hidden])')] as HTMLButtonElement[];
-      const inputs = [...document.querySelectorAll('input:not([hidden]),textarea:not([hidden])')] as (HTMLInputElement|HTMLTextAreaElement)[];
+      const inputs = [...document.querySelectorAll('input:not([hidden]),textarea:not([hidden]),select:not([hidden])')] as (HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement)[];
       const unnamed = buttons.filter((button) => {
         const name = button.getAttribute('aria-label') || button.textContent || button.title;
         return !name.trim();
@@ -100,6 +100,22 @@ test('P10 critical screens have names, focusable controls, visual baselines and 
   await expect(focused).toBeVisible();
   const outline = await focused.evaluate((el) => getComputedStyle(el).outlineStyle);
   expect(outline).not.toBe('none');
+});
+
+test('P10 retains populated second-brain visual evidence on action-dense screens',async({page},testInfo)=>{
+  mkdirSync(artifactDir,{recursive:true}); const project=projectSlug(testInfo.project.name);
+  await page.goto('/#/home');
+  await page.evaluate(()=>{
+    const repo=(window as any).__PA_REPOSITORY__;
+    repo.seedSynthetic();
+    repo.create('followUps',{id:'visual-followup',dueAt:new Date(Date.now()+3600000).toISOString(),status:'open',title:'Confirm Murugan asking price',personId:'person-murugan',propertyId:'property-murugan'});
+    (window as any).PropertyAssistantMatching.sync(repo);
+  });
+  for(const route of ['home','requirements','properties','matches','people','followups']){
+    await page.goto(`/#/${route}`);
+    await expect(page.getByRole('heading').first()).toBeVisible();
+    await page.screenshot({path:`${artifactDir}/${project}-populated-${route}.png`,fullPage:true,animations:'disabled'});
+  }
 });
 
 test('P10 core local workflow remains usable after network is lost', async ({ page, context }) => {

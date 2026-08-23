@@ -1,10 +1,12 @@
 (function(){
 'use strict';
 const repo=window.__PA_REPOSITORY__;
-let draft={imageBlob:null,imageName:null,ocrText:'',phone:null,posterLocation:null,captureLocation:null,capturedAt:null};
+function freshDraft(){return {imageBlob:null,imageName:null,ocrText:'',phone:null,posterLocation:null,captureLocation:null,capturedAt:null,leadId:null};}
+let draft=freshDraft();
 function route(){return (location.hash.replace(/^#\/?/,'')||'').split('?')[0];}
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function renderPoster(){
+ draft=freshDraft();
  app.innerHTML=shell(`<section class="page"><p class="eyebrow">SCAN POSTER</p><h1>Scan Poster</h1><p class="lead">Take a photo or choose an image. Property Assistant reads it locally and prioritizes phone numbers.</p><label class="field"><span>Poster image</span><input type="file" accept="image/*" capture="environment" data-testid="poster-image" /></label><label class="field"><span>Poster text fallback</span><textarea rows="5" data-testid="poster-text" placeholder="If local OCR is unavailable, type or paste the visible poster text here."></textarea></label><div class="page-actions"><button class="button primary" type="button" data-testid="read-poster">Read poster locally</button><button class="button" type="button" data-testid="use-poster-text">Use typed poster text</button></div><p class="lead" data-testid="poster-status"></p></section>`,'');
  bindShell();
  document.querySelector('[data-testid="read-poster"]').addEventListener('click',readPoster);

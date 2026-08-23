@@ -58,10 +58,27 @@
     return Number.isFinite(min)&&Number.isFinite(max)&&min>0&&min<=max?{min,max}:null;
   }
 
+  function parsePriceBasis(text,intent='sale') {
+    const source=String(text || '');
+    if(/(?:\/|\bper\s+)(?:acre|acres)\b/i.test(source)) return 'per_acre';
+    if(/(?:\/|\bper\s+)(?:cent|cents)\b/i.test(source)) return 'per_cent';
+    if(/(?:\/|\bper\s+)(?:sq\.?\s*ft|sqft|square\s*feet)\b/i.test(source)) return 'per_sqft';
+    if(/(?:\/|\bper\s+)(?:month|monthly)\b/i.test(source) || intent==='rent') return 'per_month';
+    return 'total';
+  }
+
   function parseSize(text) {
-    const match=String(text || '').match(/\b(\d+(?:\.\d+)?)\s*(acre|acres|cent|cents|sq\.?\s*ft|sqft|square\s*feet)\b/i);
+    const source=String(text || '');
+    const range=source.match(/\b([\d,]+(?:\.\d+)?)\s*(?:-|–|—|to)\s*([\d,]+(?:\.\d+)?)\s*(acre|acres|cent|cents|sq\.?\s*ft|sqft|square\s*feet)\b/i);
+    if(range){
+      const minValue=Number(range[1].replaceAll(',','')); const maxValue=Number(range[2].replaceAll(',',''));
+      const rawUnit=range[3].toLowerCase().replace(/\s+/g,'');
+      const unit=rawUnit.startsWith('acre')?'acre':rawUnit.startsWith('cent')?'cent':'sqft';
+      if(Number.isFinite(minValue)&&Number.isFinite(maxValue)&&minValue>0&&minValue<=maxValue) return {minValue,maxValue,unit};
+    }
+    const match=source.match(/\b([\d,]+(?:\.\d+)?)\s*(acre|acres|cent|cents|sq\.?\s*ft|sqft|square\s*feet)\b/i);
     if(!match) return null;
-    const value=Number(match[1]);if(!Number.isFinite(value)||value<=0)return null;
+    const value=Number(match[1].replaceAll(',',''));if(!Number.isFinite(value)||value<=0)return null;
     const rawUnit=match[2].toLowerCase().replace(/\s+/g,'');
     const unit=rawUnit.startsWith('acre')?'acre':rawUnit.startsWith('cent')?'cent':'sqft';
     return { value, unit };
@@ -113,7 +130,32 @@
     const owner = text.match(/^\s*([A-Za-z][A-Za-z.'-]{1,30})\s+(?:owner|has|selling|sells)\b/i);
     if (owner) return owner[1];
     const trailingOwner=text.match(/\bowner\s+([A-Za-z][A-Za-z.'-]{1,30})\b/i);
-    if(trailingOwner) return trailingOwner[1];
+    if(trailingOwner && !new Set(['negotiable','direct','available','asking','price','says','solraru']).has(trailingOwner[1].toLowerCase())) return trailingOwner[1];
+    return null;
+  }
+
+  function extractActionName(text) {
+    const source=String(text || '');
+    const action=source.match(/^\s*(?:call|whatsapp|remind(?:\s+me)?(?:\s+to)?(?:\s+call)?|follow\s*up(?:\s+with)?)\s+([A-Za-z][A-Za-z.'-]{1,30})\b/i);
+    if(action && !/^(?:him|her|them|owner|customer)$/i.test(action[1])) return action[1];
+    const subject=source.match(/^\s*([A-Za-z][A-Za-z.'-]{1,30})\s+(?:rejected|visited|visiting|prefers|doesn'?t|does not|is not interested)\b/i);
+    return subject ? subject[1] : extractName(source);
+  }
+
+  function parseFollowUpTiming(text) {
+    const source=String(text || '');
+    if(/\btomorrow\b/i.test(source)) return 'Tomorrow';
+    if(/\btoday\b/i.test(source)) return 'Today';
+    const day=source.match(/\b(next\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i);
+    if(day) return `${day[1]?'Next ':''}${day[2][0].toUpperCase()}${day[2].slice(1).toLowerCase()}`;
+    return '';
+  }
+
+  function detectSpecialKind(text) {
+    const source=String(text || '');
+    if(/\b(?:price|asking\s+price)\s+(?:changed|change|updated|now|is now)\b/i.test(source) || /\bprice\s+change\s+to\b/i.test(source)) return 'property_update';
+    if(/^\s*(?:call|whatsapp|remind|follow\s*up)\b/i.test(source) || /\b(?:call|follow\s*up|visit|visiting|price confirmation)\b[\s\S]*\b(?:pending|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(source)) return 'followup';
+    if(/\b(?:rejected|not interested|visited|road (?:was |is )?too narrow|doesn'?t want|does not want|prefers?)\b/i.test(source)) return 'interaction';
     return null;
   }
 
@@ -136,10 +178,30 @@
     const moneyRange = parseMoneyRange(source);
     const amount = moneyRange?.max ?? parseMoney(source);
     const size = parseSize(source);
+    const specialKind=detectSpecialKind(source);
     const detected = detectIntentAndKind(source);
-    const name = extractName(source);
+    const name = specialKind ? extractActionName(source) : extractName(source);
     const preferences = parsePreferences(source);
     const timing = parseTiming(source);
+    if(specialKind==='property_update'){
+      const priceBasis=parsePriceBasis(source,'sale');
+      const uncertain=['targetProperty'];
+      if(amount==null) uncertain.push('price');
+      return {ok:true,source,kind:'property_update',confidence:amount==null?0.55:0.82,uncertain,person:{name:name||'',role:'owner',primaryPhone:phone||'',alternatePhones:[]},propertyUpdate:{price:amount,priceBasis,propertyType:propertyType||'',locality:locality||'',attributes:preferences}};
+    }
+    if(specialKind==='followup'){
+      const dueText=parseFollowUpTiming(source); const uncertain=[];
+      if(!name&&!phone) uncertain.push('targetPerson');
+      if(!dueText) uncertain.push('dueAt');
+      const channel=/\bwhatsapp\b/i.test(source)?'WhatsApp':/\bvisit(?:ing)?\b/i.test(source)?'Site visit':/\bprice confirmation\b/i.test(source)?'Price confirmation':'Call';
+      return {ok:true,source,kind:'followup',confidence:Math.max(0.45,1-uncertain.length*0.18),uncertain,person:{name:name||'',role:'other',primaryPhone:phone||'',alternatePhones:[]},followUp:{title:`${channel} ${name||'contact'}`,dueText,channel}};
+    }
+    if(specialKind==='interaction'){
+      const learned=[...preferences];
+      if(/\broad (?:was |is )?too narrow\b/i.test(source)&&!learned.some(value=>/ft road/i.test(value))) learned.push('Wider road required');
+      const uncertain=[]; if(!name&&!phone) uncertain.push('targetPerson');
+      return {ok:true,source,kind:'interaction',confidence:Math.max(0.5,1-uncertain.length*0.2),uncertain,person:{name:name||'',role:'other',primaryPhone:phone||'',alternatePhones:[]},interaction:{kind:'note',summary:source,learnedPreferences:[...new Set(learned)],propertyType:propertyType||'',locality:locality||''}};
+    }
     const uncertain = [];
     if (!locality) uncertain.push('locality');
     if (!propertyType) uncertain.push('propertyType');
@@ -155,14 +217,18 @@
       uncertain,
       person: { name:name || '', role:detected.role, primaryPhone:phone || '', alternatePhones:[] },
       requirement: detected.kind === 'requirement' ? { intent:detected.intent, propertyType:propertyType || '', locations:locality?[locality]:[], budgetMin:moneyRange?.min ?? null, budgetMax:amount, size, preferences, timing } : null,
-      property: detected.kind === 'property' ? { intent:detected.intent, propertyType:propertyType || '', locality:locality || '', price:amount, ownerPersonId:null, size, attributes:preferences } : null
+      property: detected.kind === 'property' ? { intent:detected.intent, propertyType:propertyType || '', locality:locality || '', price:amount, priceBasis:parsePriceBasis(source,detected.intent), ownerPersonId:null, size, attributes:preferences } : null
     };
   }
 
   function isExtraction(value) {
-    if (!(value && value.ok === true && ['requirement','property'].includes(value.kind) && Array.isArray(value.uncertain))) return false;
+    if (!(value && value.ok === true && ['requirement','property','property_update','followup','interaction'].includes(value.kind) && Array.isArray(value.uncertain))) return false;
     if (!value.person || typeof value.person !== 'object') return false;
-    return value.kind === 'requirement' ? Boolean(value.requirement && typeof value.requirement === 'object') : Boolean(value.property && typeof value.property === 'object');
+    if(value.kind==='requirement') return Boolean(value.requirement && typeof value.requirement === 'object');
+    if(value.kind==='property') return Boolean(value.property && typeof value.property === 'object');
+    if(value.kind==='property_update') return Boolean(value.propertyUpdate && typeof value.propertyUpdate === 'object');
+    if(value.kind==='followup') return Boolean(value.followUp && typeof value.followUp === 'object');
+    return Boolean(value.interaction && typeof value.interaction === 'object');
   }
 
   function createExtractor(modelAdapter = null) {
@@ -181,5 +247,5 @@
     };
   }
 
-  root.PropertyAssistantCapture = { parse, cleanPhone, extractPhone, parseMoney, parseMoneyRange, parseSize, parsePreferences, parseTiming, createExtractor };
+  root.PropertyAssistantCapture = { parse, cleanPhone, extractPhone, parseMoney, parseMoneyRange, parsePriceBasis, parseSize, parsePreferences, parseTiming, parseFollowUpTiming, createExtractor };
 })(globalThis);

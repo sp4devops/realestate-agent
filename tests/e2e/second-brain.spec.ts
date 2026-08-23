@@ -45,6 +45,53 @@ test('saved demand and supply appear as memory cards and an automatic match', as
   await expect(page.getByTestId('match-card')).toContainText('100%');
 });
 
+test('new memory persists matches immediately without visiting Matches first',async({page})=>{
+  await page.goto('/#/type');
+  await page.getByTestId('capture-text').fill('Subramani owner has 2100 sqft plot for sale in Perundurai asking 31 lakh');
+  await page.getByTestId('analyze-capture').click();
+  await page.getByTestId('save-capture').click();
+  await expect(page.getByTestId('property-title')).toContainText('land in Perundurai');
+
+  await page.goto('/#/type');
+  await page.getByTestId('capture-text').fill('Kumar wants plot in Perundurai, size 1500-2500 sqft, budget 25-35 lakh');
+  await page.getByTestId('analyze-capture').click();
+  await page.getByTestId('save-capture').click();
+  await expect(page.getByTestId('automatic-match-summary')).toContainText('1 possible match found immediately');
+  await expect(page.getByTestId('match-card')).toContainText('Kumar');
+  const count=await page.evaluate(()=>(window as any).__PA_REPOSITORY__.list('matches').length);
+  expect(count).toBe(1);
+});
+
+test('price changes, reminders and rejection learning update connected memory',async({page})=>{
+  await page.goto('/#/home');
+  await page.evaluate(()=>(window as any).__PA_REPOSITORY__.seedSynthetic());
+
+  await page.getByTestId('home-capture-text').fill('Price changed to 24 lakhs');
+  await page.getByTestId('home-review-save').click();
+  await expect(page.getByTestId('field-targetProperty')).toHaveValue('property-murugan');
+  await page.getByTestId('save-capture').click();
+  expect(await page.evaluate(()=>(window as any).__PA_REPOSITORY__.get('properties','property-murugan').price)).toBe(2400000);
+
+  await page.goto('/#/type');
+  await page.getByTestId('capture-text').fill('Call Suresh Tuesday');
+  await page.getByTestId('analyze-capture').click();
+  await page.getByTestId('field-targetPerson').selectOption('person-suresh');
+  await page.getByTestId('save-capture').click();
+  await expect(page.getByTestId('followup-list')).toContainText('Call Suresh');
+
+  await page.goto('/#/type');
+  await page.getByTestId('capture-text').fill('Suresh rejected this because road too narrow');
+  await page.getByTestId('analyze-capture').click();
+  await page.getByTestId('field-targetPerson').selectOption('person-suresh');
+  await page.getByTestId('save-capture').click();
+  const memory=await page.evaluate(()=>({
+    requirement:(window as any).__PA_REPOSITORY__.get('requirements','requirement-suresh'),
+    matches:(window as any).__PA_REPOSITORY__.list('matches')
+  }));
+  expect(memory.requirement.preferences).toContain('Wider road required');
+  expect(memory.matches[0].reasons.join(' ')).toContain('prior narrow-road rejection');
+});
+
 test('core second-brain surfaces change display language without rewriting memory', async ({ page }) => {
   await page.goto('/#/home');
   await page.evaluate(() => (window as any).__PA_REPOSITORY__.seedSynthetic());

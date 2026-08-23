@@ -60,3 +60,22 @@ test('OCR unavailable is a recoverable user-facing state',async({page})=>{
  await expect(page.getByTestId('poster-status')).toContainText('Local OCR is unavailable');
  await expect(page.getByTestId('poster-text')).toBeEditable();
 });
+
+test('a new poster flow cannot inherit the previous lead image or GPS evidence',async({page,context})=>{
+ await context.grantPermissions(['geolocation']); await context.setGeolocation({latitude:11.341,longitude:77.7172});
+ await page.addInitScript(()=>{(window as any).__PA_LOCAL_OCR__={recognize:async()=>({text:'House for rent. Location: Chennai. Contact 9123456789'})};});
+ await page.goto('/#/poster');
+ await page.getByTestId('poster-image').setInputFiles({name:'first.png',mimeType:'image/png',buffer:Buffer.from('first-image')});
+ await page.getByTestId('read-poster').click();
+ await page.getByTestId('get-capture-location').click();
+ await page.getByTestId('save-poster-lead').click();
+ await page.getByRole('button',{name:'Scan another poster'}).click();
+ await page.getByTestId('poster-text').fill('Plot in Erode. Contact 9345678901');
+ await page.getByTestId('use-poster-text').click();
+ await expect(page.getByText('No image attached; text-only lead.')).toBeVisible();
+ await expect(page.getByTestId('capture-location')).toContainText('Not captured');
+ await page.getByTestId('save-poster-lead').click();
+ const second=await page.evaluate(()=>Object.values((window as any).__PA_REPOSITORY__.loadSnapshot().entities.posterLeads).find((item:any)=>item.phone==='9345678901') as any);
+ expect(second.imageRef).toBe(null);
+ expect(second.captureLocation).toBe(null);
+});

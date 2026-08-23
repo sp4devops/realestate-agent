@@ -4,6 +4,7 @@ const repository = window.PropertyAssistantPersistence.createRepository(localSto
 let bootError = null;
 try {
   repository.migrateAndPersist();
+  window.PropertyAssistantMatching?.sync(repository);
 } catch (error) {
   bootError = error instanceof Error ? error.message : 'Local data could not be opened safely.';
 }
@@ -230,7 +231,19 @@ function formatMoney(value,monthly=false){
   else label=`₹${amount.toLocaleString('en-IN')}`;
   return monthly ? `${label} / month` : label;
 }
-function sizeLabel(size){ return size ? `${escapeHtml(size.value)} ${escapeHtml(size.unit)}` : 'Size not set'; }
+function sizeLabel(size){
+  if(!size) return 'Size not set';
+  if(size.value!=null) return `${escapeHtml(size.value)} ${escapeHtml(size.unit)}`;
+  if(size.minValue!=null&&size.maxValue!=null) return `${escapeHtml(size.minValue)}–${escapeHtml(size.maxValue)} ${escapeHtml(size.unit)}`;
+  return `${escapeHtml(size.minValue ?? size.maxValue)} ${escapeHtml(size.unit)}`;
+}
+function propertyPriceLabel(property){
+  if(property?.price==null)return 'Price not set';
+  const suffix={per_month:' / month',per_acre:' / acre',per_cent:' / cent',per_sqft:' / sqft'}[property.priceBasis] || (property.intent==='rent'?' / month':'');
+  const rate=`${formatMoney(property.price)}${suffix}`;
+  const total=window.PropertyAssistantMatching?.effectivePropertyPrice(property);
+  return property.priceBasis&&property.priceBasis.startsWith('per_')&&property.priceBasis!=='per_month'&&total!=null ? `${rate} · ${formatMoney(total)} total` : rate;
+}
 function propertyTitle(property){ return `${titleCase(property?.propertyType || 'Property')} in ${property?.locality || 'Location pending'}`; }
 function matchRecordId(requirementId,propertyId){ return `match-${requirementId}-${propertyId}`; }
 function requirementPerson(requirement){ return requirement ? repository.get('people',requirement.personId) : null; }
@@ -247,6 +260,13 @@ function matchContext(match){
 }
 function parsedSummary(parsed){
   if(!parsed?.ok) return [];
+  if(parsed.kind==='property_update') return [
+    {icon:'sparkles',label:'Property update'},
+    parsed.propertyUpdate?.price!=null?{icon:'sparkles',label:`New rate ${formatMoney(parsed.propertyUpdate.price)}`} : null,
+    parsed.propertyUpdate?.priceBasis?{icon:'properties',label:titleCase(parsed.propertyUpdate.priceBasis)}:null
+  ].filter(Boolean);
+  if(parsed.kind==='followup') return [{icon:'followups',label:'Follow-up'},{icon:'user',label:parsed.person?.name || 'Choose person'},{icon:'followups',label:parsed.followUp?.dueText || 'Choose time'}];
+  if(parsed.kind==='interaction') return [{icon:'sparkles',label:'Remember feedback'},{icon:'user',label:parsed.person?.name || 'Choose person'},...(parsed.interaction?.learnedPreferences || []).map(label=>({icon:'check',label}))];
   const record=parsed.kind==='requirement' ? parsed.requirement : parsed.property;
   const chips=[];
   chips.push({icon:'user',label:parsed.kind==='requirement' ? titleCase(parsed.person?.role || 'buyer') : 'Owner / Property'});
@@ -276,7 +296,7 @@ function renderHome(){
   const text=t();
   const copy=text.ui;
   const matches=rankedMatches().slice(0,2).map(matchContext).filter(item=>item.requirement&&item.property&&item.person);
-  const matchCards=matches.map(({match,property,person})=>`<article class="mini-property-card" data-testid="home-match-card"><div class="property-visual ${escapeHtml(property.propertyType)}">${icon(property.propertyType==='land'?'pin':'properties','property-visual-icon')}</div><div class="mini-property-copy"><div class="card-topline"><span class="match-pill">${match.score}% Match</span><button class="bookmark-button" type="button" data-open-match="${escapeHtml(matchRecordId(match.requirementId,match.propertyId))}" aria-label="Open match">${icon('arrow')}</button></div><strong>${escapeHtml(propertyTitle(property))}</strong><p>${icon('pin','inline-icon')}${escapeHtml(property.locality)}</p><b>${formatMoney(property.price,property.intent==='rent')}</b><small>${sizeLabel(property.size)} · for ${escapeHtml(person.name)}</small></div></article>`).join('');
+  const matchCards=matches.map(({match,property,person})=>`<article class="mini-property-card" data-testid="home-match-card"><div class="property-visual ${escapeHtml(property.propertyType)}">${icon(property.propertyType==='land'?'pin':'properties','property-visual-icon')}</div><div class="mini-property-copy"><div class="card-topline"><span class="match-pill">${match.score}% Match</span><button class="bookmark-button" type="button" data-open-match="${escapeHtml(matchRecordId(match.requirementId,match.propertyId))}" aria-label="Open match">${icon('arrow')}</button></div><strong>${escapeHtml(propertyTitle(property))}</strong><p>${icon('pin','inline-icon')}${escapeHtml(property.locality)}</p><b>${propertyPriceLabel(property)}</b><small>${sizeLabel(property.size)} · for ${escapeHtml(person.name)}</small></div></article>`).join('');
   const requirements=repository.list('requirements').sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,2);
   const followups=repository.list('followUps').filter(item=>item.status==='open').sort((a,b)=>new Date(a.dueAt)-new Date(b.dueAt)).slice(0,2);
   const activity=[
@@ -299,7 +319,7 @@ function renderRequirements(){
   const requirements=repository.list('requirements').sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
   const cards=requirements.map(requirement=>{
     const person=requirementPerson(requirement);
-    const role=person?.role==='tenant'?'tenant':'buyer';
+    const role=requirement.intent==='rent'||requirement.intent==='lease'?'tenant':'buyer';
     const related=matches.filter(match=>match.requirementId===requirement.id).sort((a,b)=>b.score-a.score);
     const interaction=repository.list('interactions').filter(item=>(item.personIds||[]).includes(person?.id)).sort((a,b)=>new Date(b.occurredAt)-new Date(a.occurredAt))[0];
     const note=interaction?.summary || requirement.sourceText || `${person?.name || 'This person'} needs ${requirement.propertyType || 'a property'} in ${requirement.locations?.join(' / ') || 'a location to confirm'}.`;
@@ -317,7 +337,7 @@ function renderProperties(){
     const owner=propertyOwner(property);
     const related=matches.filter(match=>match.propertyId===property.id);
     const attributeChips=(property.attributes || []).map(value=>`<span>${escapeHtml(value)}</span>`).join('');
-    return `<article class="memory-card property-memory-card" data-testid="property-card" data-intent="${escapeHtml(property.intent)}"><div class="property-card-layout"><div class="property-visual large ${escapeHtml(property.propertyType)}">${icon(property.propertyType==='land'?'pin':'properties','property-visual-icon')}</div><div class="property-card-copy"><div class="memory-card-head compact"><div><h2>${escapeHtml(propertyTitle(property))}</h2><p>${escapeHtml(owner?.name || 'Owner not linked')} · ${titleCase(property.intent)}</p></div><button class="more-button" type="button" data-property-id="${escapeHtml(property.id)}" aria-label="Open property">${icon('arrow')}</button></div><strong class="property-price">${formatMoney(property.price,property.intent==='rent')}</strong><p>${sizeLabel(property.size)} · ${escapeHtml(property.locality)}</p><div class="reason-chips"><span>${related.length} buyer match${related.length===1?'':'es'}</span>${attributeChips}<span>Stored locally</span></div></div></div></article>`;
+    return `<article class="memory-card property-memory-card" data-testid="property-card" data-intent="${escapeHtml(property.intent)}"><div class="property-card-layout"><div class="property-visual large ${escapeHtml(property.propertyType)}">${icon(property.propertyType==='land'?'pin':'properties','property-visual-icon')}</div><div class="property-card-copy"><div class="memory-card-head compact"><div><h2>${escapeHtml(propertyTitle(property))}</h2><p>${escapeHtml(owner?.name || 'Owner not linked')} · ${titleCase(property.intent)}</p></div><button class="more-button" type="button" data-property-id="${escapeHtml(property.id)}" aria-label="Open property">${icon('arrow')}</button></div><strong class="property-price">${propertyPriceLabel(property)}</strong><p>${sizeLabel(property.size)} · ${escapeHtml(property.locality)}</p><div class="reason-chips"><span>${related.length} buyer match${related.length===1?'':'es'}</span>${attributeChips}<span>Stored locally</span></div></div></div></article>`;
   }).join('');
   return shell(`<section class="screen-page"><div class="screen-heading"><div><h1>${copy.properties}</h1><p>${copy.propertiesHint}</p></div><button class="icon-button" type="button" data-route="type" aria-label="Add property">${icon('plus')}</button></div><div class="filter-tabs" role="group" aria-label="Property filters"><button class="filter-tab active" type="button" data-property-filter="all">${copy.all}</button><button class="filter-tab" type="button" data-property-filter="sale">${copy.sale}</button><button class="filter-tab" type="button" data-property-filter="rent">${copy.rent}</button><button class="filter-tab" type="button" data-property-filter="lease">${copy.lease}</button></div><div class="memory-list" data-testid="properties-list">${cards || `<div class="empty-state">${icon('properties')}<p>${copy.noProperties}</p><button class="button primary" type="button" data-route="type">${t().actions.type}</button></div>`}</div></section>`,'properties');
 }
@@ -328,7 +348,7 @@ function renderPeople(){
     const requirements=repository.list('requirements').filter(item=>item.personId===person.id).length;
     const properties=repository.list('properties').filter(item=>item.ownerPersonId===person.id).length;
     const notes=repository.list('interactions').filter(item=>(item.personIds||[]).includes(person.id)).length;
-    return `<article class="memory-card contact-card" data-testid="person-card"><span class="avatar">${initials(person.name)}</span><div><h2>${escapeHtml(person.name)}</h2><p>${titleCase(person.role)} · ${escapeHtml(person.primaryPhone)}</p><small>${requirements} requirement${requirements===1?'':'s'} · ${properties} propert${properties===1?'y':'ies'} · ${notes} remembered note${notes===1?'':'s'}</small></div><button type="button" class="button" data-person-id="${escapeHtml(person.id)}">${t().ui.open}</button></article>`;
+    return `<article class="memory-card contact-card" data-testid="person-card"><span class="avatar">${initials(person.name)}</span><div><h2>${escapeHtml(person.name)}</h2><p>${(person.roles || [person.role]).map(titleCase).join(' · ')} · ${escapeHtml(person.primaryPhone || 'Phone pending')}</p><small>${requirements} requirement${requirements===1?'':'s'} · ${properties} propert${properties===1?'y':'ies'} · ${notes} remembered note${notes===1?'':'s'}</small></div><button type="button" class="button" data-person-id="${escapeHtml(person.id)}">${t().ui.open}</button></article>`;
   }).join('');
   return shell(`<section class="screen-page"><div class="screen-heading"><div><h1>Contacts</h1><p>Owners, customers, builders and Property Advisors remembered locally.</p></div><button class="icon-button" type="button" data-route="type" aria-label="Add contact">${icon('plus')}</button></div><div class="memory-list" data-testid="people-list">${cards || `<div class="empty-state">${icon('user')}<h2>No contacts yet</h2><p>Capture a person naturally and their contact will appear here.</p><button class="button primary" type="button" data-route="type">${t().actions.type}</button></div>`}</div></section>`, '');
 }
@@ -350,19 +370,19 @@ function renderPerson(){
     ...properties.filter(item=>item.sourceText).map(item=>({date:item.createdAt,summary:item.sourceText}))
   ].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const history=memories.map(item=>`<li><span>${new Date(item.date).toLocaleDateString()}</span><p>${escapeHtml(item.summary)}</p></li>`).join('');
-  return shell(`<section class="screen-page detail-page"><div class="person-hero"><span class="avatar large">${initials(person.name)}</span><div><p class="eyebrow">PROPERTY MEMORY</p><h1 data-testid="person-name">${escapeHtml(person.name)}</h1><p>${titleCase(person.role)}</p></div></div><div class="detail-grid"><section class="detail-panel"><h2>Contact</h2><strong data-testid="primary-phone">${escapeHtml(person.primaryPhone)}</strong><p>Alternate phones</p><ul>${alternates}</ul></section><section class="detail-panel"><h2>Next action</h2>${followups[0]?`<strong>${escapeHtml(followups[0].title)}</strong><p>${new Date(followups[0].dueAt).toLocaleString()}</p><button class="button" type="button" data-route="followups">Open follow-up</button>`:'<p>No open follow-up.</p><button class="button" type="button" data-route="after-call">Add recap</button>'}</section></div>${requirements.length?`<section class="detail-panel"><h2>Requirements</h2>${requirementCards}</section>`:''}${properties.length?`<section class="detail-panel"><h2>Properties</h2>${propertyCards}</section>`:''}<section class="detail-panel"><div class="section-heading"><h2>What I remember</h2><button class="text-button" type="button" data-route="after-call">${icon('plus')} Add recap</button></div>${history?`<ol class="memory-timeline">${history}</ol>`:'<div class="empty-inline">No conversation history yet. Add a recap after the next call.</div>'}</section><div class="page-actions">${button('Back to Contacts','people')}</div></section>`, '');
+  return shell(`<section class="screen-page detail-page"><div class="person-hero"><span class="avatar large">${initials(person.name)}</span><div><p class="eyebrow">PROPERTY MEMORY</p><h1 data-testid="person-name">${escapeHtml(person.name)}</h1><p>${(person.roles || [person.role]).map(titleCase).join(' · ')}</p></div></div><div class="detail-grid"><section class="detail-panel"><h2>Contact</h2><strong data-testid="primary-phone">${escapeHtml(person.primaryPhone || 'Phone pending')}</strong><p>Alternate phones</p><ul>${alternates}</ul></section><section class="detail-panel"><h2>Next action</h2>${followups[0]?`<strong>${escapeHtml(followups[0].title)}</strong><p>${new Date(followups[0].dueAt).toLocaleString()}</p><button class="button" type="button" data-route="followups">Open follow-up</button>`:'<p>No open follow-up.</p><button class="button" type="button" data-route="after-call">Add recap</button>'}</section></div>${requirements.length?`<section class="detail-panel"><h2>Requirements</h2>${requirementCards}</section>`:''}${properties.length?`<section class="detail-panel"><h2>Properties</h2>${propertyCards}</section>`:''}<section class="detail-panel"><div class="section-heading"><h2>What I remember</h2><button class="text-button" type="button" data-route="after-call">${icon('plus')} Add recap</button></div>${history?`<ol class="memory-timeline">${history}</ol>`:'<div class="empty-inline">No conversation history yet. Add a recap after the next call.</div>'}</section><div class="page-actions">${button('Back to Contacts','people')}</div></section>`, '');
 }
 
 function renderProperty(){
   const id=routeParams().get('id') || '';
   const property=id ? repository.get('properties', id) : null;
   if(!property) return shell(`<section class="page"><h1>Property not found</h1><p class="lead">This local record no longer exists.</p>${button('Back to Home','home')}</section>`, '');
-  const size=property.size ? ` · ${escapeHtml(property.size.value)} ${escapeHtml(property.size.unit)}` : '';
+  const size=property.size ? ` · ${sizeLabel(property.size)}` : '';
   const owner=propertyOwner(property);
   const matches=rankedMatches().filter(item=>item.propertyId===property.id).map(matchContext);
   const buyerRows=matches.map(item=>`<button class="linked-memory-row" type="button" data-open-match="${escapeHtml(matchRecordId(item.match.requirementId,item.match.propertyId))}"><span class="match-score-small">${item.match.score}%</span><span><strong>${escapeHtml(item.person?.name || 'Buyer')}</strong><small>${escapeHtml(item.match.reasons.slice(1).join(' · '))}</small></span>${icon('arrow')}</button>`).join('');
   const attributes=(property.attributes || []).map(value=>`<span>${icon('check','inline-icon')}${escapeHtml(value)}</span>`).join('');
-  return shell(`<section class="screen-page detail-page"><div class="property-detail-hero"><div class="property-visual large ${escapeHtml(property.propertyType)}">${icon(property.propertyType==='land'?'pin':'properties','property-visual-icon')}</div><div><p class="eyebrow">AVAILABLE ${escapeHtml(property.intent).toUpperCase()}</p><h1 data-testid="property-title">${escapeHtml(property.propertyType)} in ${escapeHtml(property.locality)}</h1><strong class="property-price">${formatMoney(property.price,property.intent==='rent')}</strong><p>${titleCase(property.intent)}${size}</p></div></div><div class="detail-grid"><section class="detail-panel"><h2>Owner</h2>${owner?`<button class="linked-memory-row simple" type="button" data-person-id="${escapeHtml(owner.id)}"><span class="avatar">${initials(owner.name)}</span><span><strong>${escapeHtml(owner.name)}</strong><small>${escapeHtml(owner.primaryPhone)}</small></span>${icon('arrow')}</button>`:'<p>Owner not linked yet.</p>'}</section><section class="detail-panel"><h2>Memory status</h2><strong>Stored privately on this device</strong><p>Updated ${new Date(property.updatedAt || property.createdAt).toLocaleDateString()}</p></section></div>${attributes?`<section class="detail-panel"><h2>Property attributes</h2><div class="reason-chips">${attributes}</div></section>`:''}${property.sourceText?`<section class="detail-panel"><h2>Original capture</h2><p>${escapeHtml(property.sourceText)}</p></section>`:''}<section class="detail-panel"><div class="section-heading"><h2>Suitable people</h2><button class="text-button" type="button" data-route="matches">${t().ui.viewAll} ${icon('arrow')}</button></div>${buyerRows || '<div class="empty-inline">No suitable requirements yet.</div>'}</section><div class="page-actions">${button('View all properties','properties')}${button('View Matches','matches','button primary')}</div></section>`, 'properties');
+  return shell(`<section class="screen-page detail-page"><div class="property-detail-hero"><div class="property-visual large ${escapeHtml(property.propertyType)}">${icon(property.propertyType==='land'?'pin':'properties','property-visual-icon')}</div><div><p class="eyebrow">AVAILABLE ${escapeHtml(property.intent).toUpperCase()}</p><h1 data-testid="property-title">${escapeHtml(property.propertyType)} in ${escapeHtml(property.locality)}</h1><strong class="property-price">${propertyPriceLabel(property)}</strong><p>${titleCase(property.intent)}${size}</p></div></div><div class="detail-grid"><section class="detail-panel"><h2>Owner</h2>${owner?`<button class="linked-memory-row simple" type="button" data-person-id="${escapeHtml(owner.id)}"><span class="avatar">${initials(owner.name)}</span><span><strong>${escapeHtml(owner.name)}</strong><small>${escapeHtml(owner.primaryPhone || 'Phone pending')}</small></span>${icon('arrow')}</button>`:'<p>Owner not linked yet.</p>'}</section><section class="detail-panel"><h2>Memory status</h2><strong>Stored privately on this device</strong><p>Updated ${new Date(property.updatedAt || property.createdAt).toLocaleDateString()}</p></section></div>${attributes?`<section class="detail-panel"><h2>Property attributes</h2><div class="reason-chips">${attributes}</div></section>`:''}${property.sourceText?`<section class="detail-panel"><h2>Original capture</h2><p>${escapeHtml(property.sourceText)}</p></section>`:''}<section class="detail-panel"><div class="section-heading"><h2>Suitable people</h2><button class="text-button" type="button" data-route="matches">${t().ui.viewAll} ${icon('arrow')}</button></div>${buyerRows || '<div class="empty-inline">No suitable requirements yet.</div>'}</section><div class="page-actions">${button('View all properties','properties')}${button('View Matches','matches','button primary')}</div></section>`, 'properties');
 }
 
 function renderLanguage(){
@@ -473,5 +493,5 @@ document.addEventListener('click',event=>{
   const languageButton=event.target.closest?.('[data-quick-language]');
   if(languageButton) setDisplayLanguage(languageButton.dataset.quickLanguage);
 });
-window.addEventListener('hashchange',render);
+window.addEventListener('hashchange',()=>{ window.scrollTo(0,0); render(); });
 window.addEventListener('DOMContentLoaded',()=>{ render(); updateKeyboardState(); });

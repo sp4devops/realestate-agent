@@ -52,3 +52,49 @@ test('invalid reviewed buyer details do not leave an orphan person', async ({ pa
   const orphanCount = await page.evaluate(() => window.__PA_REPOSITORY__.list('people').filter(person => person.name === 'Rollback Demo').length);
   expect(orphanCount).toBe(0);
 });
+
+test('phone-less requirement is remembered as a provisional contact',async({page})=>{
+  await page.goto('/#/type');
+  await page.getByTestId('capture-text').fill('Ramesh-ku Erode railway station pakkathula 2BHK rent venum. Budget 15,000. Next month move pannuvaaru.');
+  await page.getByTestId('analyze-capture').click();
+  await expect(page.getByTestId('field-primaryPhone')).toHaveValue('');
+  await page.getByTestId('save-capture').click();
+  await expect(page.getByTestId('person-name')).toHaveText('Ramesh');
+  await expect(page.getByTestId('primary-phone')).toHaveText('Phone pending');
+  const saved=await page.evaluate(()=>{
+    const person=(window as any).__PA_REPOSITORY__.list('people').find((item:any)=>item.name==='Ramesh');
+    const requirement=(window as any).__PA_REPOSITORY__.list('requirements').find((item:any)=>item.personId===person?.id);
+    return {person,requirement};
+  });
+  expect(saved.person.identityStatus).toBe('phone_pending');
+  expect(saved.requirement.budgetMax).toBe(15000);
+
+  await page.goto('/#/type');
+  await page.getByTestId('capture-text').fill('Ramesh wants 2BHK rent in Erode Railway Station budget 16k phone 98765 40009');
+  await page.getByTestId('analyze-capture').click();
+  await page.getByTestId('save-capture').click();
+  const enriched=await page.evaluate(()=>({
+    people:(window as any).__PA_REPOSITORY__.list('people').filter((item:any)=>item.name==='Ramesh'),
+    requirements:(window as any).__PA_REPOSITORY__.list('requirements')
+  }));
+  expect(enriched.people).toHaveLength(1);
+  expect(enriched.people[0]).toMatchObject({primaryPhone:'+91 98765 40009',identityStatus:'confirmed'});
+  expect(enriched.requirements).toHaveLength(2);
+});
+
+test('phone-less owner remains linked and a per-acre rate is not stored as a total',async({page})=>{
+  await page.goto('/#/type');
+  await page.getByTestId('capture-text').fill('2 acre land available near Chennimalai, ₹55 lakh/acre, owner Subramani, negotiable.');
+  await page.getByTestId('analyze-capture').click();
+  await expect(page.getByTestId('field-name')).toHaveValue('Subramani');
+  await expect(page.getByTestId('field-priceBasis')).toHaveValue('per_acre');
+  await page.getByTestId('save-capture').click();
+  await expect(page.getByTestId('property-title')).toContainText('land in Chennimalai');
+  const saved=await page.evaluate(()=>{
+    const property=(window as any).__PA_REPOSITORY__.list('properties')[0];
+    const owner=(window as any).__PA_REPOSITORY__.get('people',property.ownerPersonId);
+    return {property,owner};
+  });
+  expect(saved.owner).toMatchObject({name:'Subramani',primaryPhone:'',identityStatus:'phone_pending'});
+  expect(saved.property).toMatchObject({price:5500000,priceBasis:'per_acre',size:{value:2,unit:'acre'}});
+});
