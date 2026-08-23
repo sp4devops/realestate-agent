@@ -78,6 +78,18 @@ test('edits made while GPS resolves are retained when the location arrives',asyn
  await expect(page.getByTestId('poster-review-text')).toHaveValue('Changed while GPS was loading');
 });
 
+test('GPS completion does not redraw poster review after navigation away',async({page})=>{
+ await page.addInitScript(()=>{Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition:(success:(position:any)=>void)=>setTimeout(()=>success({coords:{latitude:11.341,longitude:77.7172}}),150)}});});
+ await page.goto('/#/poster');
+ await page.getByTestId('poster-text').fill('Land in Erode. Contact 9876543210');
+ await page.getByTestId('use-poster-text').click();
+ await page.getByTestId('get-capture-location').click();
+ await page.goto('/#/people');
+ await page.waitForTimeout(250);
+ await expect(page).toHaveURL(/#\/people$/);
+ await expect(page.getByRole('heading',{name:'People'})).toBeVisible();
+});
+
 test('typed fallback keeps a selected poster image with the saved lead',async({page})=>{
  await page.goto('/#/poster');
  await page.getByTestId('poster-image').setInputFiles({name:'typed-fallback.png',mimeType:'image/png',buffer:Buffer.from('typed-image')});
