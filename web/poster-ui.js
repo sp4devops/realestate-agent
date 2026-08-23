@@ -50,11 +50,13 @@ function renderReview(){
 function captureGpsOnce(){
  const status=document.querySelector('[data-testid="poster-review-status"]');
  if(!navigator.geolocation){status.textContent='Location is unavailable. You can save without GPS.';return;}
- draft.phone=document.querySelector('[data-testid="poster-phone"]').value;
- draft.posterLocation=document.querySelector('[data-testid="poster-location"]').value.trim()||null;
- draft.ocrText=document.querySelector('[data-testid="poster-review-text"]').value;
+ syncReviewFieldsIntoDraft();
  status.textContent='Getting location once…';
- navigator.geolocation.getCurrentPosition(pos=>{draft.captureLocation=JSON.stringify({lat:Number(pos.coords.latitude.toFixed(6)),lng:Number(pos.coords.longitude.toFixed(6))});renderReview();},()=>{status.textContent='Location permission was not available. You can save without GPS.';},{enableHighAccuracy:false,maximumAge:0,timeout:5000});
+ navigator.geolocation.getCurrentPosition(pos=>{syncReviewFieldsIntoDraft();draft.captureLocation=JSON.stringify({lat:Number(pos.coords.latitude.toFixed(6)),lng:Number(pos.coords.longitude.toFixed(6))});renderReview();},()=>{status.textContent='Location permission was not available. You can save without GPS.';},{enableHighAccuracy:false,maximumAge:0,timeout:5000});
+}
+function syncReviewFieldsIntoDraft(){
+ const phone=document.querySelector('[data-testid="poster-phone"]');const location=document.querySelector('[data-testid="poster-location"]');const text=document.querySelector('[data-testid="poster-review-text"]');
+ if(phone)draft.phone=phone.value;if(location)draft.posterLocation=location.value.trim()||null;if(text)draft.ocrText=text.value;
 }
 async function saveLead(){
  const status=document.querySelector('[data-testid="poster-review-status"]'); const phone=document.querySelector('[data-testid="poster-phone"]').value.replace(/\D/g,'');

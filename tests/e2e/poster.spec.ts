@@ -63,6 +63,21 @@ test('one-shot GPS preserves corrected poster phone, area and text through save'
  expect(lead.captureLocation).toContain('11.341');
 });
 
+test('edits made while GPS resolves are retained when the location arrives',async({page})=>{
+ await page.addInitScript(()=>{Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition:(success:(position:any)=>void)=>setTimeout(()=>success({coords:{latitude:11.341,longitude:77.7172}}),150)}});});
+ await page.goto('/#/poster');
+ await page.getByTestId('poster-text').fill('Land in Erode. Contact 9876543210');
+ await page.getByTestId('use-poster-text').click();
+ await page.getByTestId('get-capture-location').click();
+ await page.getByTestId('poster-phone').fill('9345678901');
+ await page.getByTestId('poster-location').fill('Perundurai');
+ await page.getByTestId('poster-review-text').fill('Changed while GPS was loading');
+ await expect(page.getByTestId('capture-location')).toContainText('11.341');
+ await expect(page.getByTestId('poster-phone')).toHaveValue('9345678901');
+ await expect(page.getByTestId('poster-location')).toHaveValue('Perundurai');
+ await expect(page.getByTestId('poster-review-text')).toHaveValue('Changed while GPS was loading');
+});
+
 test('typed fallback keeps a selected poster image with the saved lead',async({page})=>{
  await page.goto('/#/poster');
  await page.getByTestId('poster-image').setInputFiles({name:'typed-fallback.png',mimeType:'image/png',buffer:Buffer.from('typed-image')});
