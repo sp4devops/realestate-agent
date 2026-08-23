@@ -66,7 +66,7 @@ test('display-language changes UI while structured memory remains unchanged', as
   const before=await page.evaluate(()=>JSON.stringify((window as any).__PA_REPOSITORY__.loadSnapshot()));
   await page.getByTestId('display-language-options').getByRole('button',{name:/தமிழ்/}).click();
   await page.goto('/#/home');
-  await expect(page.getByRole('heading',{name:'இன்றைய வாய்ப்புகள்'})).toBeVisible();
+  await expect(page.getByTestId('home-heading')).toContainText('வணக்கம்');
   const after=await page.evaluate(()=>JSON.stringify((window as any).__PA_REPOSITORY__.loadSnapshot()));
   expect(after).toBe(before);
 });
