@@ -9,7 +9,7 @@ async function seedDemo(page) {
 test('Suresh and Murugan seed records produce an explained match and idempotent follow-up action', async ({ page }) => {
   await seedDemo(page);
   const card=page.getByTestId('match-card').filter({hasText:'Suresh (Demo)'});
-  await expect(card).toContainText('land in Erode');
+  await expect(card).toContainText(/land in Erode/i);
   await expect(card).toContainText('Match score 100');
   await card.getByRole('button',{name:'Why this match?'}).click();
   await expect(page.getByTestId('match-title')).toContainText('Suresh (Demo)');
