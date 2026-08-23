@@ -57,6 +57,7 @@ test('one-shot GPS preserves corrected poster phone, area and text through save'
  await expect(page.getByTestId('poster-location')).toHaveValue('Perundurai');
  await expect(page.getByTestId('poster-review-text')).toHaveValue('Corrected land poster in Perundurai. Call 9345678901');
  await page.getByTestId('save-poster-lead').click();
+ await expect(page.getByRole('heading',{name:'Poster lead'})).toBeVisible();
  const lead=await page.evaluate(()=>Object.values((window as any).__PA_REPOSITORY__.loadSnapshot().entities.posterLeads).find((item:any)=>item.phone==='9345678901') as any);
  expect(lead).toMatchObject({phone:'9345678901',posterLocation:'Perundurai',ocrText:'Corrected land poster in Perundurai. Call 9345678901'});
  expect(lead.captureLocation).toContain('11.341');
