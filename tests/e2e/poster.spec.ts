@@ -84,7 +84,8 @@ test('GPS completion does not redraw poster review after navigation away',async(
  await page.getByTestId('poster-text').fill('Land in Erode. Contact 9876543210');
  await page.getByTestId('use-poster-text').click();
  await page.getByTestId('get-capture-location').click();
- await page.goto('/#/people');
+ await page.evaluate(()=>{location.hash='#/people';});
+ await expect(page.getByRole('heading',{name:'People'})).toBeVisible();
  await page.waitForTimeout(250);
  await expect(page).toHaveURL(/#\/people$/);
  await expect(page.getByRole('heading',{name:'People'})).toBeVisible();
