@@ -27,6 +27,7 @@ test('Android poster location bridge is one-shot capable without broad app permi
 });
 
 test('Android release bundles an offline OCR engine and connects it to the web adapter',()=>{
+ assert.match(build,/org\.jetbrains\.kotlin:kotlin-bom:1\.8\.22/);
  assert.match(build,/com\.google\.mlkit:text-recognition:16\.0\.1/);
  assert.match(activity,/recognizePoster/);
  assert.match(activity,/TextRecognition\.getClient\(TextRecognizerOptions\.DEFAULT_OPTIONS\)/);
