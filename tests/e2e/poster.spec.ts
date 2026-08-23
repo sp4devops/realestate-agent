@@ -32,15 +32,17 @@ test('OCR-confused phone digits are recovered with an explicit review warning',a
  await expect(page.getByTestId('poster-phone')).not.toHaveAttribute('aria-describedby');
 });
 
-test('ambiguous screenshot OCR stays blank instead of inventing a phone number',async({page})=>{
- await page.addInitScript(()=>{(window as any).__PA_LOCAL_OCR__={recognize:async()=>({text:'LAND FOR SALE\nHighway\nSo123-456-789'})};});
- await page.goto('/#/poster');
- await page.getByTestId('poster-image').setInputFiles({name:'ambiguous-poster.png',mimeType:'image/png',buffer:Buffer.from('ambiguous-image')});
- await page.getByTestId('read-poster').click();
- await expect(page.getByTestId('poster-phone')).toHaveValue('');
- await expect(page.getByTestId('poster-phone-warning')).toHaveCount(0);
- await expect(page.getByTestId('poster-review-text')).toContainText('So123-456-789');
-});
+for(const noisyPhone of ['So123-456-789','90123-456-789']){
+ test(`ambiguous screenshot OCR ${noisyPhone} stays blank instead of inventing a phone number`,async({page})=>{
+  await page.addInitScript(value=>{(window as any).__PA_LOCAL_OCR__={recognize:async()=>({text:`LAND FOR SALE\nHighway\n${value}`})};},noisyPhone);
+  await page.goto('/#/poster');
+  await page.getByTestId('poster-image').setInputFiles({name:'ambiguous-poster.png',mimeType:'image/png',buffer:Buffer.from('ambiguous-image')});
+  await page.getByTestId('read-poster').click();
+  await expect(page.getByTestId('poster-phone')).toHaveValue('');
+  await expect(page.getByTestId('poster-phone-warning')).toHaveCount(0);
+  await expect(page.getByTestId('poster-review-text')).toContainText(noisyPhone);
+ });
+}
 
 test('local OCR adapter preserves original image outside domain storage and keeps poster place separate from one-shot GPS',async({page,context})=>{
  await context.grantPermissions(['geolocation']); await context.setGeolocation({latitude:11.3410,longitude:77.7172});

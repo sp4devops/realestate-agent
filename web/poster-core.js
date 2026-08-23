@@ -3,6 +3,7 @@
 const KNOWN_PLACES=['Erode','Coimbatore','Chennai','Salem','Madurai','Trichy','Tiruppur'];
 function normalizeText(value){return String(value||'').replace(/\r/g,'').replace(/[ \t]+/g,' ').trim();}
 const OCR_DIGIT_OPTIONS={O:['0'],o:['0'],Q:['0'],D:['0'],I:['1'],i:['1'],l:['1'],L:['1'],Z:['2'],z:['2'],S:['5','9'],s:['5','9'],G:['6'],B:['8']};
+const PHONE_SEPARATORS='[\\s().\\-/+]*';
 function normalizeMobile(value){
  let digits=String(value||'').replace(/\D/g,'');
  if(digits.length===12&&digits.startsWith('91'))digits=digits.slice(2);
@@ -26,9 +27,13 @@ function recoverOcrPhone(line){
  }
  return candidates.size===1?[...candidates][0]:null;
 }
+function strictPhoneCandidates(text){
+ const pattern=new RegExp(`(?:^|[^0-9])((?:(?:\\+?91|0)${PHONE_SEPARATORS})?[6-9]\\d(?:${PHONE_SEPARATORS}\\d){8})(?!${PHONE_SEPARATORS}\\d)`,'g');
+ return [...String(text||'').matchAll(pattern)].map(match=>match[1]);
+}
 function extractPhones(text){
  const normalized=normalizeText(text);
- const matches=normalized.match(/(?:\+?91[\s().\-/+]*)?[6-9]\d(?:[\s().\-/+]*\d){8}/g)||[];
+ const matches=strictPhoneCandidates(normalized);
  const seen=new Set();
  const strict=matches.map(normalizeMobile).filter(value=>{if(!value||seen.has(value))return false;seen.add(value);return true;});
  if(strict.length)return strict;
@@ -43,7 +48,7 @@ function extractPosterLocation(text){
  return explicit?explicit[1].trim():null;
 }
 function extract(text){
- const normalized=normalizeText(text),phones=extractPhones(normalized),strictPhones=(normalized.match(/(?:\+?91[\s().\-/+]*)?[6-9]\d(?:[\s().\-/+]*\d){8}/g)||[]).map(normalizeMobile).filter(Boolean);
+ const normalized=normalizeText(text),phones=extractPhones(normalized),strictPhones=strictPhoneCandidates(normalized).map(normalizeMobile).filter(Boolean);
  return {text:normalized,phones,primaryPhone:phones[0]||null,phoneNeedsReview:Boolean(phones.length&&!strictPhones.includes(phones[0])),posterLocation:extractPosterLocation(normalized)};
 }
 const nativeRequests=new Map();
@@ -87,5 +92,5 @@ function createOcrService(){
    }catch(error){const detail=String(error?.message || 'Poster reading failed locally.').trim();return {ok:false,error:`${detail} You can type the poster text and continue.`};}
  }};
 }
-root.PropertyAssistantPoster={normalizeText,normalizeMobile,recoverOcrPhone,extractPhones,extractPosterLocation,extract,prepareImageDataUrl,recognizeWithAndroid,createOcrService};
+root.PropertyAssistantPoster={normalizeText,normalizeMobile,recoverOcrPhone,strictPhoneCandidates,extractPhones,extractPosterLocation,extract,prepareImageDataUrl,recognizeWithAndroid,createOcrService};
 })(globalThis);

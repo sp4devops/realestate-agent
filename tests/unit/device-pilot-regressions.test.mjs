@@ -32,6 +32,7 @@ test('Android shell uses secure local asset origin, navigation lock and system-b
   assert.doesNotMatch(mainActivity, /android\.graphics\.Insets|toPlatformInsets\(/);
   assert.match(qualityWorkflow, /lintDebug/);
   assert.match(manifest, /windowSoftInputMode="adjustResize"/);
+  assert.match(androidStyles, /statusBarColor">@android:color\/transparent</);
   assert.match(androidStyles, /windowLightStatusBar">true</);
 });
 

@@ -11,6 +11,7 @@ test('phone-first extraction normalizes Indian mobile numbers and preserves orde
 test('phone-first extraction accepts common poster punctuation',()=>{
  assert.deepEqual(extractPhones('Contact: (98765) 43210'),['9876543210']);
  assert.deepEqual(extractPhones('Mobile 98765.43210'),['9876543210']);
+ assert.deepEqual(extractPhones('Call 09876543210'),['9876543210']);
 });
 
 test('OCR-confused phone characters are recovered only when one valid number is unambiguous',()=>{
@@ -20,6 +21,11 @@ test('OCR-confused phone characters are recovered only when one valid number is 
  assert.equal(recovered.phoneNeedsReview,true);
  assert.equal(recoverOcrPhone('So123-456-789'),null);
  assert.equal(recoverOcrPhone('SALE S0123-456-789'),null);
+ for(const value of ['90123-456-789','90123456789']){
+  const rejected=extract(value);
+  assert.equal(rejected.primaryPhone,null);
+  assert.equal(rejected.phoneNeedsReview,false);
+ }
 });
 
 test('poster location extraction stays separate from capture GPS',()=>{
