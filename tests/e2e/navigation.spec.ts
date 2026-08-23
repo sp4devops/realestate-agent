@@ -27,7 +27,7 @@ test('all approved shell routes render, including dynamic persistence/capture/ma
   await expect(page.getByRole('heading', { name: /Property Advisor/ })).toBeVisible();
   for (const [route, heading] of requiredStaticRoutes) {
     await page.goto(`/#/${route}`);
-    await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: heading, exact: true, level: 1 })).toBeVisible();
   }
 
   await seedDemo(page);
@@ -63,7 +63,7 @@ test('primary shell navigation is wired with no dead primary controls', async ({
   await expect(page.getByRole('heading', { name: /Property Advisor/ })).toBeVisible();
   for (const [testId, heading] of [['nav-requirements','Requirements'],['nav-properties','Properties'],['nav-matches','Matches'],['nav-followups','Follow-ups']]) {
     await page.getByTestId(testId).click();
-    await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+    await expect(page.getByRole('heading', { name: heading, exact: true, level: 1 })).toBeVisible();
   }
   await page.getByTestId('nav-home').click();
   await page.getByTestId('speak-save').click();
