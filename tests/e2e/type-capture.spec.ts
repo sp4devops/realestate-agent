@@ -84,6 +84,9 @@ test('phone-less requirement is remembered as a provisional contact',async({page
   await page.goto('/#/type');
   await page.getByTestId('capture-text').fill('Ramesh wants 2BHK rent in Erode Railway Station budget 16k phone 98765 40009');
   await page.getByTestId('analyze-capture').click();
+  await expect(page.getByTestId('identity-resolution')).toContainText('A saved person may match');
+  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
+  await page.getByTestId('field-targetPerson').selectOption(saved.person.id);
   await page.getByTestId('save-capture').click();
   const enriched=await page.evaluate(()=>({
     people:(window as any).__PA_REPOSITORY__.list('people').filter((item:any)=>item.name==='Ramesh'),
