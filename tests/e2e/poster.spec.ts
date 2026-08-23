@@ -23,7 +23,23 @@ test('OCR-confused phone digits are recovered with an explicit review warning',a
  await page.getByTestId('poster-image').setInputFiles({name:'noisy-poster.png',mimeType:'image/png',buffer:Buffer.from('noisy-image')});
  await page.getByTestId('read-poster').click();
  await expect(page.getByTestId('poster-phone')).toHaveValue('9876543210');
- await expect(page.getByTestId('poster-phone-warning')).toContainText('Check this number');
+ await expect(page.getByTestId('poster-phone-warning')).toContainText('Compare the number');
+ await expect(page.getByTestId('poster-phone')).toHaveAttribute('aria-describedby','poster-phone-warning');
+ await page.getByTestId('save-poster-lead').click();
+ await expect(page.getByTestId('poster-review-status')).toContainText('Confirm that the recovered phone number');
+ await page.getByTestId('confirm-poster-phone').click();
+ await expect(page.getByTestId('poster-phone-warning')).toHaveCount(0);
+ await expect(page.getByTestId('poster-phone')).not.toHaveAttribute('aria-describedby');
+});
+
+test('ambiguous screenshot OCR stays blank instead of inventing a phone number',async({page})=>{
+ await page.addInitScript(()=>{(window as any).__PA_LOCAL_OCR__={recognize:async()=>({text:'LAND FOR SALE\nHighway\nSo123-456-789'})};});
+ await page.goto('/#/poster');
+ await page.getByTestId('poster-image').setInputFiles({name:'ambiguous-poster.png',mimeType:'image/png',buffer:Buffer.from('ambiguous-image')});
+ await page.getByTestId('read-poster').click();
+ await expect(page.getByTestId('poster-phone')).toHaveValue('');
+ await expect(page.getByTestId('poster-phone-warning')).toHaveCount(0);
+ await expect(page.getByTestId('poster-review-text')).toContainText('So123-456-789');
 });
 
 test('local OCR adapter preserves original image outside domain storage and keeps poster place separate from one-shot GPS',async({page,context})=>{

@@ -33,11 +33,12 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.webkit.WebViewAssetLoader;
 
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
-import com.google.android.gms.tasks.Tasks;
 
 import org.json.JSONObject;
 
@@ -46,9 +47,16 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
 public final class MainActivity extends Activity {
+  private static final class OcrPassTimeoutException extends Exception {
+    OcrPassTimeoutException() {
+      super("Poster reading timed out. Retake it or type the text.");
+    }
+  }
+
   private static final int POSTER_MAX_DIMENSION = 2048;
   private static final long POSTER_MAX_PIXELS = 4_000_000L;
   private static final long POSTER_OCR_PASS_TIMEOUT_SECONDS = 12L;
@@ -239,12 +247,20 @@ public final class MainActivity extends Activity {
         TextRecognizer recognizer = getPosterTextRecognizer();
         if (recognizer == null) return;
 
-        String text = recognizePosterText(recognizer, bitmap);
+        String text;
+        try {
+          text = recognizePosterText(recognizer, bitmap);
+        } catch (OcrPassTimeoutException error) {
+          bitmap = null;
+          throw error;
+        }
         if (!containsIndianMobile(text)) {
           enhancedBitmap = enhancePosterForOcr(bitmap);
           try {
             String enhancedText = recognizePosterText(recognizer, enhancedBitmap);
             if (containsIndianMobile(enhancedText) || text.isEmpty()) text = enhancedText;
+          } catch (OcrPassTimeoutException ignored) {
+            enhancedBitmap = null;
           } catch (Exception ignored) {
             // The original pass is still useful review text when the optional enhancement pass fails.
           }
@@ -262,11 +278,16 @@ public final class MainActivity extends Activity {
   }
 
   private static String recognizePosterText(TextRecognizer recognizer, Bitmap bitmap) throws Exception {
-    String text = Tasks.await(
-        recognizer.process(InputImage.fromBitmap(bitmap, 0)),
-        POSTER_OCR_PASS_TIMEOUT_SECONDS,
-        TimeUnit.SECONDS).getText();
-    return text == null ? "" : text.trim();
+    Task<com.google.mlkit.vision.text.Text> task = recognizer.process(InputImage.fromBitmap(bitmap, 0));
+    try {
+      String text = Tasks.await(task, POSTER_OCR_PASS_TIMEOUT_SECONDS, TimeUnit.SECONDS).getText();
+      return text == null ? "" : text.trim();
+    } catch (TimeoutException error) {
+      task.addOnCompleteListener(ignored -> {
+        if (!bitmap.isRecycled()) bitmap.recycle();
+      });
+      throw new OcrPassTimeoutException();
+    }
   }
 
   private static boolean containsIndianMobile(String text) {

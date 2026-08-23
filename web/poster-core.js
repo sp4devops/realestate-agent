@@ -23,7 +23,6 @@ function recoverOcrPhone(line){
  const candidates=new Set();
  for(const variant of variants){
   const direct=normalizeMobile(variant);if(direct)candidates.add(direct);
-  if(variant.length===11){for(let index=0;index<=1;index+=1){const candidate=variant.slice(index,index+10);if(/^[6-9]\d{9}$/.test(candidate))candidates.add(candidate);}}
  }
  return candidates.size===1?[...candidates][0]:null;
 }

@@ -12,6 +12,8 @@ function renderPoster(){
  ocrGeneration+=1;clearPreview();
  draft=freshDraft();
  app.innerHTML=shell(`<section class="page"><p class="eyebrow">SCAN POSTER</p><h1>Scan Poster</h1><p class="lead">Take a clear, straight photo with the poster filling the frame. Property Assistant reads English text and phone numbers privately on this device.</p><label class="field"><span>Poster image</span><input type="file" accept="image/*" capture="environment" data-testid="poster-image" /></label><label class="field"><span>Poster text fallback</span><textarea rows="5" data-testid="poster-text" placeholder="If the photo is unclear, type or paste the visible poster text here."></textarea></label><div class="page-actions"><button class="button primary" type="button" data-testid="read-poster">Read poster locally</button><button class="button" type="button" data-testid="use-poster-text">Use typed poster text</button></div><p class="lead" data-testid="poster-status"></p></section>`,'');
+ document.querySelector('[data-testid="poster-status"]')?.setAttribute('role','status');
+ document.querySelector('[data-testid="poster-status"]')?.setAttribute('aria-live','polite');
  bindShell();
  document.querySelector('[data-testid="read-poster"]').addEventListener('click',readPoster);
  document.querySelector('[data-testid="use-poster-text"]').addEventListener('click',useTypedText);
@@ -42,9 +44,20 @@ function renderReview(){
  clearPreview();if(draft.imageBlob)previewUrl=URL.createObjectURL(draft.imageBlob);
  const preview=previewUrl?`<img class="poster-preview" data-testid="poster-preview" src="${esc(previewUrl)}" alt="Selected poster to compare with recognized text" />`:'';
  app.innerHTML=shell(`<section class="page"><p class="eyebrow">REVIEW POSTER</p><h1>Poster review</h1><p class="lead">Confirm the extracted details before saving. Poster location and photo GPS stay separate.</p>${preview}<label class="field"><span>Phone number</span><input data-testid="poster-phone" value="${esc(draft.phone||'')}" inputmode="tel" /></label><div class="capture-field location-field"><label for="poster-location">Poster says area / location</label><div class="location-input-row"><input id="poster-location" data-testid="poster-location" value="${esc(draft.posterLocation||'')}" role="combobox" aria-autocomplete="list" aria-controls="poster-location-options" aria-expanded="false" autocomplete="off" /><button class="pin-location-button" type="button" data-testid="pin-poster-location">☆ Pin area</button></div><div class="location-options" id="poster-location-options" role="listbox" aria-label="Area suggestions" hidden></div></div><label class="field"><span>Recognized poster text</span><textarea rows="5" data-testid="poster-review-text">${esc(draft.ocrText||'')}</textarea></label><div class="placeholder-card"><strong>Original image</strong><p>${draft.imageBlob?`${esc(draft.imageName||'poster-image')} · saved locally with this lead`:'No image attached; text-only lead.'}</p><strong>Photo taken at</strong><p data-testid="capture-location">${draft.captureLocation?esc(draft.captureLocation):'Not captured. GPS is optional.'}</p></div><div class="page-actions"><button class="button" type="button" data-testid="get-capture-location">Use current location once</button><button class="button primary" type="button" data-testid="save-poster-lead">Save poster lead</button></div><p class="lead" data-testid="poster-review-status"></p></section>`,'');
+ const phoneInput=document.querySelector('[data-testid="poster-phone"]');
  if(draft.phoneNeedsReview){
-  document.querySelector('[data-testid="poster-phone"]')?.insertAdjacentHTML('afterend','<small data-testid="poster-phone-warning">Some phone characters were unclear. Check this number against the photo before saving.</small>');
+  phoneInput?.closest('.field')?.insertAdjacentHTML('afterend','<div class="capture-error" id="poster-phone-warning" data-testid="poster-phone-warning" role="alert">Some phone characters were unclear. Compare the number with the photo. <button class="text-button" type="button" data-testid="confirm-poster-phone">Number matches photo</button></div>');
  }
+ if(draft.phoneNeedsReview)phoneInput?.setAttribute('aria-describedby','poster-phone-warning');
+ const confirmPhone=()=>{
+  draft.phoneNeedsReview=false;
+  phoneInput?.removeAttribute('aria-describedby');
+  document.getElementById('poster-phone-warning')?.remove();
+ };
+ phoneInput?.addEventListener('input',confirmPhone);
+ document.querySelector('[data-testid="confirm-poster-phone"]')?.addEventListener('click',confirmPhone);
+ document.querySelector('[data-testid="poster-review-status"]')?.setAttribute('role','status');
+ document.querySelector('[data-testid="poster-review-status"]')?.setAttribute('aria-live','polite');
  bindShell();
  window.PropertyAssistantLocations?.bindTypeahead(document.querySelector('[data-testid="poster-location"]'),{repository:repo,list:document.getElementById('poster-location-options'),pinButton:document.querySelector('[data-testid="pin-poster-location"]')});
  document.querySelector('[data-testid="get-capture-location"]').addEventListener('click',captureGpsOnce);
@@ -63,6 +76,7 @@ function syncReviewFieldsIntoDraft(){
 }
 async function saveLead(){
  const status=document.querySelector('[data-testid="poster-review-status"]'); const phone=document.querySelector('[data-testid="poster-phone"]').value.replace(/\D/g,'');
+ if(draft.phoneNeedsReview){status.textContent='Confirm that the recovered phone number matches the poster before saving.';return;}
  if(phone.length!==10||!/^[6-9]/.test(phone)){status.textContent='Enter a valid Indian 10-digit mobile number before saving.';return;}
  const posterLocation=document.querySelector('[data-testid="poster-location"]').value.trim()||null;
  const text=document.querySelector('[data-testid="poster-review-text"]').value.trim();

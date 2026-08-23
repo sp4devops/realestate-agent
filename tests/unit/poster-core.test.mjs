@@ -18,6 +18,7 @@ test('OCR-confused phone characters are recovered only when one valid number is 
  const recovered=extract('LAND FOR SALE\nCall: 9B765-43210');
  assert.equal(recovered.primaryPhone,'9876543210');
  assert.equal(recovered.phoneNeedsReview,true);
+ assert.equal(recoverOcrPhone('So123-456-789'),null);
  assert.equal(recoverOcrPhone('SALE S0123-456-789'),null);
 });
 

@@ -7,7 +7,8 @@ Focused physical-device repair for Android layout and poster OCR.
 - Converted Android physical-pixel system-bar insets to CSS pixels before applying them to the WebView, removing the oversized status/navigation gaps seen on high-density phones.
 - Added a bounded grayscale/high-contrast OCR retry when the first offline pass cannot find a valid Indian mobile number.
 - Preserved more detail while preparing poster images for local OCR and accepted common phone punctuation.
-- Added conservative recovery for OCR-confused phone characters. Recovered numbers are shown with an explicit check-before-save warning; ambiguous guesses remain blank.
+- Added conservative recovery for OCR-confused phone characters. Recovered numbers require an explicit confirm/edit action before save; ambiguous guesses remain blank.
+- Corrected status-bar icon contrast on the app's white edge-to-edge header.
 - Added regression coverage for high-density insets, noisy poster numbers and the review warning.
 
 ### Remaining device gate

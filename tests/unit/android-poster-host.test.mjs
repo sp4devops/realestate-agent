@@ -39,6 +39,8 @@ test('Android release bundles an offline OCR engine and connects it to the web a
  assert.match(activity,/containsIndianMobile/);
  assert.match(activity,/Tasks\.await/);
  assert.match(activity,/POSTER_OCR_PASS_TIMEOUT_SECONDS = 12L/);
+ assert.match(activity,/task\.addOnCompleteListener/);
+ assert.match(activity,/bitmap\.recycle\(\)/);
  assert.match(activity,/__PA_POSTER_OCR_RESULT__/);
  assert.match(posterCore,/recognizeWithAndroid/);
  assert.match(posterCore,/prepareImageDataUrl/);
