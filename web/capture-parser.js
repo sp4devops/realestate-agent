@@ -28,6 +28,10 @@
       { re:/(\d+(?:\.\d+)?)\s*(?:lakh|lac|lakhs|lacs|l)\b/i, mult:100000 },
       { re:/(\d+(?:\.\d+)?)\s*k\b/i, mult:1000 },
       { re:/₹\s*([\d,]+)/, mult:1 },
+      { re:/₹?\s*([\d,]+)\s*(?:per\s+|\/\s*)?(?:month|monthly|mo)\b/i, mult:1 },
+      { re:/₹?\s*([\d,]{4,7})\s*(?:rent|rental)\b/i, mult:1 },
+      { re:/\b(?:rent|rental)(?:\s+(?:is|of|:))?\s*₹?\s*([\d,]{4,7})\b/i, mult:1 },
+      { re:/\bfor\s+₹?\s*([\d,]{4,7})(?!\d)/i, mult:1 },
       { re:/(?:budget|price|விலை)\s*(?:is|around|about|under|upto|up to|க்கு|சுமார்)?\s*([\d,]{5,})/i, mult:1 }
     ];
     for (const {re,mult} of patterns) {
@@ -159,27 +163,49 @@
     return null;
   }
 
-  function detectIntentAndKind(text) {
+  function hasSupplyPossession(text) {
+    return /\bhas\b[\s\S]{0,40}\b(?:\d+(?:\.\d+)?\s*bhk|house|home|flat|apartment|land|plot|site)\b/i.test(text);
+  }
+
+  function isRelativeLocality(text) {
+    return /\b(?:the\s+)?same\s+(?:area|locality|place|location)\b|\b(?:that|this)\s+area\b/i.test(String(text || ''));
+  }
+
+  function looksLikeResidentialMonthly(amount, text, propertyType) {
+    if (amount == null || !Number.isFinite(Number(amount))) return false;
+    if (/\b(?:for sale|sell|selling|sale|virpanai|vikk)\b/i.test(text) || /விற்பனை/u.test(text)) return false;
+    const value=Number(amount);
+    if (value < 1000 || value >= 100000) return false;
+    const type=String(propertyType || '');
+    return /\d+\s*bhk|house|apartment|flat/i.test(type) || /\b(?:\d+\s*bhk|house|apartment|flat)\b/i.test(text);
+  }
+
+  function detectIntentAndKind(text, extras={}) {
     const isBuyer = /\b(?:buy|buyer|wants|needs|looking for|venum|thevai)\b/i.test(text) || /வேண்டும்|தேவை/u.test(text);
     const isLease = /\blease\b/i.test(text);
-    const isRentalDemand = /\b(?:rent|rental|tenant|vaadagai|vadagai)\b/i.test(text) || /வாடகை/u.test(text);
-    const isSupply = /\b(?:for sale|sell|selling|available|owner|virpanai|vikk|sale)\b/i.test(text) || /விற்பனை|உரிமையாளர்/u.test(text);
+    const rentWords = /\b(?:rent|rental|tenant|vaadagai|vadagai)\b/i.test(text) || /வாடகை/u.test(text);
+    const isRentalDemand = rentWords || looksLikeResidentialMonthly(extras.amount, text, extras.propertyType);
+    const isSupply = /\b(?:for sale|sell|selling|available|owner|virpanai|vikk|sale)\b/i.test(text) || /விற்பனை|உரிமையாளர்/u.test(text) || hasSupplyPossession(text);
     const intent=isLease?'lease':isRentalDemand?'rent':isSupply?'sale':'buy';
     if (isSupply && !isBuyer) return { kind:'property', intent:intent==='lease'?'lease':intent==='rent'?'rent':'sale', role:'owner' };
     return { kind:'requirement', intent, role:isRentalDemand||isLease?'tenant':'buyer' };
   }
 
-  function parse(text) {
+  function parse(text, options={}) {
     const source = String(text || '').trim();
     if (!source) return { ok:false, error:'Type something about a buyer, tenant, owner, or property.' };
     const phone = extractPhone(source);
-    const locality = detectLocality(source);
+    let locality = detectLocality(source);
+    if (!locality && isRelativeLocality(source)) {
+      const last=String(options.lastLocality || '').trim();
+      if (last) locality = last;
+    }
     const propertyType = detectPropertyType(source);
     const moneyRange = parseMoneyRange(source);
     const amount = moneyRange?.max ?? parseMoney(source);
     const size = parseSize(source);
     const specialKind=detectSpecialKind(source);
-    const detected = detectIntentAndKind(source);
+    const detected = detectIntentAndKind(source, { amount, propertyType });
     const name = specialKind ? extractActionName(source) : extractName(source);
     const preferences = parsePreferences(source);
     const timing = parseTiming(source);
@@ -231,21 +257,77 @@
     return Boolean(value.interaction && typeof value.interaction === 'object');
   }
 
+
+  function remapUncertain(uncertain, nextKind) {
+    return (uncertain || []).map(key => {
+      if (nextKind === 'property' && key === 'budgetMax') return 'price';
+      if (nextKind === 'requirement' && key === 'price') return 'budgetMax';
+      return key;
+    });
+  }
+
+  function switchCaptureKind(parsed, nextKind) {
+    if (!parsed || (nextKind !== 'requirement' && nextKind !== 'property') || parsed.kind === nextKind) return parsed;
+    const person = { ...(parsed.person || {}) };
+    if (nextKind === 'property') {
+      const req = parsed.requirement || {};
+      const intent = req.intent === 'buy' ? 'sale' : (req.intent || 'sale');
+      person.role = 'owner';
+      return {
+        ...parsed,
+        kind:'property',
+        person,
+        requirement:null,
+        property:{
+          intent,
+          propertyType:req.propertyType || '',
+          locality:(req.locations && req.locations[0]) || '',
+          price:req.budgetMax ?? req.budgetMin ?? null,
+          priceBasis:intent === 'rent' || intent === 'lease' ? 'per_month' : 'total',
+          ownerPersonId:null,
+          size:req.size || null,
+          attributes:req.preferences || []
+        },
+        uncertain:remapUncertain(parsed.uncertain, 'property')
+      };
+    }
+    const prop = parsed.property || {};
+    const intent = prop.intent === 'sale' ? 'buy' : (prop.intent || 'buy');
+    person.role = intent === 'rent' || intent === 'lease' ? 'tenant' : 'buyer';
+    return {
+      ...parsed,
+      kind:'requirement',
+      person,
+      property:null,
+      requirement:{
+        intent,
+        propertyType:prop.propertyType || '',
+        locations:prop.locality ? [prop.locality] : [],
+        budgetMin:null,
+        budgetMax:prop.price ?? null,
+        size:prop.size || null,
+        preferences:prop.attributes || [],
+        timing:parsed.requirement?.timing || ''
+      },
+      uncertain:remapUncertain(parsed.uncertain, 'requirement')
+    };
+  }
+
   function createExtractor(modelAdapter = null) {
     return {
-      async extract(text) {
+      async extract(text, options={}) {
         if (modelAdapter && typeof modelAdapter.extract === 'function') {
           try {
-            const candidate = await modelAdapter.extract(String(text || ''));
+            const candidate = await modelAdapter.extract(String(text || ''), options);
             if (isExtraction(candidate)) return candidate;
           } catch (_) {
             // Local deterministic fallback is mandatory and intentionally silent here.
           }
         }
-        return parse(text);
+        return parse(text, options);
       }
     };
   }
 
-  root.PropertyAssistantCapture = { parse, cleanPhone, extractPhone, parseMoney, parseMoneyRange, parsePriceBasis, parseSize, parsePreferences, parseTiming, parseFollowUpTiming, createExtractor };
+  root.PropertyAssistantCapture = { parse, cleanPhone, extractPhone, parseMoney, parseMoneyRange, parsePriceBasis, parseSize, parsePreferences, parseTiming, parseFollowUpTiming, createExtractor, switchCaptureKind, isRelativeLocality, hasSupplyPossession };
 })(globalThis);

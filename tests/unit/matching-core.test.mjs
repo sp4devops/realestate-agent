@@ -84,3 +84,20 @@ test('advisor-area landmarks rank as nearby rather than disappearing',()=>{
   assert.equal(areNearby('Perundurai','Vijayamangalam'),true);
   assert.equal(areNearby('Thindal','Erode'),true);
 });
+
+test('messy rent requirement matches the same-area rent house', () => {
+  const requirement={id:'r-ramesh',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:18000,preferences:['Family only']};
+  const property={id:'p-murugan',intent:'rent',propertyType:'2bhk',locality:'Erode Railway Station',price:17500,priceBasis:'per_month'};
+  const result=evaluate(requirement,property);
+  assert.equal(result.eligible,true);
+  assert.ok(result.reasons.some(reason=>reason.includes('Exact location')));
+  assert.ok(result.reasons.some(reason=>reason.includes('Within stated budget')));
+  assert.ok(result.reasons.some(reason=>/Family only/i.test(reason)));
+});
+
+test('matching only pairs requirements against properties', () => {
+  const first={id:'r1',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:18000};
+  const second={id:'r2',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:17500};
+  assert.deepEqual(rank([first,second],[]),[]);
+  assert.equal(evaluate(first,second).eligible,false);
+});
