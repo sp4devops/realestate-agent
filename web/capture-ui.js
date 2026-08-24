@@ -1,9 +1,11 @@
 (function () {
   'use strict';
 
+  if (typeof document === 'undefined') return;
+
   const DRAFT_KEY = 'pa.captureDraft';
   const TYPE_PREFILL_KEY = 'pa.typePrefill';
-  const CREATE_PERSON_VALUE = '__create_new_person__';
+  const CREATE_PERSON_VALUE = window.PropertyAssistantIdentity.CREATE_PERSON_VALUE;
   const app = document.getElementById('app');
   const extractor = window.PropertyAssistantCapture.createExtractor();
   const uncertaintyLabels = { locality:'Location', propertyType:'Property type', primaryPhone:'Primary phone (can stay pending)', name:'Name', budgetMax:'Budget', price:'Price', targetProperty:'Property to update', targetPerson:'Person', dueAt:'Follow-up time' };
@@ -108,9 +110,13 @@
   function identityField(label,name,parsed){
     const candidates=identityCandidates(parsed);if(!candidates.length)return '';
     const duplicate=candidates.length>1;
-    const selected=suggestedPersonId(parsed);
-    const options=[`<option value="${CREATE_PERSON_VALUE}"${selected?'':' selected'}>Create a new person</option>`,...candidates.map(person=>`<option value="${esc(person.id)}"${person.id===selected?' selected':''}>${esc(personIdentityLabel(person))}</option>`)].join('');
-    return `<div class="identity-resolution" data-testid="identity-resolution"><strong>${duplicate?'More than one saved person has this name':'A saved person may match'}</strong><p>${duplicate?'Choose using phone, role and area. Names alone never identify a person.':'Confirm whether this is the saved person or create a separate contact.'}</p><label class="capture-field"><span>${label}</span><select data-testid="field-${name}" name="${name}">${options}</select></label></div>`;
+    const phoneMatchedId=suggestedPersonId(parsed);
+    const selected=window.PropertyAssistantIdentity.defaultIdentityChoice(candidates.length,phoneMatchedId);
+    const requireChoice=window.PropertyAssistantIdentity.requiresExplicitIdentityChoice(candidates.length,phoneMatchedId);
+    const fieldLabel=requireChoice?String(label).replace(/\s*\(optional\)\s*$/i,''):label;
+    const placeholder=requireChoice?`<option value="" selected>Choose…</option>`:'';
+    const options=[placeholder,`<option value="${CREATE_PERSON_VALUE}"${selected===CREATE_PERSON_VALUE?' selected':''}>Create a new person</option>`,...candidates.map(person=>`<option value="${esc(person.id)}"${person.id===selected?' selected':''}>${esc(personIdentityLabel(person))}</option>`)].join('');
+    return `<div class="identity-resolution" data-testid="identity-resolution"><strong>${duplicate?'More than one saved person has this name':'A saved person may match'}</strong><p>${duplicate?'Choose using phone, role and area. Names alone never identify a person.':'Confirm whether this is the saved person or create a separate contact.'}</p><label class="capture-field"><span>${fieldLabel}</span><select data-testid="field-${name}" name="${name}">${options}</select></label></div>`;
   }
   function suggestedPropertyId(parsed){
     const update=parsed.propertyUpdate || parsed.interaction || {}; const name=String(parsed.person?.name || '').trim().toLowerCase(); const repo=window.__PA_REPOSITORY__;
@@ -195,6 +201,10 @@
     if(target){ const phoneHit=people.find(person=>[person.primaryPhone,...(person.alternatePhones || [])].some(value=>normalize(value)===target)); if(phoneHit)return phoneHit; }
     return null;
   }
+  function requireIdentityChoice(form,parsed){
+    const live={person:{name:String(form.get('name')||parsed.person?.name||'').trim(),primaryPhone:String(form.get('primaryPhone')||'').trim()}};
+    window.PropertyAssistantIdentity.assertIdentityChoice(identityCandidates(live).length,suggestedPersonId(live),String(form.get('targetPerson')||''));
+  }
   function upsertPerson(tx,{id='',name='',phone='',role='other'}){
     const cleanName=String(name || '').trim(); const cleanPhone=String(phone || '').trim();
     const normalize=window.PropertyAssistantPersistence.normalizePhone;
@@ -226,6 +236,7 @@
 
   function saveRequirement(form,parsed){
     requireResolvedLocality(form, parsed);
+    requireIdentityChoice(form, parsed);
     const repo=window.__PA_REPOSITORY__; const phone=String(form.get('primaryPhone')||'').trim(); const intent=String(form.get('intent')||'buy');
     const result=repo.transact(tx=>{
       const role=intent==='rent'||intent==='lease'?'tenant':'buyer';
@@ -239,6 +250,7 @@
 
   function saveProperty(form,parsed){
     requireResolvedLocality(form, parsed);
+    requireIdentityChoice(form, parsed);
     const repo=window.__PA_REPOSITORY__;
     const result=repo.transact(tx=>{
       const ownerName=String(form.get('name')||'').trim(); const ownerPhone=String(form.get('primaryPhone')||'').trim();
@@ -265,6 +277,7 @@
   }
 
   function saveFollowUp(form,parsed){
+    requireIdentityChoice(form, parsed);
     const repo=window.__PA_REPOSITORY__; const due=String(form.get('dueAt') || '').trim(); if(!due||Number.isNaN(new Date(due).getTime()))throw new Error('Choose a valid follow-up time.');
     const result=repo.transact(tx=>{
       const person=upsertPerson(tx,{id:String(form.get('targetPerson')||''),name:String(form.get('name')||''),phone:String(form.get('primaryPhone')||''),role:'other'});
@@ -275,6 +288,7 @@
   }
 
   function saveInteraction(form,parsed){
+    requireIdentityChoice(form, parsed);
     const repo=window.__PA_REPOSITORY__; const summary=String(form.get('summary')||'').trim(); if(!summary)throw new Error('Add what happened.');
     const result=repo.transact(tx=>{
       const person=upsertPerson(tx,{id:String(form.get('targetPerson')||''),name:String(form.get('name')||''),phone:String(form.get('primaryPhone')||''),role:'other'});
