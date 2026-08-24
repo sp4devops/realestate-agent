@@ -95,6 +95,23 @@ test('messy rent requirement matches the same-area rent house', () => {
   assert.ok(result.reasons.some(reason=>/Family only/i.test(reason)));
 });
 
+test('priced Ramesh want does not match a same-area house with no rent or price', () => {
+  const requirement={id:'r-ramesh-unpriced',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:18000};
+  const property={id:'p-unpriced-house',intent:'rent',propertyType:'2bhk',locality:'Erode Railway Station'};
+  const result=evaluate(requirement,property);
+  assert.equal(result.eligible,false);
+  assert.equal(result.score,0);
+  assert.ok(result.reasons.includes('The house has no rent or price, so it cannot fit this budget'));
+});
+
+test('both sides without money numbers stay unmatched', () => {
+  const requirement={id:'r-no-budget',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station']};
+  const property={id:'p-no-price',intent:'rent',propertyType:'2bhk',locality:'Erode Railway Station'};
+  const result=evaluate(requirement,property);
+  assert.equal(result.eligible,false);
+  assert.equal(result.score,0);
+});
+
 test('matching only pairs requirements against properties', () => {
   const first={id:'r1',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:18000};
   const second={id:'r2',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:17500};
