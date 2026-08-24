@@ -13,8 +13,8 @@ test('two same-name people with no phone match do not default to create new', ()
 });
 
 test('duplicate-name save without an explicit choice is blocked', () => {
-  assert.throws(() => identity.assertIdentityChoice(2, '', ''), /Choose which saved person/);
-  assert.throws(() => identity.assertIdentityChoice(2, '', '   '), /Choose which saved person/);
+  assert.throws(() => identity.assertIdentityChoice(2, '', ''), /Two people share this name\. Which one\?/);
+  assert.throws(() => identity.assertIdentityChoice(2, '', '   '), /Two people share this name\. Which one\?/);
 });
 
 test('choosing an existing Ramesh or create new is an explicit allowed choice', () => {
