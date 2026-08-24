@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "entities": {
+    "people": {
+      "person-ravi": {"id":"person-ravi","name":"Ravi","role":"buyer","primaryPhone":"9876543219","alternatePhones":[],"createdAt":"2026-08-22T00:00:00.000Z","updatedAt":"2026-08-22T00:00:00.000Z"},
+      "person-murugan": {"id":"person-murugan","name":"Murugan","role":"owner","primaryPhone":"9876543218","alternatePhones":[],"createdAt":"2026-08-22T00:00:00.000Z","updatedAt":"2026-08-22T00:00:00.000Z"},
+      "person-meena": {"id":"person-meena","name":"Meena","role":"buyer","primaryPhone":"9876543217","alternatePhones":[],"createdAt":"2026-08-22T00:00:00.000Z","updatedAt":"2026-08-22T00:00:00.000Z"}
+    },
+    "contacts": {},
+    "requirements": {
+      "req-ravi-land": {"id":"req-ravi-land","personId":"person-ravi","intent":"buy","locations":["Erode"],"propertyType":"land","budgetMin":2000000,"budgetMax":2500000,"createdAt":"2026-08-22T00:00:00.000Z","updatedAt":"2026-08-22T00:00:00.000Z"},
+      "req-meena-house": {"id":"req-meena-house","personId":"person-meena","intent":"buy","locations":["Salem"],"propertyType":"house","budgetMin":3500000,"budgetMax":4500000,"createdAt":"2026-08-22T00:00:00.000Z","updatedAt":"2026-08-22T00:00:00.000Z"}
+    },
+    "properties": {
+      "property-murugan-erode": {"id":"property-murugan-erode","intent":"sale","propertyType":"land","locality":"Erode","ownerPersonId":"person-murugan","price":2400000,"size":{"value":1200,"unit":"sqft"},"createdAt":"2026-08-22T00:00:00.000Z","updatedAt":"2026-08-22T00:00:00.000Z"}
+    },
+    "interactions": {
+      "interaction-ravi": {"id":"interaction-ravi","kind":"call","occurredAt":"2026-08-22T00:00:00.000Z","personIds":["person-ravi"],"summary":"Demo buyer call for Erode land.","phone":"9876543219","createdAt":"2026-08-22T00:00:00.000Z","updatedAt":"2026-08-22T00:00:00.000Z"}
+    },
+    "followUps": {
+      "followup-ravi": {"id":"followup-ravi","dueAt":"2026-08-23T10:00:00.000Z","status":"open","title":"Share Erode land options with Ravi","personId":"person-ravi","propertyId":"property-murugan-erode","createdAt":"2026-08-22T00:00:00.000Z","updatedAt":"2026-08-22T00:00:00.000Z"}
+    },
+    "matches": {
+      "match-ravi-murugan": {"id":"match-ravi-murugan","requirementId":"req-ravi-land","propertyId":"property-murugan-erode","score":92,"reasons":["Erode locality match","Land type match","Price within buyer budget"],"createdAt":"2026-08-22T00:00:00.000Z","updatedAt":"2026-08-22T00:00:00.000Z"}
+    },
+    "posterLeads": {}
+  }
+}

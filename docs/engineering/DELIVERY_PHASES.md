@@ -2,6 +2,8 @@
 
 Each phase is a gated vertical milestone. Agents must finish the active phase before advancing unless a documented dependency requires parallel work.
 
+**Current P12 pilot override:** validate English typing only. Earlier voice/multilingual implementation is historical work and is disabled in the active release. Preserve extension boundaries, but do not expose or quality-gate voice/Tamil/Tanglish until a later explicit phase reactivates them.
+
 ## P0 — Harness and source-of-truth bootstrap
 
 Deliverables: AGENTS.md, PROJECT_STATE.yaml, product guardrails, phase plan, QA strategy, handoff log, harness validation, CI.
@@ -24,13 +26,13 @@ Acceptance: create/read/update/delete survives restart; primary/alternate phone 
 
 Deliverables: Type & Save flow; deterministic parser/fallback; model adapter interface; extraction review/correction card.
 
-Acceptance: Tamil/English/Tanglish fixtures map to validated structured records; uncertain values can be corrected; no-model path remains usable; E2E saves a buyer and property.
+Current pilot acceptance: English typed fixtures map to validated structured records; uncertain values can be corrected; no-model path remains usable; E2E saves a buyer and property. Older multilingual parser fixtures may remain only as explicitly deferred, non-gating regression references.
 
-## P4 — Voice capture and multilingual understanding
+## P4 — Voice capture and multilingual understanding (historical; disabled for current pilot)
 
 Deliverables: microphone capture, local STT adapter, language/business normalization, local dictionaries for regional places/property terms.
 
-Acceptance: supported test fixtures extract useful business meaning; permission denial handled; model/STT failure does not break typed capture; memory/latency measured on representative target class where available.
+Historical acceptance remains recorded in handoff evidence. Current P12 acceptance instead requires no active voice UI, no Android microphone permission, and a preserved typed-capture/review boundary for later reactivation.
 
 ## P5 — Matching and Action Brain
 
@@ -42,7 +44,7 @@ Acceptance: new demand matches existing supply and vice versa; updates recalcula
 
 Deliverables: natural-language query interpretation, local search, filters, actionable results.
 
-Acceptance: queries return cards/lists rather than chat-only response; voice/text entry supported by shared query contract; offline search works.
+Current pilot acceptance: typed English queries return cards/lists rather than chat-only response and offline search works. Future voice input must reuse the same query contract.
 
 ## P7 — Poster capture and OCR lead flow
 
@@ -74,7 +76,7 @@ Deliverables: signed/configurable Android release pipeline, installable APK arti
 
 Acceptance: clean build from repository; automated smoke/E2E pass against release candidate; APK artifact retained; install/launch verified where runner/device permits.
 
-## P12 — Broker pilot readiness
+## P12 — Property Advisor pilot readiness
 
 Deliverables: pilot checklist, synthetic/demo dataset, feedback capture plan, privacy/backup onboarding, known-limitations sheet.
 

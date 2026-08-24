@@ -4,7 +4,7 @@ This file is the concise in-repository decision filter derived from the approved
 
 ## Product definition
 
-Property Assistant is a **private, local-first AI memory and deal assistant for Property Advisors**. It captures natural voice/text input, turns it into structured business memory, automatically connects demand and supply, and surfaces useful next actions.
+Property Assistant is a **private, local-first AI memory and deal assistant for Property Advisors**. The current pilot captures natural English typed input, turns it into structured business memory, automatically connects demand and supply, and surfaces useful next actions.
 
 It is **not** a generic CRM.
 
@@ -19,14 +19,13 @@ It is **not** a generic CRM.
 
 Everything built for the MVP must strengthen at least one of the first five steps without making the product harder to use.
 
-## MVP capture paths
+## Current pilot capture paths
 
-- Speak & Save
 - Type & Save
 - After-call recap prompt
 - Scan Poster
 
-The MVP must not depend on unrestricted cellular-call recording/transcription.
+Voice capture is deferred until the typed core loop is stable. The product must not depend on unrestricted cellular-call recording/transcription.
 
 ## Core data
 
@@ -50,7 +49,13 @@ A non-technical older Property Advisor who can use calls, WhatsApp, a camera, an
 
 Avoid exposing CRM, pipeline, workflow, database, automation, or technical AI terminology to users unless strictly necessary.
 
-## Native-language rule
+## Language scope
+
+The current validation build supports and quality-gates **English UI + English typing only**. Voice, Tamil, and Tanglish are deferred; they must not be exposed or marketed in this pilot.
+
+Structured business records remain language-neutral, and input/model components remain replaceable so the deferred capabilities can return without a storage or matching redesign.
+
+Future quality priority remains:
 
 Launch-quality priority:
 
@@ -60,7 +65,7 @@ Launch-quality priority:
 
 Architecture should allow later expansion, but do not market a language before real-world quality is good enough.
 
-**UI display language and input/speech language are independent settings.** Translated UI is not the same as native-language intelligence.
+When multilingual support returns, UI display language and input/speech language must remain independent. Translated UI is not the same as native-language intelligence.
 
 ## Local-first rule
 
@@ -72,7 +77,7 @@ Optional cloud features may come later with explicit consent and strong privacy 
 
 Use existing replaceable local/open models and deterministic logic. Do not train a foundation model for the MVP. The application must still perform core storage, lookup, matching, reminders, and navigation when model inference is unavailable.
 
-Optimize extraction for correct business meaning, including Tamil/English/Tanglish, local place names, real-estate vocabulary, numbers/currencies, land units, role, sale/rent intent, and negotiability.
+For the current pilot, optimize English typed extraction for correct business meaning, including local place names, real-estate vocabulary, numbers/currencies, land units, role, sale/rent intent, and negotiability. Preserve a replaceable normalization boundary for later Tamil/Tanglish work.
 
 ## Device/platform rule
 
@@ -99,19 +104,20 @@ Android target class includes approximately 4 GB RAM phones. Avoid architecture 
 
 ## MVP must-have capabilities
 
-1. Speak and save
-2. Type and save
+1. English Type & Save
+2. Review and correct extracted meaning
 3. After-call recap
 4. People/contact memory
 5. Property memory
 6. Automatic matching
 7. Follow-ups/next actions
-8. Natural-language ask/search with visual results
+8. English typed ask/search with visual results
 9. Poster scan into actionable lead
 10. Poster photo/timestamp/GPS metadata when permitted
 11. Local backup/export and restore
-12. Tamil + English + Tanglish real-world quality
-13. Replaceable AI-assisted extraction with deterministic fallbacks
+12. Replaceable AI-assisted extraction with deterministic fallbacks
+
+Deferred without being designed out: voice capture/search, Tamil UI/input, Tanglish UI/input, and broader multilingual quality validation.
 
 ## Explicitly out of MVP
 
@@ -146,7 +152,7 @@ Until at least ₹10,000 in customer revenue, cash build-cost target is ₹0: pr
 
 The approved prototype defines the expected hierarchy and interaction style for:
 
-Splash, Onboarding, Home, Speak, Type, Review, Ask/Search, People, Person detail, Property detail, Matches, Match detail, Poster capture/review/lead, Follow-ups, Language, and Settings/Backup.
+Current pilot: Splash, Onboarding, Home, Type, Review, Ask/Search, People, Person detail, Property detail, Matches, Match detail, Poster capture/review/lead, Follow-ups, and Settings/Backup. Speak and Language remain future design references, not active pilot surfaces.
 
 Visual direction: light surfaces, deep green primary, restrained warm gold, readable typography, rounded cards, generous spacing, strong contrast, large tap targets, minimal navigation, obvious primary actions.
 

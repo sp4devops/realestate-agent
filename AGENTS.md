@@ -42,10 +42,10 @@ Never silently change a product guardrail to make implementation easier.
 Every implementation must preserve all of these:
 
 - Capture → Understand → Remember → Match → Act is the central loop.
-- Voice-first, not voice-only.
+- The current validation build is **English + typing only**. Voice and multilingual support are deferred until the core loop is stable; do not expose inactive controls or request microphone permission.
+- Preserve language-neutral records, replaceable extraction/input adapters, and clean capability boundaries so voice, Tamil, and Tanglish can return later without redesigning storage or matching.
 - Local-first and private by default.
-- Tamil, English, and Tanglish are the first quality targets.
-- UI language and spoken/input language are separate concepts.
+- English is the only supported and quality-gated UI/input language for the current pilot. Tamil and Tanglish remain future quality targets, not current claims.
 - Core storage, lookup, deterministic matching, reminders, navigation, and basic workflows work when AI/model inference is unavailable.
 - Contact numbers are first-class structured data.
 - Results are action-oriented cards/lists, not chatbot-only output.
@@ -204,7 +204,7 @@ Production UI should follow the approved visual prototype unless a documented de
 - minimal navigation;
 - simple terminology suitable for a non-technical older user.
 
-Primary screens/flows to preserve include Splash, Onboarding, Home, Speak, Type, Review, Ask/Search, People, Person detail, Property detail, Matches, Match detail, Poster capture/review/lead, Follow-ups, Language, and Settings/Backup.
+Current pilot screens/flows to preserve include Splash, Onboarding, Home, Type, Review, Ask/Search, People, Person detail, Property detail, Matches, Match detail, Poster capture/review/lead, Follow-ups, and Settings/Backup. Speak and Language remain deferred extension surfaces and must not be exposed in the current pilot.
 
 ## 15. Stop conditions
 

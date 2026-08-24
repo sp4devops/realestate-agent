@@ -2,6 +2,10 @@
 
 This file turns the approved HTML/CSS prototype into a stable implementation/testing contract. Production code may use a different framework, but changing these experience decisions requires an explicit product decision.
 
+## Current pilot scope override
+
+The current explicit product decision is **English + typing only**. Voice and multilingual controls are deferred while Capture → Understand → Remember → Match → Act is validated. Their future return must use the same review, language-neutral memory, search, matching, and action contracts; the current pilot must not show dead voice/language controls or request microphone permission.
+
 ## Brand and interaction direction
 
 - Product name: **Property Assistant**.
@@ -23,37 +27,44 @@ The implementation must preserve an understandable path through:
 
 1. Splash
 2. Onboarding
-3. Home / Today's Opportunities
-4. Speak & Save
-5. Type & Save
-6. AI extraction Review
-7. After-call capture prompt/recap
-8. People
-9. Person detail
-10. Property detail
-11. Ask / Search
-12. Search result cards
-13. Matches
-14. Match detail/actions
-15. Poster capture
-16. Poster extraction review
-17. Poster lead detail
-18. Follow-ups / Action Brain
-19. Language / Personalize
+3. Home / Assistant capture
+4. Type & Save
+5. AI extraction Review
+6. After-call capture prompt/recap
+7. Requirements
+8. Properties
+9. Contacts / People
+10. Person detail
+11. Property detail
+12. Ask / Search
+13. Search result cards
+14. Matches
+15. Match detail/actions
+16. Poster capture
+17. Poster extraction review
+18. Poster lead detail
+19. Follow-ups / Action Brain
 20. Settings / Backup
+
+Deferred screen references: Speak & Save and Language / Personalize.
 
 ## Home contract
 
-Home must emphasize capture and action, not dashboard complexity. Voice and quick typing are prominent entry points. The user should quickly see what needs attention today: useful matches, follow-ups, price/status changes, or unfinished leads.
+Home is the default Assistant surface and must emphasize capture and action, not dashboard complexity. One prominent natural-language composer accepts English typing without requiring a form first. The user should quickly see the extracted meaning, useful matches, recent memory, follow-ups, price/status changes, or unfinished leads.
+
+## Memory contract
+
+- Requirements, properties, contacts, interactions, preferences, rejection reasons and follow-ups are connected business memory, not isolated CRM rows.
+- Requirements and Properties provide focused browsable views without displacing Assistant as the default workflow.
+- Original capture text/transcript remains available as evidence while normalized fields power search and matching.
+- Person and property details expose useful related context: what was requested/offered, prior conversations, learned preferences, rejection reasons, next actions and suitable matches.
+- Automatic matching runs from persisted local records and explains why a result is relevant.
 
 ## Capture contract
 
-### Voice
+### Voice — deferred
 
-- A large, obvious microphone action.
-- Clear listening/processing state.
-- Transcript/recognized content visible before irreversible save when appropriate.
-- Permission/failure states understandable.
+Do not expose a microphone action or request microphone permission in the current pilot. A future voice adapter must hand text into the same review-before-save contract and degrade cleanly to typing.
 
 ### Type
 
@@ -67,7 +78,7 @@ AI extraction is never treated as unquestionable truth. Structured fields are sh
 
 ## Ask/Search contract
 
-Voice or typing may express the question. The answer should normally be operational cards/lists with relevant people/properties, match information, and actions—not a long chatbot transcript.
+The current pilot accepts typed English questions. The answer should normally be operational cards/lists with relevant people/properties, match information, and actions—not a long chatbot transcript. Future voice input must reuse this query/result contract.
 
 ## Match contract
 
@@ -82,15 +93,15 @@ Match cards/details should show an understandable match score/reason and obvious
 - Keep `Poster says` property/location information separate from `Photo taken at` GPS/capture location.
 - GPS absence is a normal handled state.
 
-## Language contract
+## Language contract — deferred UI
 
-The approved prototype treats app display language independently from voice/typing understanding.
+The current pilot renders English only. Legacy language preferences must not change the UI or mutate stored business data.
 
-Changing UI language changes menus, buttons, labels, confirmations, and guidance. It must **not** rewrite or corrupt language-neutral stored business data. A Property Advisor may use Tamil UI while speaking Tamil, Tanglish, or English.
+When language selection returns, changing UI language must change menus, buttons, labels, confirmations, and guidance without rewriting or corrupting language-neutral stored business data.
 
 ## Navigation contract
 
-Navigation stays minimal. The approved concept centers on Home, Ask, Matches, People, and More, with capture reachable prominently. Desktop may use a side navigation while mobile uses bottom navigation/FAB patterns as appropriate.
+Navigation stays minimal. The primary mobile navigation is Home, Requirements, Properties, Matches and Follow-ups. Home is the Assistant and primary capture surface. Ask/Search is reachable from the persistent header; Contacts, poster capture, after-call recap, language and settings remain reachable as contextual or quick actions. Desktop may use a side navigation while preserving the same information architecture.
 
 ## Automated acceptance expectations
 
@@ -102,7 +113,7 @@ For each implemented screen:
 - navigation to/from the screen works;
 - mobile viewport has no unintended horizontal overflow;
 - critical actions have semantic labels/stable selectors;
-- language switch updates interface copy without mutating seeded domain data;
+- the current pilot stays English even when legacy language preferences exist, without mutating seeded domain data;
 - no placeholder button remains dead in a phase marked complete.
 
 Playwright visual snapshots may be added for representative desktop/mobile viewports, but behavioral assertions are mandatory.

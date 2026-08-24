@@ -1,59 +1,41 @@
 import { test, expect } from '@playwright/test';
 
-test('typed Ask returns actionable local property card',async({page})=>{
- await page.goto('/#/ask');
- await page.getByTestId('query-input').fill('show land in Erode under 25 lakh');
- await page.getByTestId('run-query').click();
- const card=page.getByTestId('query-result-card').filter({hasText:'land in Erode'});
- await expect(card).toContainText('₹22,00,000');
- await card.getByRole('button',{name:'Open'}).click();
- await expect(page.getByTestId('property-title')).toContainText('land in Erode');
+async function seedDemo(page) {
+  await page.goto('/#/home');
+  await page.evaluate(() => (window as any).__PA_REPOSITORY__.seedSynthetic());
+  await page.goto('/#/ask');
+}
+
+test('typed Ask returns an actionable local property card',async({page})=>{
+  await seedDemo(page);
+  await page.getByTestId('query-input').fill('show land in Erode under 25 lakh');
+  await page.getByTestId('run-query').click();
+  const card=page.getByTestId('query-result-card').filter({hasText:'land in Erode'});
+  await expect(card).toContainText('₹22,00,000');
+  await card.getByRole('button',{name:'See the note'}).click();
+  await expect(page.getByTestId('property-title')).toContainText('land in Erode');
 });
 
-test('voice Ask uses the same local query contract',async({page})=>{
- await page.addInitScript(()=>{
-  class FakeTrack{stop(){}}
-  class FakeRecorder{
-   static isTypeSupported(){return true}
-   stream:any; ondataavailable:any; onstop:any; mimeType='audio/webm'; state='inactive';
-   constructor(stream:any){this.stream=stream;}
-   start(){this.state='recording';setTimeout(()=>this.ondataavailable?.({data:new Blob(['voice'],{type:'audio/webm'})}),0);}
-   stop(){this.state='inactive';setTimeout(()=>this.onstop?.(),0);}
-  }
-  Object.defineProperty(navigator,'mediaDevices',{value:{getUserMedia:async()=>({getTracks:()=>[new FakeTrack()]})}});
-  (window as any).MediaRecorder=FakeRecorder;
-  (window as any).__PA_LOCAL_STT__={transcribe:async()=>({transcript:'show land in Erode under 25 lakh'})};
- });
- await page.goto('/#/ask');
- await page.getByTestId('start-query-voice').click();
- await expect(page.getByTestId('stop-query-voice')).toBeVisible();
- await page.getByTestId('stop-query-voice').click();
- await expect(page.getByTestId('query-result-card').filter({hasText:'land in Erode'})).toBeVisible();
- await expect(page.getByTestId('query-voice-status')).toContainText('searched local memory');
+test('typed Ask supports keyboard submit and contact lookup',async({page})=>{
+  await seedDemo(page);
+  await page.getByTestId('query-input').fill('find Suresh contact');
+  await page.getByTestId('query-input').press('Enter');
+  await expect(page.getByTestId('query-result-card').filter({hasText:'Suresh (Demo)'})).toBeVisible();
+  await expect(page.getByTestId('query-summary')).toHaveText('1 result saved on this phone.');
 });
 
-test('STT unavailable leaves typed Ask usable',async({page})=>{
- await page.addInitScript(()=>{
-  class FakeTrack{stop(){}}
-  class FakeRecorder{ondataavailable:any;onstop:any;mimeType='audio/webm';state='inactive';start(){this.state='recording';setTimeout(()=>this.ondataavailable?.({data:new Blob(['x'])}),0)}stop(){this.state='inactive';setTimeout(()=>this.onstop?.(),0)}}
-  Object.defineProperty(navigator,'mediaDevices',{value:{getUserMedia:async()=>({getTracks:()=>[new FakeTrack()]})}});(window as any).MediaRecorder=FakeRecorder;
- });
- await page.goto('/#/ask'); await page.getByTestId('start-query-voice').click(); await page.getByTestId('stop-query-voice').click();
- await expect(page.getByTestId('query-voice-status')).toContainText('unavailable');
- await page.getByTestId('query-input').fill('find Suresh contact'); await page.getByTestId('run-query').click();
- await expect(page.getByTestId('query-result-card').filter({hasText:'Suresh (Demo)'})).toBeVisible();
+test('empty Ask input shows guidance instead of dumping all local memory',async({page})=>{
+  await seedDemo(page);
+  await page.getByTestId('run-query').click();
+  await expect(page.getByTestId('query-summary')).toHaveText('Type what you want to find first.');
+  await expect(page.getByTestId('query-result-card')).toHaveCount(0);
+  await expect(page.getByText(/No local results found/)).toHaveCount(0);
 });
 
-test('leaving Ask stops active microphone and does not create results',async({page})=>{
- await page.addInitScript(()=>{
-  (window as any).__askTrackStopped=false;
-  class FakeTrack{stop(){(window as any).__askTrackStopped=true;}}
-  class FakeRecorder{ondataavailable:any;onstop:any;mimeType='audio/webm';state='inactive';start(){this.state='recording'}stop(){this.state='inactive';setTimeout(()=>this.onstop?.(),0)}}
-  Object.defineProperty(navigator,'mediaDevices',{value:{getUserMedia:async()=>({getTracks:()=>[new FakeTrack()]})}});(window as any).MediaRecorder=FakeRecorder;
-  (window as any).__PA_LOCAL_STT__={transcribe:async()=>({transcript:'show land in Erode under 25 lakh'})};
- });
- await page.goto('/#/ask'); await page.getByTestId('start-query-voice').click(); await expect(page.getByTestId('stop-query-voice')).toBeVisible();
- await page.goto('/#/home');
- await expect(page.getByRole('heading',{name:"Today's opportunities"})).toBeVisible();
- expect(await page.evaluate(()=>(window as any).__askTrackStopped)).toBe(true);
+test('Ask exposes typing only in the focused pilot',async({page})=>{
+  await page.goto('/#/ask');
+  await expect(page.getByRole('heading',{name:'Ask',exact:true})).toBeVisible();
+  await expect(page.getByText(/Type what you need in English/)).toBeVisible();
+  await expect(page.getByTestId('start-query-voice')).toHaveCount(0);
+  await expect(page.getByTestId('stop-query-voice')).toHaveCount(0);
 });

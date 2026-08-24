@@ -1,7 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+async function seedDemo(page) {
+ await page.goto('/#/home');
+ await page.evaluate(() => (window as any).__PA_REPOSITORY__.seedSynthetic());
+}
+
 test('after-call recap saves call interaction and follow-up then completes lifecycle',async({page})=>{
- await page.goto('/#/after-call');
+ await seedDemo(page); await page.goto('/#/after-call');
  await expect(page.getByRole('heading',{name:'After-call recap'})).toBeVisible();
  await expect(page.getByText('Property Assistant does not record the call.')).toBeVisible();
  await page.getByTestId('recap-phone').fill('+91 90000 00001');
@@ -44,7 +49,7 @@ test('Call WhatsApp and Share use host actions and returning from Call offers re
    shareText:(text:string)=>(window as any).__hostActions.push(['share',text])
   };
  });
- await page.goto('/#/home');
+ await seedDemo(page);
  await page.evaluate(()=>{(window as any).__PA_REPOSITORY__.create('followUps',{dueAt:'2026-08-23T10:30:00.000Z',status:'open',title:'Call Suresh about Erode land',personId:'person-suresh'});location.hash='#/followups';});
  const card=page.getByTestId('followup-card').filter({hasText:'Call Suresh'});
  await card.getByRole('button',{name:'Call'}).click();

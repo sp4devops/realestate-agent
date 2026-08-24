@@ -15,7 +15,7 @@ Private, local-first AI memory and deal assistant for Property Advisors.
 
 **Capture → Understand → Remember → Match → Act**
 
-Voice is primary, not exclusive. The application must remain local-first, private by default, usable by non-technical Property Advisors, lightweight for approximately 4 GB Android devices, and functional for core workflows when an AI model is unavailable.
+The current pilot proves this loop through **English typing only**. Voice, Tamil, and Tanglish are deliberately deferred while the core workflow is stabilized; language-neutral records and adapter boundaries are retained so they can return later. The application must remain local-first, private by default, usable by non-technical Property Advisors, lightweight for approximately 4 GB Android devices, and functional for core workflows when an AI model is unavailable.
 
 ## Harness contract
 

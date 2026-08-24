@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
-const criticalRoutes = ['home','type','ask','matches','people','followups','poster','language','settings'];
+const criticalRoutes = ['home','requirements','properties','type','ask','matches','people','followups','poster','settings'];
 const artifactDir = 'p10-artifacts';
 
 function projectSlug(name: string) {
@@ -10,7 +10,7 @@ function projectSlug(name: string) {
 
 test('P10 captures startup, heap and local-storage measurements', async ({ page }, testInfo) => {
   await page.goto('/#/home');
-  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Property Advisor/ })).toBeVisible();
 
   const metrics = await page.evaluate(async () => {
     const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
@@ -54,14 +54,14 @@ test('P10 critical screens have names, focusable controls, visual baselines and 
 
     const audit = await page.evaluate(() => {
       const buttons = [...document.querySelectorAll('button:not([hidden])')] as HTMLButtonElement[];
-      const inputs = [...document.querySelectorAll('input:not([hidden]),textarea:not([hidden])')] as (HTMLInputElement|HTMLTextAreaElement)[];
+      const inputs = [...document.querySelectorAll('input:not([hidden]),textarea:not([hidden]),select:not([hidden])')] as (HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement)[];
       const unnamed = buttons.filter((button) => {
         const name = button.getAttribute('aria-label') || button.textContent || button.title;
         return !name.trim();
       }).length;
       const unlabeledInputs = inputs.filter((input) => !input.labels?.length && !input.getAttribute('aria-label') && !input.getAttribute('aria-labelledby')).length;
       const doc = document.documentElement;
-      const primaryTargets = [...document.querySelectorAll('.button,.nav-item,.language-chip,.brand,.text-button,.choice,.capture')] as HTMLElement[];
+      const primaryTargets = [...document.querySelectorAll('.button,.nav-item,.brand,.text-button,.choice,.capture')] as HTMLElement[];
       const undersized = primaryTargets.filter((el) => {
         const rect = el.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0 && (rect.width < 44 || rect.height < 44);
@@ -85,7 +85,7 @@ test('P10 critical screens have names, focusable controls, visual baselines and 
     expect(audit.undersized, `${route}: undersized primary touch targets`).toBe(0);
     expect(audit.undersizedInputs, `${route}: undersized form controls`).toBe(0);
     expect(audit.overflowPx, `${route}: horizontal overflow`).toBeLessThanOrEqual(1);
-    expect(audit.lang).toMatch(/^(en|ta)$/);
+    expect(audit.lang).toBe('en');
 
     await page.screenshot({
       path: `${artifactDir}/${project}-${route}.png`,
@@ -102,9 +102,25 @@ test('P10 critical screens have names, focusable controls, visual baselines and 
   expect(outline).not.toBe('none');
 });
 
+test('P10 retains populated second-brain visual evidence on action-dense screens',async({page},testInfo)=>{
+  mkdirSync(artifactDir,{recursive:true}); const project=projectSlug(testInfo.project.name);
+  await page.goto('/#/home');
+  await page.evaluate(()=>{
+    const repo=(window as any).__PA_REPOSITORY__;
+    repo.seedSynthetic();
+    repo.create('followUps',{id:'visual-followup',dueAt:new Date(Date.now()+3600000).toISOString(),status:'open',title:'Confirm Murugan asking price',personId:'person-murugan',propertyId:'property-murugan'});
+    (window as any).PropertyAssistantMatching.sync(repo);
+  });
+  for(const route of ['home','requirements','properties','matches','people','followups']){
+    await page.goto(`/#/${route}`);
+    await expect(page.getByRole('heading').first()).toBeVisible();
+    await page.screenshot({path:`${artifactDir}/${project}-populated-${route}.png`,fullPage:true,animations:'disabled'});
+  }
+});
+
 test('P10 core local workflow remains usable after network is lost', async ({ page, context }) => {
   await page.goto('/#/home');
-  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Property Advisor/ })).toBeVisible();
   await context.setOffline(true);
 
   await page.getByTestId('type-save').click();
@@ -121,15 +137,8 @@ test('P10 core local workflow remains usable after network is lost', async ({ pa
   await expect(page.getByRole('heading').first()).toBeVisible();
 });
 
-test('P10 microphone/STT absence keeps Type & Save and local persistence usable', async ({ page }) => {
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
-  });
+test('P10 focused pilot keeps English typed capture and local persistence usable', async ({ page }) => {
   await page.goto('/#/speak');
-  await page.getByTestId('voice-toggle').click();
-  await expect(page.getByTestId('voice-status')).toContainText('Type & Save is still fully available');
-  await page.getByRole('button', { name: 'Use Type & Save instead' }).click();
-
   await expect(page.getByRole('heading', { name: 'Type & Save' })).toBeVisible();
   await page.getByTestId('capture-text').fill('Meena wants land in Erode budget 30 lakh phone 98765 43218');
   await page.getByTestId('analyze-capture').click();
@@ -139,5 +148,5 @@ test('P10 microphone/STT absence keeps Type & Save and local persistence usable'
   const saved = await page.evaluate(() => (window as any).__PA_REPOSITORY__.list('people').some((person:any) => person.name === 'Meena'));
   expect(saved).toBe(true);
   await page.evaluate(() => { location.hash = '#/home'; });
-  await expect(page.getByRole('heading', { name: "Today's opportunities" })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Property Advisor/ })).toBeVisible();
 });

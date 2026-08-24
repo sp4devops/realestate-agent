@@ -1,8 +1,10 @@
 plugins { id 'com.android.application' }
 
 def versionFile = rootProject.file('../VERSION')
-def releaseVersionName = versionFile.exists() ? versionFile.text.trim() : '0.11.0-rc.1'
-def releaseVersionCode = (System.getenv('PA_VERSION_CODE') ?: '11') as Integer
+def releaseVersionName = versionFile.exists() ? versionFile.text.trim() : '0.11.0-rc.6'
+def releaseVersionCode = (System.getenv('PA_VERSION_CODE') ?: '16') as Integer
+def applicationIdValue = System.getenv('PA_APPLICATION_ID') ?: 'ai.propertyassistant.app'
+def applicationLabel = System.getenv('PA_APPLICATION_LABEL') ?: 'Property Assistant'
 
 def releaseStore = System.getenv('PA_RELEASE_STORE_FILE') ?: (project.findProperty('paReleaseStoreFile') ?: '')
 def releaseStorePassword = System.getenv('PA_RELEASE_STORE_PASSWORD') ?: (project.findProperty('paReleaseStorePassword') ?: '')
@@ -14,11 +16,14 @@ android {
   namespace 'ai.propertyassistant.app'
   compileSdk 35
   defaultConfig {
-    applicationId 'ai.propertyassistant.app'
+    applicationId applicationIdValue
     minSdk 24
     targetSdk 35
     versionCode releaseVersionCode
     versionName releaseVersionName
+    resValue 'string', 'app_name', applicationLabel
+    resValue 'string', 'app_version_label', releaseVersionName
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
   }
 
   signingConfigs {
@@ -41,11 +46,20 @@ android {
 }
 
 dependencies {
+  // Align Kotlin artifacts pulled transitively by AndroidX and ML Kit to avoid duplicate JDK7/JDK8 classes.
+  implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
   implementation 'androidx.core:core:1.15.0'
+  implementation 'androidx.webkit:webkit:1.12.1'
+  // Bundled Latin-script model: available offline immediately, with no model download or Internet permission.
+  implementation 'com.google.mlkit:text-recognition:16.0.1'
+  androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+  androidTestImplementation 'androidx.test:runner:1.6.2'
 }
 
-tasks.register('syncWebAssets', Copy) {
-  from rootProject.file('../web')
+tasks.register('syncWebAssets', Sync) {
+  from(rootProject.file('../web')) {
+    exclude 'voice-core.js', 'voice-ui.js'
+  }
   into project.file('src/main/assets')
 }
 preBuild.dependsOn syncWebAssets

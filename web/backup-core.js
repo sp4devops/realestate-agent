@@ -3,6 +3,7 @@
 const FORMAT='property-assistant-backup';
 const VERSION=1;
 const ITERATIONS=150000;
+const PINNED_LOCATIONS_KEY='pa.pinnedLocations.v1';
 const encoder=new TextEncoder();
 const decoder=new TextDecoder();
 function assert(condition,message){if(!condition)throw new Error(message);}
@@ -46,7 +47,8 @@ async function createPayload({repository,imageStore,storage,now=()=>new Date().t
  assert(repository&&typeof repository.loadSnapshot==='function','Repository is unavailable');
  const images=[];
  if(imageStore&&typeof imageStore.list==='function')for(const item of await imageStore.list())images.push({id:item.id,name:item.name,type:item.type,size:item.size,createdAt:item.createdAt,data:await blobToBase64(item.blob)});
- return {createdAt:now(),domain:repository.loadSnapshot(),settings:{displayLanguage:storage.getItem('pa.displayLanguage')||'en',inputLanguage:storage.getItem('pa.inputLanguage')||'auto'},posterImages:images};
+ let pinnedLocations=[];try{const parsed=JSON.parse(storage.getItem(PINNED_LOCATIONS_KEY)||'[]');if(Array.isArray(parsed))pinnedLocations=parsed;}catch(_){}
+ return {createdAt:now(),domain:repository.loadSnapshot(),settings:{displayLanguage:storage.getItem('pa.displayLanguage')||'en',inputLanguage:storage.getItem('pa.inputLanguage')||'auto',pinnedLocations},posterImages:images};
 }
 function validateDomainSnapshot(snapshot){
  const persistence=root.PropertyAssistantPersistence;assert(persistence&&typeof persistence.createRepository==='function','Persistence validator is unavailable');
@@ -60,20 +62,25 @@ async function restorePayload(payload,{imageStore,storage}){
  const display=payload.settings.displayLanguage,input=payload.settings.inputLanguage;
  assert(['en','ta','tg'].includes(display),'Backup display language is invalid');
  assert(['auto','en','ta','tg'].includes(input),'Backup input language is invalid');
+ const pinnedLocations=payload.settings.pinnedLocations||[];assert(Array.isArray(pinnedLocations),'Backup pinned locations are invalid');
+ const cleanPinned=[...new Set(pinnedLocations.map(value=>{assert(typeof value==='string'&&value.trim()&&value.trim().length<=80,'Backup pinned location is invalid');return value.trim().replace(/\s+/g,' ');} ))].slice(0,30);
  const persistence=root.PropertyAssistantPersistence;
  const validated=validateDomainSnapshot(payload.domain);
- const imageRecords=(payload.posterImages||[]).map(item=>{assert(item&&typeof item.id==='string'&&item.id,'Backup poster image is invalid');return {...item,blob:base64ToBlob(item.data,item.type)};});
- const domainKey=persistence.STORAGE_KEY;
- const previous={domain:storage.getItem(domainKey),display:storage.getItem('pa.displayLanguage'),input:storage.getItem('pa.inputLanguage')};
+ const posterImages=payload.posterImages||[];assert(Array.isArray(posterImages),'Backup poster images are invalid');
+ const imageRecords=posterImages.map(item=>{assert(item&&typeof item.id==='string'&&item.id&&typeof item.data==='string','Backup poster image is invalid');const blob=base64ToBlob(item.data,item.type);assert(blob.size>0,'Backup poster image is empty');return {...item,blob};});
  const canReplaceImages=Boolean(imageStore&&typeof imageStore.replaceAll==='function');
+ if(imageRecords.length>0)assert(canReplaceImages,'Poster image storage is unavailable; restore was not started');
+ const domainKey=persistence.STORAGE_KEY;
+ const previous={domain:storage.getItem(domainKey),display:storage.getItem('pa.displayLanguage'),input:storage.getItem('pa.inputLanguage'),pinned:storage.getItem(PINNED_LOCATIONS_KEY)};
  const previousImages=canReplaceImages&&typeof imageStore.list==='function'?await imageStore.list():null;
  try{
   storage.setItem(domainKey,JSON.stringify(validated));
   storage.setItem('pa.displayLanguage',display);storage.setItem('pa.inputLanguage',input);
+  storage.setItem(PINNED_LOCATIONS_KEY,JSON.stringify(cleanPinned));
   if(canReplaceImages)await imageStore.replaceAll(imageRecords);
  }catch(error){
   try{
-   restoreStorageValue(storage,domainKey,previous.domain);restoreStorageValue(storage,'pa.displayLanguage',previous.display);restoreStorageValue(storage,'pa.inputLanguage',previous.input);
+   restoreStorageValue(storage,domainKey,previous.domain);restoreStorageValue(storage,'pa.displayLanguage',previous.display);restoreStorageValue(storage,'pa.inputLanguage',previous.input);restoreStorageValue(storage,PINNED_LOCATIONS_KEY,previous.pinned);
    if(previousImages&&canReplaceImages)await imageStore.replaceAll(previousImages);
   }catch(_){throw new Error('Restore failed and previous local data could not be fully recovered');}
   throw new Error(`Restore could not be completed; previous local data was kept. ${error.message||''}`.trim());

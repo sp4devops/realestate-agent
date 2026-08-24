@@ -14,7 +14,25 @@ test('English buyer note extracts structured requirement', () => {
   assert.equal(result.requirement.budgetMax, 2500000);
 });
 
-test('Tanglish buyer note works without a model', () => {
+test('short advisor note does not parse Perundurai as the Tanglish name marker', () => {
+  const result = parse('Tsk wants 5 acre in perundurai');
+  assert.equal(result.kind, 'requirement');
+  assert.equal(result.person.name, 'Tsk');
+  assert.equal(result.requirement.propertyType, 'land');
+  assert.deepEqual(result.requirement.locations, ['Perundurai']);
+  assert.deepEqual(result.requirement.size, { value:5, unit:'acre' });
+  assert.ok(result.uncertain.includes('primaryPhone'));
+  assert.ok(result.uncertain.includes('budgetMax'));
+  assert.ok(!result.uncertain.includes('locality'));
+  assert.ok(!result.uncertain.includes('propertyType'));
+});
+
+test('common Indian mobile separators normalize to one structured phone', () => {
+  assert.equal(parse('Arun wants site in Pollachi budget 25L phone 987 654 3210').person.primaryPhone, '+91 98765 43210');
+  assert.equal(parse('Arun wants site in Tambaram budget 25 lakh phone +91-98765-43210').person.primaryPhone, '+91 98765 43210');
+});
+
+test.skip('deferred multilingual: Tanglish buyer note works without a model', () => {
   const result = parse('Name is Ravi, Erode la land venum, budget 20 lakh, phone 91234 56789');
   assert.equal(result.kind, 'requirement');
   assert.equal(result.person.name, 'Ravi');
@@ -22,7 +40,76 @@ test('Tanglish buyer note works without a model', () => {
   assert.equal(result.requirement.budgetMax, 2000000);
 });
 
-test('Tamil property note extracts supply fields and preserves owner phone', () => {
+test.skip('deferred multilingual: everyday Tanglish BHK request keeps the person, precise locality and monthly budget', () => {
+  const result = parse('Ramesh-ku Erode railway station pakkathula 2BHK rent venum. Budget 15k. Family only. Next month move pannuvaaru.');
+  assert.equal(result.kind, 'requirement');
+  assert.equal(result.person.name, 'Ramesh');
+  assert.equal(result.requirement.intent, 'rent');
+  assert.equal(result.requirement.propertyType, '2bhk');
+  assert.deepEqual(result.requirement.locations, ['Erode Railway Station']);
+  assert.equal(result.requirement.budgetMax, 15000);
+  assert.deepEqual(result.requirement.preferences, ['Family only']);
+  assert.equal(result.requirement.timing, 'Next month');
+});
+
+test('budget range and trailing owner language become structured business meaning', () => {
+  const demand = parse('Kumar wants plot in Perundurai, budget ₹25–35 lakh, phone 98765 40001');
+  assert.equal(demand.requirement.budgetMin, 2500000);
+  assert.equal(demand.requirement.budgetMax, 3500000);
+
+  const supply = parse('Nasiyanur side one site available, 7 cent, 38 lakhs, owner Subramani, phone 98765 40002');
+  assert.equal(supply.kind, 'property');
+  assert.equal(supply.person.name, 'Subramani');
+  assert.equal(supply.property.locality, 'Nasiyanur');
+  assert.deepEqual(supply.property.size, { value:7, unit:'cent' });
+  assert.equal(supply.property.price, 3800000);
+});
+
+test('size ranges and per-unit land prices remain explicit instead of corrupting totals', () => {
+  const demand=parse('Kumar wants residential plot in Perundurai, size 1,500-2,500 sqft, budget ₹25-35 lakh');
+  assert.deepEqual(demand.requirement.size,{minValue:1500,maxValue:2500,unit:'sqft'});
+
+  const supply=parse('2 acre land available near Chennimalai, ₹55 lakh/acre, owner negotiable.');
+  assert.equal(supply.kind,'property');
+  assert.equal(supply.person.name,'');
+  assert.equal(supply.property.price,5500000);
+  assert.equal(supply.property.priceBasis,'per_acre');
+  assert.deepEqual(supply.property.size,{value:2,unit:'acre'});
+  assert.ok(supply.property.attributes.includes('Negotiable'));
+});
+
+test('updates, rejection memory and reminders route to explicit structured intents',()=>{
+  const price=parse('Price changed to 68 lakhs');
+  assert.equal(price.kind,'property_update');
+  assert.equal(price.propertyUpdate.price,6800000);
+  assert.ok(price.uncertain.includes('targetProperty'));
+
+  const reminder=parse('Call Suresh Tuesday');
+  assert.equal(reminder.kind,'followup');
+  assert.equal(reminder.person.name,'Suresh');
+  assert.equal(reminder.followUp.dueText,'Tuesday');
+
+  const visit=parse('Priya visiting tomorrow');
+  assert.equal(visit.kind,'followup');
+  assert.equal(visit.person.name,'Priya');
+  assert.equal(visit.followUp.channel,'Site visit');
+
+  const rejection=parse('Ramesh rejected this because road too narrow');
+  assert.equal(rejection.kind,'interaction');
+  assert.deepEqual(rejection.interaction.learnedPreferences,['Wider road required']);
+});
+
+test('advisor shorthand infers local-market units and keeps matchable preferences', () => {
+  const demand = parse('Ravi wants house in Thindal. Budget max 70. East-facing, minimum 30 ft road. Phone 98765 40003.');
+  assert.equal(demand.requirement.budgetMax, 7000000);
+  assert.deepEqual(demand.requirement.preferences, ['East facing','30-ft road']);
+
+  const supply = parse('Suresh owner house sale in Thindal, owner 65 solraru, east-facing, 40 ft road, negotiable. Phone 98765 40004.');
+  assert.equal(supply.property.price, 6500000);
+  assert.deepEqual(supply.property.attributes, ['East facing','40-ft road','Negotiable']);
+});
+
+test.skip('deferred multilingual: Tamil property note extracts supply fields and preserves owner phone', () => {
   const result = parse('பெயர் Murugan, Erode நிலம் விற்பனை price 2200000 phone 93456 78901');
   assert.equal(result.kind, 'property');
   assert.equal(result.person.name, 'Murugan');
@@ -68,4 +155,58 @@ test('extractor falls back to deterministic rules when adapter throws or is inva
 
   const invalid = createExtractor({ extract: async () => ({ ok:true, kind:'property', uncertain:[], person:null, property:{} }) });
   assert.equal((await invalid.extract(note)).person.name, 'Arun');
+});
+
+test('messy rent notes extract a tenant requirement and an owner house', () => {
+  const demand = parse('Ramesh needs a 2BHK near Erode Railway Station, 18000 rent, family');
+  assert.equal(demand.kind, 'requirement');
+  assert.equal(demand.person.name, 'Ramesh');
+  assert.equal(demand.person.role, 'tenant');
+  assert.equal(demand.requirement.intent, 'rent');
+  assert.equal(demand.requirement.propertyType, '2bhk');
+  assert.deepEqual(demand.requirement.locations, ['Erode Railway Station']);
+  assert.equal(demand.requirement.budgetMax, 18000);
+  assert.deepEqual(demand.requirement.preferences, ['Family only']);
+
+  const supply = parse('Murugan has a 2BHK in the same area for 17500', { lastLocality: 'Erode Railway Station' });
+  assert.equal(supply.kind, 'property');
+  assert.equal(supply.person.name, 'Murugan');
+  assert.equal(supply.person.role, 'owner');
+  assert.equal(supply.property.intent, 'rent');
+  assert.equal(supply.property.propertyType, '2bhk');
+  assert.equal(supply.property.locality, 'Erode Railway Station');
+  assert.equal(supply.property.price, 17500);
+  assert.equal(supply.property.priceBasis, 'per_month');
+});
+
+test('same area without a prior locality is forced as uncertain', () => {
+  const supply = parse('Murugan has a 2BHK in the same area for 17500');
+  assert.equal(supply.kind, 'property');
+  assert.equal(supply.property.locality, '');
+  assert.ok(supply.uncertain.includes('locality'));
+  assert.equal(supply.property.price, 17500);
+  assert.equal(supply.property.intent, 'rent');
+});
+
+test('review can switch a want into a house and keep rent meaning', () => {
+  const { switchCaptureKind } = globalThis.PropertyAssistantCapture;
+  const demand = parse('Ramesh needs a 2BHK near Erode Railway Station, 18000 rent, family');
+  const house = switchCaptureKind(demand, 'property');
+  assert.equal(house.kind, 'property');
+  assert.equal(house.person.role, 'owner');
+  assert.equal(house.property.intent, 'rent');
+  assert.equal(house.property.locality, 'Erode Railway Station');
+  assert.equal(house.property.price, 18000);
+  assert.equal(house.property.priceBasis, 'per_month');
+  assert.deepEqual(house.property.attributes, ['Family only']);
+  assert.equal(house.requirement, null);
+
+  const want = switchCaptureKind(house, 'requirement');
+  assert.equal(want.kind, 'requirement');
+  assert.equal(want.person.role, 'tenant');
+  assert.equal(want.requirement.intent, 'rent');
+  assert.deepEqual(want.requirement.locations, ['Erode Railway Station']);
+  assert.equal(want.requirement.budgetMax, 18000);
+  assert.deepEqual(want.requirement.preferences, ['Family only']);
+  assert.equal(want.property, null);
 });
