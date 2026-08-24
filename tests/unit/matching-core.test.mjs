@@ -84,3 +84,56 @@ test('advisor-area landmarks rank as nearby rather than disappearing',()=>{
   assert.equal(areNearby('Perundurai','Vijayamangalam'),true);
   assert.equal(areNearby('Thindal','Erode'),true);
 });
+
+test('messy rent requirement matches the same-area rent house', () => {
+  const requirement={id:'r-ramesh',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:18000,preferences:['Family only']};
+  const property={id:'p-murugan',intent:'rent',propertyType:'2bhk',locality:'Erode Railway Station',price:17500,priceBasis:'per_month'};
+  const result=evaluate(requirement,property);
+  assert.equal(result.eligible,true);
+  assert.ok(result.reasons.some(reason=>reason.includes('Exact location')));
+  assert.ok(result.reasons.some(reason=>reason.includes('Within stated budget')));
+  assert.ok(result.reasons.some(reason=>/Family only/i.test(reason)));
+});
+
+test('priced Ramesh want does not match a same-area house with no rent or price', () => {
+  const requirement={id:'r-ramesh-unpriced',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:18000};
+  const property={id:'p-unpriced-house',intent:'rent',propertyType:'2bhk',locality:'Erode Railway Station'};
+  const result=evaluate(requirement,property);
+  assert.equal(result.eligible,false);
+  assert.equal(result.score,0);
+  assert.ok(result.reasons.includes('The house has no rent or price, so it cannot fit this budget'));
+});
+
+test('both sides without money numbers stay unmatched', () => {
+  const requirement={id:'r-no-budget',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station']};
+  const property={id:'p-no-price',intent:'rent',propertyType:'2bhk',locality:'Erode Railway Station'};
+  const result=evaluate(requirement,property);
+  assert.equal(result.eligible,false);
+  assert.equal(result.score,0);
+});
+
+test('matching only pairs requirements against properties', () => {
+  const first={id:'r1',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:18000};
+  const second={id:'r2',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:17500};
+  assert.deepEqual(rank([first,second],[]),[]);
+  assert.equal(evaluate(first,second).eligible,false);
+});
+
+test('incomplete demand without location or budget does not match any 2bhk rent',()=>{
+  const incomplete={id:'r-blank',intent:'rent',propertyType:'2bhk',locations:[]};
+  const otherCity={id:'p-chennai',intent:'rent',propertyType:'2bhk',locality:'Chennai',price:12000,priceBasis:'per_month'};
+  const anyRent={id:'p-erode',intent:'rent',propertyType:'2bhk',locality:'Erode Railway Station',price:17500,priceBasis:'per_month'};
+  assert.equal(evaluate(incomplete,otherCity).eligible,false);
+  assert.equal(evaluate(incomplete,anyRent).eligible,false);
+  assert.equal(evaluate({...incomplete,locations:['Erode Railway Station']},anyRent).eligible,false);
+  assert.equal(evaluate({...incomplete,budgetMax:18000},anyRent).eligible,false);
+});
+
+test('complete Ramesh and Murugan pair still matches when location and budget are present',()=>{
+  const requirement={id:'r-ramesh-complete',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:18000};
+  const property={id:'p-murugan-complete',intent:'rent',propertyType:'2bhk',locality:'Erode Railway Station',price:17500,priceBasis:'per_month'};
+  const result=evaluate(requirement,property);
+  assert.equal(result.eligible,true);
+  assert.ok(result.reasons.some(reason=>reason.includes('Exact location')));
+  assert.ok(result.reasons.some(reason=>reason.includes('Within stated budget')));
+});

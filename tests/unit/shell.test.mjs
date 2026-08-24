@@ -22,12 +22,12 @@ test('pilot mode exposes English typing and explicitly defers voice and multilin
 
 test('production shell never auto-seeds synthetic business records', () => {
   assert.doesNotMatch(app, /repository\.seedSynthetic\s*\(/);
-  assert.match(app, /Local memory needs recovery/);
+  assert.match(app, /Saved on this phone needs a copy/);
 });
 
 test('primary shell presents a property second brain instead of a CRM pipeline', () => {
   assert.match(app, /local property second brain/i);
-  assert.match(app, /What should I remember\?/);
+  assert.match(app, /Write what they said\./);
   assert.doesNotMatch(app, /sales pipeline|deal stage|lead funnel/i);
 });
 

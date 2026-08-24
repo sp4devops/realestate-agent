@@ -39,7 +39,7 @@ test('English-only pilot mode remains independent from language-neutral domain r
     localStorage.setItem('pa.inputLanguage','tg');
   });
   await page.reload();
-  await expect(page.getByRole('heading',{name:'Contacts',exact:true})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'People',exact:true})).toBeVisible();
   const after = await page.evaluate(() => JSON.stringify(window.__PA_REPOSITORY__.loadSnapshot()));
   expect(after).toBe(before);
 });

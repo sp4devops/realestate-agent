@@ -6,8 +6,8 @@ const backup=globalThis.PropertyAssistantBackup;
 const persistence=globalThis.PropertyAssistantPersistence;
 function storage(initial={}){const values=new Map(Object.entries(initial));return {getItem:key=>values.has(key)?values.get(key):null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key),dump:()=>Object.fromEntries(values)};}
 
-test('encrypted backup round-trips structured local data and language settings',async()=>{
- const source=storage({'pa.displayLanguage':'ta','pa.inputLanguage':'tg'});const repo=persistence.createRepository(source,{now:()=> '2026-08-22T00:00:00.000Z',makeId:()=> 'person-1'});
+test('encrypted backup round-trips structured local data, settings and pinned areas',async()=>{
+ const source=storage({'pa.displayLanguage':'ta','pa.inputLanguage':'tg','pa.pinnedLocations.v1':'["Perundurai"]'});const repo=persistence.createRepository(source,{now:()=> '2026-08-22T00:00:00.000Z',makeId:()=> 'person-1'});
  repo.create('people',{id:'person-1',name:'Suresh',role:'buyer',primaryPhone:'+91 90000 00001',alternatePhones:[]});
  const payload=await backup.createPayload({repository:repo,imageStore:null,storage:source,now:()=> '2026-08-22T00:30:00.000Z'});
  const encrypted=await backup.encryptPayload(payload,'local-safe-123');
@@ -15,7 +15,7 @@ test('encrypted backup round-trips structured local data and language settings',
  const decoded=await backup.decryptBackup(encrypted,'local-safe-123');
  const target=storage();await backup.restorePayload(decoded,{imageStore:null,storage:target});
  const restored=persistence.createRepository(target).loadSnapshot();
- assert.equal(restored.entities.people['person-1'].name,'Suresh');assert.equal(target.getItem('pa.displayLanguage'),'ta');assert.equal(target.getItem('pa.inputLanguage'),'tg');
+ assert.equal(restored.entities.people['person-1'].name,'Suresh');assert.equal(target.getItem('pa.displayLanguage'),'ta');assert.equal(target.getItem('pa.inputLanguage'),'tg');assert.equal(target.getItem('pa.pinnedLocations.v1'),'["Perundurai"]');
 });
 
 test('poster images are included in a produced backup and restored with their bytes',async()=>{

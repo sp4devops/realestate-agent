@@ -4,38 +4,38 @@ repository: sp4devops/realestate-agent
 status: needs_device_retest
 active_phase: P12
 active_phase_name: Property Advisor pilot readiness
-last_verified_commit: bfb4563aa814dd6590b3995ca381789554af3862
-last_updated: 2026-08-23T11:58:41+05:30
-active_pr: 13
-active_branch: ai/p12-pilot-readiness
+last_verified_commit: 8850c5c22b590c00fbf7792c26e36f6b5a8dcec6
+last_updated: 2026-08-23T19:28:46+05:30
+active_pr: 14
+active_branch: ai/p12-usability-ocr
 
 ci_gate:
   status: green_functional_head
-  verified_head_sha: bfb4563aa814dd6590b3995ca381789554af3862
+  verified_head_sha: 8850c5c22b590c00fbf7792c26e36f6b5a8dcec6
   workflow_name: Quality Gates + Release Candidates
-  quality_workflow_run_id: 32622809337
-  quality_workflow_run_number: 436
-  release_workflow_run_id: 32622809304
-  release_workflow_run_number: 155
+  quality_workflow_run_id: 32643679567
+  quality_workflow_run_number: 467
+  release_workflow_run_id: 32643679571
+  release_workflow_run_number: 186
   workflow_status: completed
   workflow_conclusion: success
   required_for_advance: true
   terminal_success_required: true
-  note: The repaired 0.11.0-rc.4 English typing-only functional head passed every required job, including 101 Playwright cases with one intentional viewport skip, Android build/lint/tests, signed APK verification with deferred voice assets absent, desktop packaging/smoke and the required summary. This state/handoff commit will move PR HEAD and therefore requires its own exact-head workflows before handoff.
+  note: The repaired 0.11.0-rc.6 functional head passed every required job, including the full Playwright suite, 89 active unit tests with three intentional multilingual skips, Android build/lint/tests, bundled offline OCR on an emulator, signed APK verification, desktop packaging/smoke and the required summary. This state/handoff commit will move PR HEAD and therefore requires its own exact-head workflows before handoff.
 
 review_gates:
   code_review:
     status: pass
     blocking_findings: 0
-    note: Post-repair review of bfb4563aa814dd6590b3995ca381789554af3862 found no Critical, High or Medium issue. Typed place aliases and synchronized Android asset staging closed the prior findings. Product-mode capability flags remain descriptive compiled-build metadata until deferred adapters are reactivated; this is Low and nonblocking.
+    note: Final review of 8850c5c22b590c00fbf7792c26e36f6b5a8dcec6 found no Critical or High issue. Two deferred Medium edge cases remain: multiple contacts separated only by whitespace or slash may retain only the later contact, and a valid leading-zero first-pass phone can trigger an unnecessary enhanced OCR retry. Neither affects the requested single-contact poster repair.
   qa_review:
     status: pass_with_device_validation_pending
     blocking_findings: 0
-    note: Post-repair review confirmed draft restoration, typed save-after-reload persistence, onboarding-once behavior, English-only active fixtures, empty Ask guidance and voice-free packaging. Hosted automation is complete; physical Android install/launch, keyboard/insets and device integrations remain runtime validation rather than an unresolved code defect.
+    note: Final review passed with no Critical or High issue. The multiple-contact separator behavior is deferred as Medium; possible light status icons over the dark-green launch splash are deferred as Low for physical inspection. Physical Android validation remains the only runtime gate.
   product_guardrail_review:
     status: pass
     blocking_findings: 0
-    note: The active product is an English typing-only local second brain, not a CRM. Capture-Understand-Remember-Match-Follow up is intact; voice and multilingual UI/input are absent from release surfaces but language-neutral memory and adapter seams remain.
+    note: Final review of rc.6 found no issues. The active product remains an English typing-only local second brain, not a CRM; density-correct layout and reviewable on-device OCR strengthen Capture-Understand-Remember-Match-Follow up without cloud, pipeline or contact-management scope drift.
 
 product_contract:
   core_loop: [capture, understand, remember, match, follow_up]
@@ -80,9 +80,25 @@ current_tasks:
     owner: ai-agent
     description: Refocus 0.11.0-rc.4 on the typed second-brain loop, remove active voice/language UI and microphone permission, preserve reactivation seams, repair reviewer findings and obtain exact-head CI plus three independent approvals.
   - id: P12-T4
-    status: needs_device_retest
+    status: superseded_by_rc5
     owner: user-and-ai-agent
     description: Install and exercise 0.11.0-rc.4 on a representative Android phone for first/returning launch, typed capture/edit/save/reload, automatic match, follow-up, keyboard/insets, camera/gallery, location denial, backup document flow and communication intents.
+  - id: P12-T5
+    status: done
+    owner: ai-agent
+    description: Deliver rc.5 duplicate-name identity resolution, Cursor-style completion, offline area typeahead and pinning, Android safe insets, bundled offline OCR, reviewer repairs, exact-head CI and three independent approvals.
+  - id: P12-T6
+    status: superseded_by_rc6
+    owner: user-and-ai-agent
+    description: Install and exercise 0.11.0-rc.5 on a representative Android phone for system bars/keyboard, touch completion, camera/gallery OCR, rotation/accuracy, location permission, memory/thermal/latency, launch/restart persistence, backup picker and external intents.
+  - id: P12-T7
+    status: done
+    owner: ai-agent
+    description: Deliver rc.6 density-correct Android insets, light-status-bar treatment, bounded two-pass OCR enhancement, conservative phone recovery, explicit uncertainty confirmation, exact-head CI and three independent reviewer approvals.
+  - id: P12-T8
+    status: needs_device_retest
+    owner: user-and-ai-agent
+    description: Install and exercise 0.11.0-rc.6 on the screenshot device for three-button and gesture navigation, keyboard/rotation, status-bar appearance, camera/gallery OCR accuracy and approximately 4 GB phone memory/thermal/latency.
   - id: P4-T3
     status: deferred
     owner: ai-agent
@@ -93,16 +109,19 @@ current_tasks:
     description: Select, package and benchmark a production local OCR runtime on representative target hardware before broader release.
 
 blockers:
-  - Physical Android validation of the 0.11.0-rc.4 English typing-only candidate is required before P12 is called pilot-ready or merge-ready.
+  - Physical Android validation of the 0.11.0-rc.6 English typing-only candidate is required before P12 is called pilot-ready or merge-ready.
 
 known_constraints:
   - Cash build-cost target is zero until product validation/revenue threshold.
   - No paid AI APIs or cloud dependency should be introduced merely for convenience.
   - CI Android RC uses an ephemeral signing key; production distribution requires a persistent protected signing key.
   - Desktop RC requires Python 3.9+ and uses a loopback-only system-browser launcher.
-  - Production OCR runtime and approximately 4 GB Android physical-device memory/thermal benchmarking remain broader-release constraints.
+  - Bundled OCR is automated on an emulator; approximately 4 GB Android physical-device accuracy, memory, latency and thermal benchmarking remain required.
   - Product-mode capability flags describe this compiled pilot; packaging/runtime activation must be wired when deferred adapters return.
   - Direct Call/WhatsApp actions from Ask/person cards are a later enhancement; current Match and Follow-up screens provide the operational actions.
+  - Posters containing multiple contacts separated only by whitespace or a slash can retain only the later contact; this is deferred because the current review form intentionally stores one primary contact and the requested poster has one contact.
+  - A valid leading-zero phone found by the first OCR pass can trigger an unnecessary enhanced retry; this is bounded but should be optimized before broader release.
+  - Transparent status-bar icon contrast over the brief dark-green Android launch splash needs physical-device inspection; the normal app header uses the intended white background and dark icons.
 
 last_checks:
   - check: rc.4 local verification
@@ -129,11 +148,29 @@ last_checks:
   - check: post-repair product guardrail reviewer
     result: pass
     evidence: English typing-only second-brain scope, local-first privacy, deferred capability seams, returning-advisor simplicity and the full Capture-Understand-Remember-Match-Follow up loop all pass.
+  - check: rc.5 final exact-head Quality Gates
+    result: pass
+    evidence: Quality Gates #459 (32630727175) completed successfully for f87bd40c5623350e352f2f9a0cbdb831360002eb; Harness, 87 active unit tests with three deferred skips, 145 Playwright cases with one intentional skip, Android build/lint/tests, bundled OCR emulator and Required summary all passed.
+  - check: rc.5 final exact-head Release Candidates
+    result: pass
+    evidence: Release Candidates #178 (32630727167) completed successfully for f87bd40c5623350e352f2f9a0cbdb831360002eb; signed Android rc.5, desktop package/smoke/archive and artifact uploads passed.
+  - check: rc.5 three independent reviewers
+    result: pass
+    evidence: Code and Product reviewers found no Critical, High, Medium or Low issue. QA found no Critical, High or Medium issue and deferred one Low listbox-ARIA structure note; physical-device checks remain.
+  - check: rc.6 final exact-head Quality Gates
+    result: pass
+    evidence: Quality Gates #467 (32643679567) completed successfully for 8850c5c22b590c00fbf7792c26e36f6b5a8dcec6; Harness, 89 active unit tests with three deferred multilingual skips, full Playwright, Android build/lint/tests, bundled OCR emulator and Required summary all passed.
+  - check: rc.6 final exact-head Release Candidates
+    result: pass
+    evidence: Release Candidates #186 (32643679571) completed successfully for 8850c5c22b590c00fbf7792c26e36f6b5a8dcec6; signed Android rc.6, desktop package/smoke/archive and artifact uploads passed.
+  - check: rc.6 three independent reviewers
+    result: pass_with_device_validation_pending
+    evidence: Product review passed without findings. Code and QA found no Critical or High issue; two Medium OCR edge cases and one Low launch-splash contrast check are deferred and recorded above. Physical-device layout and real-camera OCR checks remain.
 
 next_actions:
   - Run Quality Gates and Release Candidates on the exact state/handoff documentation HEAD.
-  - Provide the resulting 0.11.0-rc.4 Android APK and desktop release candidate.
-  - On a representative Android phone, test first launch and returning launch, Home typing, Review and Edit note draft preservation, save/relaunch persistence, matching, follow-up, keyboard/system insets and absence of any microphone prompt.
-  - Exercise camera/gallery, deny location, export/restore an encrypted synthetic backup, and open Call/WhatsApp/Share intents.
+  - Provide the resulting 0.11.0-rc.6 Android APK for physical validation.
+  - On the screenshot device, retest the same screens with three-button and gesture navigation, keyboard open/closed, rotation, launch-splash/status-bar transition and absence of doubled physical-pixel safe-area spacing.
+  - Exercise camera/gallery OCR with the supplied poster plus clear and low-contrast posters; confirm correct/uncertain phone review, correction before/while GPS resolves, location allow/deny and large-image memory/heat/latency.
   - After physical validation, run the approximately five-Property-Advisor checklist and collect reproducible feedback.
-  - Only after device confirmation may P12 become pilot-ready/merge-ready; PR #13 still requires fresh explicit user authorization before merge.
+  - Only after device confirmation may P12 become pilot-ready/merge-ready; PR #14 and then PR #13 still require fresh explicit user authorization before merge.

@@ -5,9 +5,16 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
@@ -26,14 +33,34 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.webkit.WebViewAssetLoader;
 
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
 
 public final class MainActivity extends Activity {
+  private static final class OcrPassTimeoutException extends Exception {
+    OcrPassTimeoutException() {
+      super("Poster reading timed out. Retake it or type the text.");
+    }
+  }
+
+  private static final int POSTER_MAX_DIMENSION = 2048;
+  private static final long POSTER_MAX_PIXELS = 4_000_000L;
+  private static final long POSTER_OCR_PASS_TIMEOUT_SECONDS = 12L;
+  private static final Pattern INDIAN_MOBILE = Pattern.compile("(?:^|\\D)(?:91|0)?[6-9][0-9]{9}(?:\\D|$)");
   private static final int LOCATION_PERMISSION_REQUEST = 43;
   private static final int FILE_CHOOSER_REQUEST = 44;
   private static final int BACKUP_EXPORT_REQUEST = 45;
@@ -48,6 +75,12 @@ public final class MainActivity extends Activity {
   private Uri pendingCameraImageUri;
   private String pendingBackupText;
   private WebView web;
+  private TextRecognizer posterTextRecognizer;
+  private volatile boolean destroyed;
+  private int safeInsetTop;
+  private int safeInsetRight;
+  private int safeInsetBottom;
+  private int safeInsetLeft;
 
   @Override public void onCreate(Bundle state) {
     super.onCreate(state);
@@ -55,8 +88,12 @@ public final class MainActivity extends Activity {
 
     web = new WebView(this);
     ViewCompat.setOnApplyWindowInsetsListener(web, (view, windowInsets) -> {
-      Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-      view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+      Insets bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+      safeInsetTop = bars.top;
+      safeInsetRight = bars.right;
+      safeInsetBottom = bars.bottom;
+      safeInsetLeft = bars.left;
+      applySystemInsetsToWeb();
       return windowInsets;
     });
 
@@ -81,6 +118,11 @@ public final class MainActivity extends Activity {
 
       @Override public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
         return assetLoader.shouldInterceptRequest(Uri.parse(url));
+      }
+
+      @Override public void onPageFinished(WebView view, String url) {
+        super.onPageFinished(view, url);
+        applySystemInsetsToWeb();
       }
 
       @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -151,6 +193,154 @@ public final class MainActivity extends Activity {
     @JavascriptInterface public void exportBackup(String fileName, String encryptedText) {
       runOnUiThread(() -> launchBackupExport(fileName, encryptedText));
     }
+
+    @JavascriptInterface public void recognizePoster(String imageDataUrl, String requestId) {
+      startPosterRecognition(imageDataUrl, requestId);
+    }
+  }
+
+  private void applySystemInsetsToWeb() {
+    if (web == null) return;
+    float density = getResources().getDisplayMetrics().density;
+    int cssInsetTop = toCssPixels(safeInsetTop, density);
+    int cssInsetRight = toCssPixels(safeInsetRight, density);
+    int cssInsetBottom = toCssPixels(safeInsetBottom, density);
+    int cssInsetLeft = toCssPixels(safeInsetLeft, density);
+    String script = "(function(){var s=document.documentElement.style;"
+        + "s.setProperty('--native-safe-top','" + cssInsetTop + "px');"
+        + "s.setProperty('--native-safe-right','" + cssInsetRight + "px');"
+        + "s.setProperty('--native-safe-bottom','" + cssInsetBottom + "px');"
+        + "s.setProperty('--native-safe-left','" + cssInsetLeft + "px');})();";
+    web.evaluateJavascript(script, null);
+  }
+
+  static int toCssPixels(int physicalPixels, float density) {
+    return Math.max(0, Math.round(physicalPixels / Math.max(1f, density)));
+  }
+
+  private synchronized TextRecognizer getPosterTextRecognizer() {
+    if (destroyed) return null;
+    if (posterTextRecognizer == null) {
+      posterTextRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+    }
+    return posterTextRecognizer;
+  }
+
+  private void startPosterRecognition(String imageDataUrl, String requestId) {
+    if (requestId == null || requestId.isEmpty()) return;
+    if (destroyed) return;
+    if (imageDataUrl == null || imageDataUrl.length() > 8_000_000) {
+      sendPosterRecognitionResult(requestId, false, "", "Poster image is too large. Retake it closer to the poster.");
+      return;
+    }
+    new Thread(() -> {
+      Bitmap bitmap = null;
+      Bitmap enhancedBitmap = null;
+      try {
+        int comma = imageDataUrl.indexOf(',');
+        if (comma < 0 || !imageDataUrl.substring(0, comma).startsWith("data:image/")) {
+          throw new IllegalArgumentException("Poster image format is invalid.");
+        }
+        byte[] bytes = Base64.decode(imageDataUrl.substring(comma + 1), Base64.DEFAULT);
+        bitmap = decodePosterBitmap(bytes);
+        if (bitmap == null) throw new IllegalArgumentException("Poster image could not be opened.");
+        TextRecognizer recognizer = getPosterTextRecognizer();
+        if (recognizer == null) return;
+
+        String text;
+        try {
+          text = recognizePosterText(recognizer, bitmap);
+        } catch (OcrPassTimeoutException error) {
+          bitmap = null;
+          throw error;
+        }
+        if (!containsIndianMobile(text)) {
+          enhancedBitmap = enhancePosterForOcr(bitmap);
+          try {
+            String enhancedText = recognizePosterText(recognizer, enhancedBitmap);
+            if (containsIndianMobile(enhancedText) || text.isEmpty()) text = enhancedText;
+          } catch (OcrPassTimeoutException ignored) {
+            enhancedBitmap = null;
+          } catch (Exception ignored) {
+            // The original pass is still useful review text when the optional enhancement pass fails.
+          }
+        }
+
+        if (text.isEmpty()) sendPosterRecognitionResult(requestId, false, "", "No readable text was found. Retake the poster in good light or type the text.");
+        else sendPosterRecognitionResult(requestId, true, text, "");
+      } catch (Exception error) {
+        sendPosterRecognitionResult(requestId, false, "", error.getMessage() == null ? "Poster image could not be read." : error.getMessage());
+      } finally {
+        if (enhancedBitmap != null) enhancedBitmap.recycle();
+        if (bitmap != null) bitmap.recycle();
+      }
+    }, "property-assistant-ocr").start();
+  }
+
+  private static String recognizePosterText(TextRecognizer recognizer, Bitmap bitmap) throws Exception {
+    Task<com.google.mlkit.vision.text.Text> task = recognizer.process(InputImage.fromBitmap(bitmap, 0));
+    try {
+      String text = Tasks.await(task, POSTER_OCR_PASS_TIMEOUT_SECONDS, TimeUnit.SECONDS).getText();
+      return text == null ? "" : text.trim();
+    } catch (TimeoutException error) {
+      task.addOnCompleteListener(ignored -> {
+        if (!bitmap.isRecycled()) bitmap.recycle();
+      });
+      throw new OcrPassTimeoutException();
+    }
+  }
+
+  private static boolean containsIndianMobile(String text) {
+    String compact = text == null ? "" : text.replaceAll("[\\s()\\-+.]+", "");
+    return INDIAN_MOBILE.matcher(compact).find();
+  }
+
+  static Bitmap enhancePosterForOcr(Bitmap source) {
+    Bitmap output = Bitmap.createBitmap(source.getWidth(), source.getHeight(), Bitmap.Config.ARGB_8888);
+    Canvas canvas = new Canvas(output);
+    ColorMatrix grayscale = new ColorMatrix();
+    grayscale.setSaturation(0f);
+    float contrast = 1.7f;
+    float offset = (1f - contrast) * 127.5f;
+    ColorMatrix contrastMatrix = new ColorMatrix(new float[] {
+        contrast, 0, 0, 0, offset,
+        0, contrast, 0, 0, offset,
+        0, 0, contrast, 0, offset,
+        0, 0, 0, 1, 0
+    });
+    grayscale.postConcat(contrastMatrix);
+    Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    paint.setColorFilter(new ColorMatrixColorFilter(grayscale));
+    canvas.drawBitmap(source, 0, 0, paint);
+    return output;
+  }
+
+  private static Bitmap decodePosterBitmap(byte[] bytes) {
+    BitmapFactory.Options bounds = new BitmapFactory.Options();
+    bounds.inJustDecodeBounds = true;
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
+
+    int sampleSize = 1;
+    while (bounds.outWidth / sampleSize > POSTER_MAX_DIMENSION
+        || bounds.outHeight / sampleSize > POSTER_MAX_DIMENSION
+        || ((long) Math.max(1, bounds.outWidth / sampleSize)
+            * Math.max(1, bounds.outHeight / sampleSize)) > POSTER_MAX_PIXELS) {
+      sampleSize *= 2;
+    }
+
+    BitmapFactory.Options decoded = new BitmapFactory.Options();
+    decoded.inSampleSize = sampleSize;
+    decoded.inPreferredConfig = Bitmap.Config.ARGB_8888;
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.length, decoded);
+  }
+
+  private void sendPosterRecognitionResult(String requestId, boolean ok, String text, String error) {
+    runOnUiThread(() -> {
+      if (destroyed || web == null) return;
+      String payload = "{ok:" + ok + ",text:" + JSONObject.quote(text) + ",error:" + JSONObject.quote(error) + "}";
+      web.evaluateJavascript("window.__PA_POSTER_OCR_RESULT__ && window.__PA_POSTER_OCR_RESULT__(" + JSONObject.quote(requestId) + "," + payload + ")", null);
+    });
   }
 
   private boolean handleNavigation(Uri uri) {
@@ -345,17 +535,26 @@ public final class MainActivity extends Activity {
   }
 
   @Override protected void onDestroy() {
+    destroyed = true;
     if (pendingFileChooser != null) pendingFileChooser.onReceiveValue(null);
     if (pendingGeolocationCallback != null) pendingGeolocationCallback.invoke(pendingGeolocationOrigin, false, false);
     pendingFileChooser = null;
     pendingGeolocationCallback = null;
     pendingGeolocationOrigin = null;
     pendingBackupText = null;
+    closePosterTextRecognizer();
     if (web != null) {
       web.removeJavascriptInterface("PropertyAssistantHost");
       web.destroy();
       web = null;
     }
     super.onDestroy();
+  }
+
+  private synchronized void closePosterTextRecognizer() {
+    if (posterTextRecognizer != null) {
+      posterTextRecognizer.close();
+      posterTextRecognizer = null;
+    }
   }
 }

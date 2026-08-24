@@ -21,9 +21,9 @@ const displayLanguages = {
     ui:{
       greeting:'Good morning, Property Advisor',
       greetingHint:"Tell me what changed. I will remember it and connect the right people and properties.",
-      captureTitle:'What should I remember?',
+      captureTitle:'Write what they said.',
       captureHint:'Type a request, available property, price change, rejection or follow-up in plain English.',
-      capturePlaceholder:'Example: Ramesh needs a 2BHK rental in Erode under ₹15,000 per month',
+      capturePlaceholder:'Ramesh needs a 2BHK near Erode Railway Station, rent 18000',
       understood:'I understood',
       reviewSave:'Review & Save',
       suggested:'Suggested matches',
@@ -33,9 +33,9 @@ const displayLanguages = {
       requirements:'Requirements',
       requirementsHint:'People actively looking for a property.',
       properties:'Properties',
-      propertiesHint:'Available sale, rent and lease inventory.',
+      propertiesHint:'Sale, rent and lease. What I have.',
       matches:'Matches',
-      matchesHint:'Smart links between requirements and properties.',
+      matchesHint:'Fits what they asked.',
       followups:'Follow-ups',
       followupsHint:'The right people to contact next.',
       all:'All',
@@ -61,7 +61,7 @@ const displayLanguages = {
 
 const routes = {
   splash: ['Property Assistant','Private, local-first memory and deal assistant for Property Advisors.'],
-  onboarding: ['Welcome','Set up the app in a few simple steps. Your business memory stays on this device.'],
+  onboarding: ['Welcome','Type in English, like a WhatsApp note. It stays on this phone.'],
   home: ['Home','Capture new business memory and see what needs attention.'],
   requirements: ['Requirements','People actively looking for a property.'],
   properties: ['Properties','Available property supply.'],
@@ -69,14 +69,14 @@ const routes = {
   review: ['Review','Confirm extracted information before saving.'],
   'after-call': ['After-call recap','Quickly capture what changed after a call without recording the call itself.'],
   ask: ['Ask','Search your local business memory by typing in English.'],
-  people: ['People','Remember Property Advisors, owners, buyers, tenants and contacts.'],
+  people: ['People','Remember Property Advisors, owners, buyers and tenants.'],
   person: ['Person detail','View contact details and saved requirements.'],
   property: ['Property detail','View structured property facts and related actions.'],
   matches: ['Matches','See demand and supply connections with clear match reasons.'],
   match: ['Match detail','Understand why a match exists and take the next action.'],
   poster: ['Scan Poster','Capture a poster or choose an image.'],
   'poster-review': ['Poster review','Confirm phone number and extracted details before save.'],
-  'poster-lead': ['Poster lead','Review saved poster details and matching opportunities.'],
+  'poster-lead': ['Number saved','Review saved poster details and matching opportunities.'],
   followups: ['Follow-ups','See useful next actions without CRM complexity.'],
   settings: ['Settings & Backup','Manage privacy, encrypted backup, restore and personalization.']
 };
@@ -149,6 +149,12 @@ function propertyPriceLabel(property){
   return property.priceBasis&&property.priceBasis.startsWith('per_')&&property.priceBasis!=='per_month'&&total!=null ? `${rate} · ${formatMoney(total)} total` : rate;
 }
 function propertyTitle(property){ return `${titleCase(property?.propertyType || 'Property')} in ${property?.locality || 'Location pending'}`; }
+function personIdentitySummary(person){
+  const roles=(person.roles||[person.role]).map(titleCase).join(' · ');
+  const locations=[...repository.list('requirements').filter(item=>item.personId===person.id).flatMap(item=>item.locations||[]),...repository.list('properties').filter(item=>item.ownerPersonId===person.id).map(item=>item.locality)].filter(Boolean);
+  const location=locations[0]||'Location pending';const phone=person.primaryPhone||'Phone pending';
+  return `${roles} · ${location} · ${phone}`;
+}
 function matchRecordId(requirementId,propertyId){ return `match-${requirementId}-${propertyId}`; }
 function requirementPerson(requirement){ return requirement ? repository.get('people',requirement.personId) : null; }
 function propertyOwner(property){ return property?.ownerPersonId ? repository.get('people',property.ownerPersonId) : null; }
@@ -192,7 +198,7 @@ function shell(content, active){
     const selected=active===id;
     return `<button type="button" class="nav-item ${selected?'active':''}" data-route="${id}" aria-label="${text.nav[id]}"${selected?' aria-current="page"':''} data-testid="nav-${id}">${icon(iconName,'nav-icon')}<small>${text.nav[id]}</small></button>`;
   }).join('');
-  return `<div class="app-shell"><header class="topbar"><button class="brand" data-route="home" aria-label="Property Assistant home"><span class="brand-mark"><span>P</span></span><span class="brand-copy"><strong>Property Assistant</strong><small>Your local property second brain</small></span></button><div class="topbar-actions"><button class="icon-button" data-route="ask" type="button" aria-label="Search local memory" data-testid="header-search">${icon('search')}</button></div></header><main>${content}</main><nav class="bottom-nav" aria-label="Primary navigation">${nav}</nav></div>`;
+  return `<div class="app-shell"><header class="topbar"><button class="brand" data-route="home" aria-label="Property Assistant home"><span class="brand-mark"><span>P</span></span><span class="brand-copy"><strong>Property Assistant</strong><small>Your local property second brain</small></span></button><div class="topbar-actions"><button class="icon-button" data-route="ask" type="button" aria-label="Search notes saved on this phone" data-testid="header-search">${icon('search')}</button></div></header><main>${content}</main><nav class="bottom-nav" aria-label="Primary navigation">${nav}</nav></div>`;
 }
 
 function renderHome(){
@@ -213,7 +219,7 @@ function renderHome(){
     }
     return `<button class="activity-row" type="button" data-route="followups"><span class="avatar gold">${icon('followups')}</span><span><strong>${escapeHtml(item.followup.title)}</strong><small>${new Date(item.followup.dueAt).toLocaleString()}</small></span><span class="status-badge">Pending</span>${icon('arrow')}</button>`;
   }).join('');
-  return shell(`<section class="assistant-intro"><div class="greeting-mark" aria-hidden="true">☀</div><div><h1 data-testid="home-heading">${copy.greeting}</h1><p>${copy.greetingHint}</p></div></section><section class="assistant-capture" aria-labelledby="capture-title"><div class="capture-heading"><span class="capture-person">${icon('user')}</span><div><h2 id="capture-title">${copy.captureTitle}</h2><p>${copy.captureHint}</p></div></div><div class="capture-composer typing-only"><label class="sr-only" for="home-capture">Natural-language property note in English</label><textarea id="home-capture" data-testid="home-capture-text" rows="4" placeholder="${copy.capturePlaceholder}"></textarea></div><div class="parsed-summary" data-testid="home-parsed-summary" hidden><div class="parsed-label">${icon('sparkles')}<strong>${copy.understood}</strong></div><div class="summary-chips" data-testid="home-summary-chips"></div></div><div class="capture-footer"><button class="detail-button" type="button" data-testid="type-save">${icon('keyboard')} Open full editor</button><button class="button primary save-memory" type="button" data-testid="home-review-save" disabled>${icon('check')} ${copy.reviewSave}</button></div><p class="capture-error" data-testid="home-capture-error" hidden></p></section><section class="home-section"><div class="section-heading"><h2>${copy.suggested}</h2><button data-route="matches" class="text-button">${copy.viewAll} ${icon('arrow')}</button></div><div class="match-scroll" data-testid="home-matches">${matchCards || `<div class="empty-state compact">${icon('matches')}<p>${copy.noMatches}</p><button class="button" type="button" data-route="type">${text.actions.type}</button></div>`}</div></section><section class="home-section"><div class="section-heading"><h2>${copy.recent}</h2><button data-route="requirements" class="text-button">${copy.viewAll} ${icon('arrow')}</button></div><div class="activity-list" data-testid="recent-activity">${activityRows || `<div class="empty-state compact">${icon('sparkles')}<p>Every saved conversation will appear here as useful business memory.</p></div>`}</div></section><section class="home-section quick-tools-section"><div class="section-heading"><h2>${copy.quickTools}</h2></div><div class="quick-actions"><button class="tool-button" type="button" data-route="people">${icon('user')} Contacts</button><button class="tool-button" type="button" data-route="poster">${icon('camera')} ${text.actions.scan}</button><button class="tool-button" type="button" data-route="after-call">${icon('phone')} After-call recap</button><button class="tool-button" type="button" data-route="settings">${icon('settings')} Settings & Backup</button></div></section>`, 'home');
+  return shell(`<section class="assistant-intro"><div class="greeting-mark" aria-hidden="true">☀</div><div><h1 data-testid="home-heading">${copy.greeting}</h1><p>${copy.greetingHint}</p></div></section><section class="assistant-capture" aria-labelledby="capture-title"><div class="capture-heading"><span class="capture-person">${icon('user')}</span><div><h2 id="capture-title">${copy.captureTitle}</h2><p>${copy.captureHint}</p></div></div><div class="capture-composer typing-only"><label class="sr-only" for="home-capture">Natural-language property note in English</label><textarea id="home-capture" data-testid="home-capture-text" rows="4" placeholder="${copy.capturePlaceholder}"></textarea></div><div class="parsed-summary" data-testid="home-parsed-summary" hidden><div class="parsed-label">${icon('sparkles')}<strong>${copy.understood}</strong></div><div class="summary-chips" data-testid="home-summary-chips"></div></div><div class="capture-footer"><button class="detail-button" type="button" data-testid="type-save">${icon('keyboard')} Open full editor</button><button class="button primary save-memory" type="button" data-testid="home-review-save" disabled>${icon('check')} ${copy.reviewSave}</button></div><p class="capture-error" data-testid="home-capture-error" hidden></p></section><section class="home-section"><div class="section-heading"><h2>${copy.suggested}</h2><button data-route="matches" class="text-button">${copy.viewAll} ${icon('arrow')}</button></div><div class="match-scroll" data-testid="home-matches">${matchCards || `<div class="empty-state compact">${icon('matches')}<p>${copy.noMatches}</p><button class="button" type="button" data-route="type">${text.actions.type}</button></div>`}</div></section><section class="home-section"><div class="section-heading"><h2>${copy.recent}</h2><button data-route="requirements" class="text-button">${copy.viewAll} ${icon('arrow')}</button></div><div class="activity-list" data-testid="recent-activity">${activityRows || `<div class="empty-state compact">${icon('sparkles')}<p>Every saved conversation will appear here as useful business memory.</p></div>`}</div></section><section class="home-section quick-tools-section"><div class="section-heading"><h2>${copy.quickTools}</h2></div><div class="quick-actions"><button class="tool-button" type="button" data-route="people">${icon('user')} People</button><button class="tool-button" type="button" data-route="poster">${icon('camera')} ${text.actions.scan}</button><button class="tool-button" type="button" data-route="after-call">${icon('phone')} After-call recap</button><button class="tool-button" type="button" data-route="settings">${icon('settings')} Settings & Backup</button></div></section>`, 'home');
 }
 
 function renderRequirements(){
@@ -251,9 +257,9 @@ function renderPeople(){
     const requirements=repository.list('requirements').filter(item=>item.personId===person.id).length;
     const properties=repository.list('properties').filter(item=>item.ownerPersonId===person.id).length;
     const notes=repository.list('interactions').filter(item=>(item.personIds||[]).includes(person.id)).length;
-    return `<article class="memory-card contact-card" data-testid="person-card"><span class="avatar">${initials(person.name)}</span><div><h2>${escapeHtml(person.name)}</h2><p>${(person.roles || [person.role]).map(titleCase).join(' · ')} · ${escapeHtml(person.primaryPhone || 'Phone pending')}</p><small>${requirements} requirement${requirements===1?'':'s'} · ${properties} propert${properties===1?'y':'ies'} · ${notes} remembered note${notes===1?'':'s'}</small></div><button type="button" class="button" data-person-id="${escapeHtml(person.id)}">${t().ui.open}</button></article>`;
+    return `<article class="memory-card contact-card" data-testid="person-card" data-person-id-value="${escapeHtml(person.id)}"><span class="avatar">${initials(person.name)}</span><div><h2>${escapeHtml(person.name)}</h2><p>${escapeHtml(personIdentitySummary(person))}</p><small>${requirements} requirement${requirements===1?'':'s'} · ${properties} propert${properties===1?'y':'ies'} · ${notes} remembered note${notes===1?'':'s'}</small></div><button type="button" class="button" data-person-id="${escapeHtml(person.id)}">${t().ui.open}</button></article>`;
   }).join('');
-  return shell(`<section class="screen-page"><div class="screen-heading"><div><h1>Contacts</h1><p>Owners, customers, builders and Property Advisors remembered locally.</p></div><button class="icon-button" type="button" data-route="type" aria-label="Add contact">${icon('plus')}</button></div><div class="memory-list" data-testid="people-list">${cards || `<div class="empty-state">${icon('user')}<h2>No contacts yet</h2><p>Capture a person naturally and their contact will appear here.</p><button class="button primary" type="button" data-route="type">${t().actions.type}</button></div>`}</div></section>`, '');
+  return shell(`<section class="screen-page"><div class="screen-heading"><div><h1>People</h1><p>Owners, customers, builders and Property Advisors remembered locally.</p></div><button class="icon-button" type="button" data-route="type" aria-label="Add person">${icon('plus')}</button></div><div class="memory-list" data-testid="people-list">${cards || `<div class="empty-state">${icon('user')}<h2>No people yet</h2><p>Capture a person naturally and their contact will appear here.</p><button class="button primary" type="button" data-route="type">${t().actions.type}</button></div>`}</div></section>`, '');
 }
 
 function renderPerson(){
@@ -273,7 +279,7 @@ function renderPerson(){
     ...properties.filter(item=>item.sourceText).map(item=>({date:item.createdAt,summary:item.sourceText}))
   ].sort((a,b)=>new Date(b.date)-new Date(a.date));
   const history=memories.map(item=>`<li><span>${new Date(item.date).toLocaleDateString()}</span><p>${escapeHtml(item.summary)}</p></li>`).join('');
-  return shell(`<section class="screen-page detail-page"><div class="person-hero"><span class="avatar large">${initials(person.name)}</span><div><p class="eyebrow">PROPERTY MEMORY</p><h1 data-testid="person-name">${escapeHtml(person.name)}</h1><p>${(person.roles || [person.role]).map(titleCase).join(' · ')}</p></div></div><div class="detail-grid"><section class="detail-panel"><h2>Contact</h2><strong data-testid="primary-phone">${escapeHtml(person.primaryPhone || 'Phone pending')}</strong><p>Alternate phones</p><ul>${alternates}</ul></section><section class="detail-panel"><h2>Next action</h2>${followups[0]?`<strong>${escapeHtml(followups[0].title)}</strong><p>${new Date(followups[0].dueAt).toLocaleString()}</p><button class="button" type="button" data-route="followups">Open follow-up</button>`:'<p>No open follow-up.</p><button class="button" type="button" data-route="after-call">Add recap</button>'}</section></div>${requirements.length?`<section class="detail-panel"><h2>Requirements</h2>${requirementCards}</section>`:''}${properties.length?`<section class="detail-panel"><h2>Properties</h2>${propertyCards}</section>`:''}<section class="detail-panel"><div class="section-heading"><h2>What I remember</h2><button class="text-button" type="button" data-route="after-call">${icon('plus')} Add recap</button></div>${history?`<ol class="memory-timeline">${history}</ol>`:'<div class="empty-inline">No conversation history yet. Add a recap after the next call.</div>'}</section><div class="page-actions">${button('Back to Contacts','people')}</div></section>`, '');
+  return shell(`<section class="screen-page detail-page"><div class="person-hero"><span class="avatar large">${initials(person.name)}</span><div><p class="eyebrow">PROPERTY MEMORY</p><h1 data-testid="person-name">${escapeHtml(person.name)}</h1><p>${(person.roles || [person.role]).map(titleCase).join(' · ')}</p></div></div><div class="detail-grid"><section class="detail-panel"><h2>Contact</h2><strong data-testid="primary-phone">${escapeHtml(person.primaryPhone || 'Phone pending')}</strong><p>Alternate phones</p><ul>${alternates}</ul></section><section class="detail-panel"><h2>Next action</h2>${followups[0]?`<strong>${escapeHtml(followups[0].title)}</strong><p>${new Date(followups[0].dueAt).toLocaleString()}</p><button class="button" type="button" data-route="followups">Open follow-up</button>`:'<p>No open follow-up.</p><button class="button" type="button" data-route="after-call">Add recap</button>'}</section></div>${requirements.length?`<section class="detail-panel"><h2>Requirements</h2>${requirementCards}</section>`:''}${properties.length?`<section class="detail-panel"><h2>Properties</h2>${propertyCards}</section>`:''}<section class="detail-panel"><div class="section-heading"><h2>What I remember</h2><button class="text-button" type="button" data-route="after-call">${icon('plus')} Add recap</button></div>${history?`<ol class="memory-timeline">${history}</ol>`:'<div class="empty-inline">No conversation history yet. Add a recap after the next call.</div>'}</section><div class="page-actions">${button('Back to People','people')}</div></section>`, '');
 }
 
 function renderProperty(){
@@ -290,11 +296,11 @@ function renderProperty(){
 
 function renderGeneric(id){
   const [title,description]=routes[id] || ['Not found','This screen does not exist.'];
-  const actions={splash:button('Get started','onboarding','button primary'),onboarding:'<button class="button primary" data-route="home" data-onboarding-complete type="button">Continue to Home</button>',type:button('Review example','review','button primary'),review:button('Back to Home','home','button primary'),'after-call':button('Back to Home','home','button primary'),ask:button('Back to Home','home'),matches:button('Open match detail','match'),match:button('Follow up','followups'),poster:button('Review captured poster','poster-review','button primary'),'poster-review':button('Save poster lead','poster-lead','button primary'),'poster-lead':button('View Matches','matches'),followups:button('Back to Home','home'),settings:button('Back to Home','home')}[id] || button('Back to Home','home');
+  const actions={splash:button('Get started','onboarding','button primary'),onboarding:'<button class="button primary" data-route="home" data-onboarding-complete type="button">Continue to Home</button>',type:button('Review example','review','button primary'),review:button('Back to Home','home','button primary'),'after-call':button('Back to Home','home','button primary'),ask:button('Back to Home','home'),matches:button('Open match detail','match'),match:button('Follow up','followups'),poster:button('Review captured poster','poster-review','button primary'),'poster-review':button('Save this number','poster-lead','button primary'),'poster-lead':button('View Matches','matches'),followups:button('Back to Home','home'),settings:button('Back to Home','home')}[id] || button('Back to Home','home');
   const trust = id==='splash'
-    ? `<div class="welcome-card"><strong>Private by default</strong><p>Capture people, properties and requirements without sending your business memory to a cloud account.</p></div>`
+    ? `<div class="welcome-card"><strong>Private by default</strong><p>Capture people, properties and requirements without sending anything to a cloud account. It stays on this phone.</p></div>`
     : id==='onboarding'
-      ? `<div class="welcome-card"><strong>Ready for everyday work</strong><p>Type a note in English, review what was understood, then save it as connected business memory.</p></div>`
+      ? `<div class="welcome-card"><strong>Ready for everyday work</strong><p>Type a note in English, review what was understood, then save it. It stays on this phone.</p></div>`
       : `<div class="welcome-card"><strong>Local-first</strong><p>Your core records remain on this device and stay usable without an AI model.</p></div>`;
   const content=`<section class="page"><p class="eyebrow">PROPERTY ASSISTANT</p><h1 data-testid="screen-title">${title}</h1><p class="lead">${description}</p>${trust}<div class="page-actions">${actions}</div></section>`;
   if(id==='splash') return `<div class="splash">${content}</div>`;
@@ -303,7 +309,7 @@ function renderGeneric(id){
 
 function renderRecovery(){
   const message=escapeHtml(bootError || 'Local data could not be opened safely.');
-  return shell(`<section class="page"><p class="eyebrow">RECOVERY REQUIRED</p><h1>Local memory needs recovery</h1><p class="lead">Property Assistant stopped before changing your stored business data.</p><div class="placeholder-card"><strong>What happened</strong><p data-testid="boot-error">${message}</p><p>Restore a known-good encrypted backup from Settings. Do not clear app data unless you have already secured a backup.</p></div><div class="page-actions">${button('Open Settings & Backup','settings','button primary')}</div></section>`,'settings');
+  return shell(`<section class="page"><p class="eyebrow">RECOVERY REQUIRED</p><h1>Saved on this phone needs a copy</h1><p class="lead">Property Assistant stopped before changing your stored business data.</p><div class="placeholder-card"><strong>What happened</strong><p data-testid="boot-error">${message}</p><p>Restore a known-good encrypted backup from Settings. Do not clear app data unless you have already secured a backup.</p></div><div class="page-actions">${button('Open Settings & Backup','settings','button primary')}</div></section>`,'settings');
 }
 
 function render(){
@@ -348,6 +354,7 @@ function bind(){
   const capture=document.querySelector('[data-testid="home-capture-text"]');
   const save=document.querySelector('[data-testid="home-review-save"]');
   if(capture&&save){
+    window.PropertyAssistantTypingAssist?.attach(capture,{repository,testId:'home-cursor-suggestion'});
     let draft=null;
     const summary=document.querySelector('[data-testid="home-parsed-summary"]');
     const chips=document.querySelector('[data-testid="home-summary-chips"]');

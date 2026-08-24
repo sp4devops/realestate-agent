@@ -156,3 +156,57 @@ test('extractor falls back to deterministic rules when adapter throws or is inva
   const invalid = createExtractor({ extract: async () => ({ ok:true, kind:'property', uncertain:[], person:null, property:{} }) });
   assert.equal((await invalid.extract(note)).person.name, 'Arun');
 });
+
+test('messy rent notes extract a tenant requirement and an owner house', () => {
+  const demand = parse('Ramesh needs a 2BHK near Erode Railway Station, 18000 rent, family');
+  assert.equal(demand.kind, 'requirement');
+  assert.equal(demand.person.name, 'Ramesh');
+  assert.equal(demand.person.role, 'tenant');
+  assert.equal(demand.requirement.intent, 'rent');
+  assert.equal(demand.requirement.propertyType, '2bhk');
+  assert.deepEqual(demand.requirement.locations, ['Erode Railway Station']);
+  assert.equal(demand.requirement.budgetMax, 18000);
+  assert.deepEqual(demand.requirement.preferences, ['Family only']);
+
+  const supply = parse('Murugan has a 2BHK in the same area for 17500', { lastLocality: 'Erode Railway Station' });
+  assert.equal(supply.kind, 'property');
+  assert.equal(supply.person.name, 'Murugan');
+  assert.equal(supply.person.role, 'owner');
+  assert.equal(supply.property.intent, 'rent');
+  assert.equal(supply.property.propertyType, '2bhk');
+  assert.equal(supply.property.locality, 'Erode Railway Station');
+  assert.equal(supply.property.price, 17500);
+  assert.equal(supply.property.priceBasis, 'per_month');
+});
+
+test('same area without a prior locality is forced as uncertain', () => {
+  const supply = parse('Murugan has a 2BHK in the same area for 17500');
+  assert.equal(supply.kind, 'property');
+  assert.equal(supply.property.locality, '');
+  assert.ok(supply.uncertain.includes('locality'));
+  assert.equal(supply.property.price, 17500);
+  assert.equal(supply.property.intent, 'rent');
+});
+
+test('review can switch a want into a house and keep rent meaning', () => {
+  const { switchCaptureKind } = globalThis.PropertyAssistantCapture;
+  const demand = parse('Ramesh needs a 2BHK near Erode Railway Station, 18000 rent, family');
+  const house = switchCaptureKind(demand, 'property');
+  assert.equal(house.kind, 'property');
+  assert.equal(house.person.role, 'owner');
+  assert.equal(house.property.intent, 'rent');
+  assert.equal(house.property.locality, 'Erode Railway Station');
+  assert.equal(house.property.price, 18000);
+  assert.equal(house.property.priceBasis, 'per_month');
+  assert.deepEqual(house.property.attributes, ['Family only']);
+  assert.equal(house.requirement, null);
+
+  const want = switchCaptureKind(house, 'requirement');
+  assert.equal(want.kind, 'requirement');
+  assert.equal(want.person.role, 'tenant');
+  assert.equal(want.requirement.intent, 'rent');
+  assert.deepEqual(want.requirement.locations, ['Erode Railway Station']);
+  assert.equal(want.requirement.budgetMax, 18000);
+  assert.deepEqual(want.requirement.preferences, ['Family only']);
+  assert.equal(want.property, null);
+});

@@ -2,6 +2,79 @@
 
 Append-only session history. New entries go at the top beneath this introduction or at the end; do not rewrite historical facts.
 
+## 2026-08-23 19:28 IST — P12 rc.6 Android layout and poster OCR repair verified
+
+**Branch:** `ai/p12-usability-ocr`
+
+**PR:** #14 — identity, area typeahead, Android insets and offline OCR
+
+**Completed scope:**
+
+- Repaired the screenshot layout defect at its native boundary: Android physical inset pixels are now converted through display density before becoming CSS pixels, preventing high-density devices from receiving roughly three times the intended top and bottom spacing.
+- Made the normal status bar transparent with dark icons over the white app header while preserving the dark navigation bar.
+- Bounded poster preparation to a 2048-pixel edge and four-megapixel native decode, then added a grayscale high-contrast second OCR pass only when the first pass has no recognized mobile number.
+- Tightened phone extraction so valid Indian mobile formats remain supported, noisy OCR glyphs are recovered only when conservative evidence exists, overlong digit sequences are not truncated into invented contacts, and uncertain recovery must be explicitly confirmed or edited before save.
+- Added exact regressions for the supplied OCR text `So123-456-789`, noisy recoverable text, overlong numeric text, density arithmetic, Android style/source integration and end-to-end confirmation behavior.
+
+**Failure and repair evidence:**
+
+- Initial independent review found that broad OCR glyph recovery could invent a plausible number from `So123-456-789`; the parser was narrowed and the exact screenshot string now stays blank.
+- Follow-up review found that overlong 11-digit sequences could still be windowed into a 10-digit contact; digit-dropping windows were removed and both separated and contiguous variants now stay blank.
+- The final repair also made uncertain-contact warning state survive OCR completion and block save until the Property Advisor confirms or edits it.
+
+**Final functional evidence:**
+
+- Exact functional SHA: `8850c5c22b590c00fbf7792c26e36f6b5a8dcec6`.
+- Quality Gates #467 / run `32643679567`: terminal success — Harness, 89 active unit tests with three intentional multilingual skips, full Playwright, Android build/lint/tests, bundled OCR emulator and Required summary passed.
+- Release Candidates #186 / run `32643679571`: terminal success — signed Android `0.11.0-rc.6`, desktop package/smoke/archive and artifact uploads passed.
+
+**Independent reviewer gates:**
+
+- Senior Code Reviewer: PASS — no Critical or High issue. Deferred Medium notes cover multiple contacts separated only by whitespace or slash and an unnecessary enhanced retry for a valid leading-zero first-pass number.
+- Senior QA Reviewer: PASS WITH DEVICE VALIDATION PENDING — no Critical or High issue. The same multiple-contact edge case is deferred as Medium; possible status-icon contrast over the brief dark-green launch splash is deferred as Low for physical inspection.
+- Product/UX Guardrail Reviewer: PASS — no findings; the repair remains local, review-before-save and centered on the Property Advisor's memory loop rather than CRM records or pipeline management.
+
+**Remaining gate:** install rc.6 on the screenshot device and verify three-button/gesture insets, keyboard and rotation, launch/status-bar contrast, same/clear/low-contrast poster OCR, uncertainty confirmation, camera/gallery behavior and approximately 4 GB phone memory/thermal/latency.
+
+**Merge rule:** PR #14 and its parent PR #13 remain unmerged. Merge only after physical-device confirmation and fresh explicit user authorization.
+
+## 2026-08-23 14:54 IST — P12 rc.5 usability, identity and offline OCR ready for device validation
+
+**Branch:** `ai/p12-usability-ocr`
+
+**PR:** #14 — identity, area typeahead, Android insets and offline OCR
+
+**Completed scope:**
+
+- Added explicit same-name resolution using stable person IDs plus role, area and phone-ending context. Names never auto-link; an exact phone is the only automatic identity signal.
+- Preserved explicit Create New intent, blocked duplicate-phone creation without partial writes, and retained a different captured number as an alternate when the advisor explicitly chooses an existing person.
+- Added local Cursor-style Tab/Right Arrow/tap completion to Home and Type composers, including touch focus retention.
+- Added offline area typeahead from built-in, remembered and pinned areas, Settings management and encrypted backup/restore coverage.
+- Delivered Android system-bar/cutout insets to the shared UI so fixed navigation can stay above gesture and three-button areas.
+- Bundled the offline ML Kit Latin OCR model with no Internet permission, original-image preview/storage, typed fallback image retention, review correction, bounds-first/downsampled bitmap decoding and lifecycle-safe navigation/GPS callbacks.
+
+**Failure and repair evidence:**
+
+- Initial reviewer passes found two High data-integrity defects: Create New could be reinterpreted as phone reuse, and requesting GPS could restore stale OCR values. Both were repaired with cross-kind identity regressions and persisted poster-correction coverage.
+- QA and later reviews found nonblocking focus, typed-fallback image, large-image allocation and asynchronous GPS edit/navigation issues. Each was repaired with focused regression coverage rather than deferred into the test APK.
+- Quality runs #449 and #455 correctly rejected new regression-test defects; their logs were diagnosed and the tests corrected. No failed run was blindly rerun.
+
+**Final functional evidence:**
+
+- Exact functional SHA: `f87bd40c5623350e352f2f9a0cbdb831360002eb`.
+- Quality Gates #459 / run `32630727175`: terminal success — Harness, 87 active unit tests with three deferred multilingual skips, 145 Playwright pass with one intentional skip, Android build/lint/tests, bundled OCR emulator and Required summary all passed.
+- Release Candidates #178 / run `32630727167`: terminal success — signed Android `0.11.0-rc.5`, desktop package/smoke/archive and artifact uploads passed.
+
+**Independent reviewer gates:**
+
+- Senior Code Reviewer: PASS — no Critical, High, Medium or Low finding.
+- Senior QA Reviewer: PASS — no Critical, High or Medium finding. One Low ARIA structure note remains for nested pin controls inside suggestion listboxes; the separate Pin area control remains accessible.
+- Product/UX Guardrail Reviewer: PASS — no findings; English typing-only, local-first second-brain scope and Capture → Understand → Remember → Match → Act remain intact.
+
+**Remaining gate:** physical Android validation of system bars/keyboard, touch completion, real camera/gallery OCR and rotation/accuracy, Android location permissions, approximately 4 GB phone memory/thermal/latency, install/restart persistence, backup picker and external intents.
+
+**Merge rule:** PR #14 and its parent PR #13 remain unmerged. Merge only after physical-device confirmation and fresh explicit user authorization.
+
 ## 2026-08-23 11:58 IST — P12 refocused on the English typed second brain
 
 **Branch:** ai/p12-pilot-readiness

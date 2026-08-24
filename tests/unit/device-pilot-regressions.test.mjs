@@ -13,6 +13,7 @@ const styles = await readFile(new URL('../../web/styles.css', import.meta.url), 
 const queryUi = await readFile(new URL('../../web/query-ui.js', import.meta.url), 'utf8');
 const settingsUi = await readFile(new URL('../../web/settings-ui.js', import.meta.url), 'utf8');
 const androidBuild = await readFile(new URL('../../android/app/build.gradle', import.meta.url), 'utf8');
+const androidStyles = await readFile(new URL('../../android/app/src/main/res/values/styles.xml', import.meta.url), 'utf8');
 const desktopBuild = await readFile(new URL('../../scripts/build_desktop_rc.py', import.meta.url), 'utf8');
 
 test('Android shell uses secure local asset origin, navigation lock and system-bar insets', () => {
@@ -23,10 +24,16 @@ test('Android shell uses secure local asset origin, navigation lock and system-b
   assert.match(mainActivity, /isTrustedOrigin/);
   assert.match(mainActivity, /MIXED_CONTENT_NEVER_ALLOW/);
   assert.match(mainActivity, /WindowInsetsCompat\.Type\.systemBars\(\)/);
+  assert.match(mainActivity, /WindowInsetsCompat\.Type\.displayCutout\(\)/);
+  assert.match(mainActivity, /--native-safe-bottom/);
+  assert.match(mainActivity, /getDisplayMetrics\(\)\.density/);
+  assert.match(mainActivity, /physicalPixels \/ Math\.max\(1f, density\)/);
   assert.match(mainActivity, /androidx\.core\.graphics\.Insets/);
   assert.doesNotMatch(mainActivity, /android\.graphics\.Insets|toPlatformInsets\(/);
   assert.match(qualityWorkflow, /lintDebug/);
   assert.match(manifest, /windowSoftInputMode="adjustResize"/);
+  assert.match(androidStyles, /statusBarColor">@android:color\/transparent</);
+  assert.match(androidStyles, /windowLightStatusBar">true</);
 });
 
 test('English typing pilot excludes voice runtime and microphone permission', () => {
@@ -72,5 +79,8 @@ test('user-facing shell contains no phase-development placeholder copy', () => {
 
 test('mobile layout protects fixed navigation and hides it while editing', () => {
   assert.match(styles, /safe-area-inset-bottom/);
+  assert.match(styles, /--native-safe-bottom/);
+  assert.match(styles, /left:var\(--safe-left\)/);
   assert.match(styles, /keyboard-open/);
+  assert.doesNotMatch(mainActivity, /--native-safe-top','" \+ safeInsetTop/);
 });

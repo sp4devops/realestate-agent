@@ -26,7 +26,7 @@
 
   function locationFit(locations, locality) {
     const wanted=normalized(locations);
-    if (!wanted.length) return { score:8, reason:'Location was not restricted' };
+    if (!wanted.length) return { score:0, reason:'Location is required to match' };
     if (wanted.some(item=>sameText(item,locality))) return { score:25, reason:`Exact location: ${locality}` };
     for (const wantedLocality of wanted) {
       if (areNearby(wantedLocality,locality)) return { score:15, reason:`Nearby ${wantedLocality}: ${locality}` };
@@ -83,8 +83,9 @@
   function hasAttribute(property,expected){ return normalized(property.attributes).some(value=>sameText(value,expected)); }
 
   function priceFit(requirement, property) {
+    if (requirement.budgetMin == null && requirement.budgetMax == null) return { score:0, reason:'Budget is required to match' };
     const price=effectivePropertyPrice(property);
-    if (price == null || (requirement.budgetMin == null && requirement.budgetMax == null)) return { score:7, reason:price==null?'Total price needs confirmation':'Budget was not restricted' };
+    if (price == null) return { score:0, reason:'The house has no rent or price, so it cannot fit this budget' };
     const min=requirement.budgetMin == null ? 0 : requirement.budgetMin;
     const max=requirement.budgetMax == null ? Number.POSITIVE_INFINITY : requirement.budgetMax;
     if (price >= min && price <= max) return { score:25, reason:'Within stated budget' };

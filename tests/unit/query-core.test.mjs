@@ -68,3 +68,47 @@ test('phone lookup targets the matching person instead of all contacts',()=>{
 test('match query returns persisted explained match',()=>{
  const results=search(snapshot,interpret('show matches in Erode')); assert.equal(results.length,1); assert.equal(results[0].kind,'match');
 });
+
+const bhkSnapshot={entities:{
+  people:{
+    u1:{id:'u1',name:'Suresh',role:'buyer',primaryPhone:'+91 9000000001',alternatePhones:[]},
+    u2:{id:'u2',name:'Murugan',role:'owner',primaryPhone:'+91 9000000003',alternatePhones:[]},
+    u5:{id:'u5',name:'Ramesh',role:'buyer',primaryPhone:'+91 9000000006',alternatePhones:[]}
+  },
+  properties:{
+    p1:{id:'p1',ownerPersonId:'u2',intent:'sale',propertyType:'land',locality:'Erode',price:2200000},
+    p4:{id:'p4',ownerPersonId:'u2',intent:'rent',propertyType:'2bhk',locality:'Erode Railway Station',price:17500,priceBasis:'per_month'},
+    p5:{id:'p5',ownerPersonId:'u2',intent:'rent',propertyType:'2bhk',locality:'Chennai',price:16000,priceBasis:'per_month'},
+    p6:{id:'p6',ownerPersonId:'u2',intent:'rent',propertyType:'house',locality:'Erode Railway Station',price:14000,priceBasis:'per_month'}
+  },
+  requirements:{
+    r1:{id:'r1',personId:'u1',intent:'buy',propertyType:'land',locations:['Erode'],budgetMin:1800000,budgetMax:2500000},
+    r3:{id:'r3',personId:'u5',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:18000}
+  },
+  matches:{}
+}};
+
+test('2BHK ask sets property type and does not dump every record',()=>{
+  const alone=interpret('2BHK');
+  assert.equal(alone.propertyType,'2bhk');
+  const aloneResults=search(bhkSnapshot,alone);
+  assert.ok(aloneResults.length>0);
+  assert.deepEqual(aloneResults.map(result=>result.id).sort(),['p4','p5']);
+  assert.equal(aloneResults.some(result=>result.kind==='person'),false);
+
+  const near=interpret('find 2BHK near Erode Railway Station');
+  assert.equal(near.propertyType,'2bhk');
+  assert.equal(near.location,'Erode Railway Station');
+  assert.deepEqual(search(bhkSnapshot,near).map(result=>result.id),['p4']);
+});
+
+test('sale and find-buyers-for-sale map to buy requirements',()=>{
+  const buyersForSale=interpret('find buyers for sale');
+  assert.equal(buyersForSale.personRole,'buyer');
+  assert.equal(buyersForSale.intent,'sale');
+  assert.deepEqual(search(snapshot,buyersForSale).map(result=>result.id),['u1','u4']);
+
+  const saleIds=search(snapshot,interpret('sale')).map(result=>result.id);
+  assert.ok(saleIds.includes('u1'));
+  assert.ok(saleIds.includes('u4'));
+});
