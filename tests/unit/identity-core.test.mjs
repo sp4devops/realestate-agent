@@ -37,5 +37,5 @@ test('review save asks for a real identity choice before creating a person', () 
   assert.match(index, /identity-core\.js/);
   assert.match(captureUi, /requireIdentityChoice\(form, parsed\)/);
   assert.match(captureUi, /defaultIdentityChoice/);
-  assert.match(captureUi, /Choose…/);
+  assert.match(captureUi, /Choose\u2026/);
 });
