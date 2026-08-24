@@ -85,7 +85,7 @@
   function priceFit(requirement, property) {
     if (requirement.budgetMin == null && requirement.budgetMax == null) return { score:0, reason:'Budget is required to match' };
     const price=effectivePropertyPrice(property);
-    if (price == null) return { score:7, reason:'Total price needs confirmation' };
+    if (price == null) return { score:0, reason:'The house has no rent or price, so it cannot fit this budget' };
     const min=requirement.budgetMin == null ? 0 : requirement.budgetMin;
     const max=requirement.budgetMax == null ? Number.POSITIVE_INFINITY : requirement.budgetMax;
     if (price >= min && price <= max) return { score:25, reason:'Within stated budget' };
