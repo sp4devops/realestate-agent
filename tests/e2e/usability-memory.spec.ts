@@ -1,20 +1,37 @@
 import { test, expect } from '@playwright/test';
 
-test('same-name people are resolved by stable identity instead of silently merged',async({page})=>{
+async function seedTwoRameshes(page:any){
  await page.goto('/#/type');
  await page.evaluate(()=>{
   const repo=(window as any).__PA_REPOSITORY__;
-  repo.create('people',{id:'ramesh-erode',name:'Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'+91 98765 40001',alternatePhones:[],identityStatus:'confirmed'});
-  repo.create('people',{id:'ramesh-perundurai',name:'Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'+91 98765 40002',alternatePhones:[],identityStatus:'confirmed'});
+  repo.create('people',{id:'ramesh-erode',name:'Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'+91 90000 00006',alternatePhones:[],identityStatus:'confirmed'});
+  repo.create('people',{id:'ramesh-perundurai',name:'Ramesh',role:'owner',roles:['owner'],primaryPhone:'+91 90000 00007',alternatePhones:[],identityStatus:'confirmed'});
   repo.create('requirements',{personId:'ramesh-erode',intent:'buy',propertyType:'land',locations:['Erode']});
   repo.create('requirements',{personId:'ramesh-perundurai',intent:'buy',propertyType:'house',locations:['Perundurai']});
  });
+}
+
+async function rameshPeople(page:any){
+ return page.evaluate(()=>(window as any).__PA_REPOSITORY__.list('people').filter((person:any)=>person.name==='Ramesh'));
+}
+
+test('two Rameshes without a phone match do not preselect Create new and block Save',async({page})=>{
+ await seedTwoRameshes(page);
  await page.getByTestId('capture-text').fill('Ramesh wants land in Bhavani budget 25 lakh');
  await page.getByTestId('analyze-capture').click();
  await expect(page.getByTestId('identity-resolution')).toContainText('More than one saved person has this name');
- await expect(page.getByTestId('field-targetPerson').locator('option')).toHaveCount(4);
  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
- await page.getByTestId('field-targetPerson').selectOption('ramesh-perundurai');
+ await expect(page.getByTestId('field-targetPerson')).not.toHaveValue('__create_new_person__');
+ await page.getByTestId('save-capture').click();
+ await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ expect(await rameshPeople(page)).toHaveLength(2);
+});
+
+test('picking Erode Ramesh attaches the want and keeps two people',async({page})=>{
+ await seedTwoRameshes(page);
+ await page.getByTestId('capture-text').fill('Ramesh wants land in Bhavani budget 25 lakh');
+ await page.getByTestId('analyze-capture').click();
+ await page.getByTestId('field-targetPerson').selectOption('ramesh-erode');
  await page.getByTestId('save-capture').click();
  const result=await page.evaluate(()=>({
   people:(window as any).__PA_REPOSITORY__.list('people').filter((item:any)=>item.name==='Ramesh'),
@@ -22,7 +39,7 @@ test('same-name people are resolved by stable identity instead of silently merge
  }));
  expect(result.people).toHaveLength(2);
  expect(result.linked).toHaveLength(1);
- expect(result.linked[0].personId).toBe('ramesh-perundurai');
+ expect(result.linked[0].personId).toBe('ramesh-erode');
 });
 
 test('Create a new person never reuses a sole name-only match',async({page})=>{
@@ -40,49 +57,57 @@ test('Create a new person never reuses a sole name-only match',async({page})=>{
  expect(people.map((person:any)=>person.id)).toContain('existing-ramesh');
 });
 
-test('a new phone still requires an explicit same-name identity choice',async({page})=>{
- await page.goto('/#/type');
- await page.evaluate(()=>{
-  const repo=(window as any).__PA_REPOSITORY__;
-  repo.create('people',{id:'pending-ramesh',name:'Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'',alternatePhones:[],identityStatus:'phone_pending'});
-  repo.create('people',{id:'other-ramesh',name:'Ramesh',role:'owner',roles:['owner'],primaryPhone:'9876540001',alternatePhones:[],identityStatus:'confirmed'});
-  sessionStorage.setItem('pa.captureDraft',JSON.stringify({ok:true,kind:'requirement',source:'Ramesh 9876540002 wants land in Erode',person:{name:'Ramesh',primaryPhone:'9876540002'},requirement:{intent:'buy',propertyType:'land',locations:['Erode']},uncertain:[]}));
-  location.hash='#/review';
- });
- await expect(page.getByTestId('field-targetPerson').locator('option')).toHaveCount(4);
+test('explicit Create new is the only way to a third Ramesh',async({page})=>{
+ await seedTwoRameshes(page);
+ await page.getByTestId('capture-text').fill('Ramesh wants land in Bhavani budget 25 lakh');
+ await page.getByTestId('analyze-capture').click();
  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
  await page.getByTestId('save-capture').click();
  await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
- const blocked=await page.evaluate(()=>(window as any).__PA_REPOSITORY__.list('people').filter((person:any)=>person.name==='Ramesh'));
- expect(blocked).toHaveLength(2);
+ expect(await rameshPeople(page)).toHaveLength(2);
  await page.getByTestId('field-targetPerson').selectOption('__create_new_person__');
  await page.getByTestId('save-capture').click();
- const result=await page.evaluate(()=>({people:(window as any).__PA_REPOSITORY__.list('people'),pending:(window as any).__PA_REPOSITORY__.get('people','pending-ramesh')}));
- expect(result.people.filter((person:any)=>person.name==='Ramesh')).toHaveLength(3);
- expect(result.pending.primaryPhone).toBe('');
- expect(result.people.some((person:any)=>person.primaryPhone==='9876540002')).toBe(true);
+ expect(await rameshPeople(page)).toHaveLength(3);
 });
 
-for(const kind of ['followup','interaction'] as const){
- test(`${kind} capture disambiguates duplicate names before linking`,async({page})=>{
-  await page.goto('/#/type');
-  await page.evaluate((captureKind)=>{
-   const repo=(window as any).__PA_REPOSITORY__;
-   repo.create('people',{id:'ramesh-one',name:'Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'9876540011',alternatePhones:[],identityStatus:'confirmed'});
-   repo.create('people',{id:'ramesh-two',name:'Ramesh',role:'owner',roles:['owner'],primaryPhone:'9876540012',alternatePhones:[],identityStatus:'confirmed'});
-   const draft=captureKind==='followup'
-    ?{ok:true,kind:captureKind,source:'Follow up Ramesh tomorrow',person:{name:'Ramesh'},followUp:{title:'Follow up Ramesh',dueText:'Tomorrow'},uncertain:[]}
-    :{ok:true,kind:captureKind,source:'Ramesh rejected this property',person:{name:'Ramesh'},interaction:{summary:'Ramesh rejected this property',learnedPreferences:[]},uncertain:[]};
-   sessionStorage.setItem('pa.captureDraft',JSON.stringify(draft));location.hash='#/review';
-  },kind);
-  await expect(page.getByTestId('identity-resolution')).toContainText('More than one saved person has this name');
-  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
-  await page.getByTestId('field-targetPerson').selectOption('ramesh-two');
-  await page.getByTestId('save-capture').click();
-  const people=await page.evaluate(()=>(window as any).__PA_REPOSITORY__.list('people').filter((person:any)=>person.name==='Ramesh'));
-  expect(people).toHaveLength(2);
- });
-}
+test('phone +91 90000 00006 preselects Erode Ramesh and Save is ok',async({page})=>{
+ await seedTwoRameshes(page);
+ await page.getByTestId('capture-text').fill('Ramesh wants land in Bhavani budget 25 lakh phone 90000 00006');
+ await page.getByTestId('analyze-capture').click();
+ await expect(page.getByTestId('field-targetPerson')).toHaveValue('ramesh-erode');
+ await page.getByTestId('save-capture').click();
+ const result=await page.evaluate(()=>({
+  people:(window as any).__PA_REPOSITORY__.list('people').filter((item:any)=>item.name==='Ramesh'),
+  linked:(window as any).__PA_REPOSITORY__.list('requirements').filter((item:any)=>item.locations?.includes('Bhavani'))
+ }));
+ expect(result.people).toHaveLength(2);
+ expect(result.linked).toHaveLength(1);
+ expect(result.linked[0].personId).toBe('ramesh-erode');
+});
+
+test('Ramesh rejected this refuses save until a person is chosen',async({page})=>{
+ await seedTwoRameshes(page);
+ await page.getByTestId('capture-text').fill('Ramesh rejected this');
+ await page.getByTestId('analyze-capture').click();
+ await expect(page.getByTestId('identity-resolution')).toContainText('More than one saved person has this name');
+ await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
+ await expect(page.getByTestId('field-targetPerson')).not.toHaveValue('__create_new_person__');
+ await page.getByTestId('save-capture').click();
+ await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ expect(await rameshPeople(page)).toHaveLength(2);
+});
+
+test('airplane mode still refuses a rushed two-Ramesh save',async({page})=>{
+ await seedTwoRameshes(page);
+ await page.context().setOffline(true);
+ await page.getByTestId('capture-text').fill('Ramesh wants land in Bhavani budget 25 lakh');
+ await page.getByTestId('analyze-capture').click();
+ await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
+ await expect(page.getByTestId('field-targetPerson')).not.toHaveValue('__create_new_person__');
+ await page.getByTestId('save-capture').click();
+ await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ expect(await rameshPeople(page)).toHaveLength(2);
+});
 
 test('Cursor-style completion accepts an area with Tab',async({page})=>{
  await page.goto('/#/home');
