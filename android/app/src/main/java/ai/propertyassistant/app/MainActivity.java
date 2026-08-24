@@ -60,7 +60,7 @@ public final class MainActivity extends Activity {
   private static final int POSTER_MAX_DIMENSION = 2048;
   private static final long POSTER_MAX_PIXELS = 4_000_000L;
   private static final long POSTER_OCR_PASS_TIMEOUT_SECONDS = 12L;
-  private static final Pattern INDIAN_MOBILE = Pattern.compile("(?:^|\\D)(?:91)?[6-9][0-9]{9}(?:\\D|$)");
+  private static final Pattern INDIAN_MOBILE = Pattern.compile("(?:^|\\D)(?:91|0)?[6-9][0-9]{9}(?:\\D|$)");
   private static final int LOCATION_PERMISSION_REQUEST = 43;
   private static final int FILE_CHOOSER_REQUEST = 44;
   private static final int BACKUP_EXPORT_REQUEST = 45;

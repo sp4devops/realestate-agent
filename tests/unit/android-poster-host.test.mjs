@@ -46,3 +46,8 @@ test('Android release bundles an offline OCR engine and connects it to the web a
  assert.match(posterCore,/prepareImageDataUrl/);
  assert.doesNotMatch(manifest,/android\.permission\.INTERNET/);
 });
+
+test('Android skips poster enhancement when the first pass has a valid leading-zero phone',()=>{
+ assert.match(activity,/Pattern\.compile\("\(\?:\^\|\\\\D\)\(\?:91\|0\)\?\[6-9\]\[0-9\]\{9\}\(\?:\\\\D\|\$\)"\)/);
+ assert.match(activity,/if \(!containsIndianMobile\(text\)\) \{\s+enhancedBitmap = enhancePosterForOcr\(bitmap\);/);
+});

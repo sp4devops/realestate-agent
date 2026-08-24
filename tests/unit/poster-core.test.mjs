@@ -8,6 +8,14 @@ test('phone-first extraction normalizes Indian mobile numbers and preserves orde
  assert.deepEqual(phones,['9876543210','9123456789']);
 });
 
+test('phone-first extraction keeps both numbers separated by space or slash',()=>{
+ for(const separator of [' ','/',' / ']){
+  const result=extract(`Call 9876543210${separator}9123456789`);
+  assert.deepEqual(result.phones,['9876543210','9123456789']);
+  assert.equal(result.primaryPhone,'9876543210');
+ }
+});
+
 test('phone-first extraction accepts common poster punctuation',()=>{
  assert.deepEqual(extractPhones('Contact: (98765) 43210'),['9876543210']);
  assert.deepEqual(extractPhones('Mobile 98765.43210'),['9876543210']);
