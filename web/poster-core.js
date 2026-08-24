@@ -28,7 +28,7 @@ function recoverOcrPhone(line){
  return candidates.size===1?[...candidates][0]:null;
 }
 function strictPhoneCandidates(text){
- const pattern=new RegExp(`(?:^|[^0-9])((?:(?:\\+?91|0)${PHONE_SEPARATORS})?[6-9]\\d(?:${PHONE_SEPARATORS}\\d){8})(?!${PHONE_SEPARATORS}\\d)`,'g');
+ const pattern=new RegExp(`(?:^|[^0-9])((?:(?:\\+?91|0)${PHONE_SEPARATORS})?[6-9]\\d(?:${PHONE_SEPARATORS}\\d){8})(?!\\d)`,'g');
  return [...String(text||'').matchAll(pattern)].map(match=>match[1]);
 }
 function extractPhones(text){
