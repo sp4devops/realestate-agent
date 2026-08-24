@@ -107,6 +107,9 @@
     if(exactPhone.length)return exactPhone;
     return people.filter(person=>name&&normalizeName(person.name)===name);
   }
+  function identityChoiceLabel(person){
+    return `${person.name} (${person.primaryPhone || 'this number'})`;
+  }
   function identityField(label,name,parsed){
     const candidates=identityCandidates(parsed);if(!candidates.length)return '';
     const duplicate=candidates.length>1;
@@ -115,8 +118,9 @@
     const requireChoice=window.PropertyAssistantIdentity.requiresExplicitIdentityChoice(candidates.length,phoneMatchedId);
     const fieldLabel=requireChoice?String(label).replace(/\s*\(optional\)\s*$/i,''):label;
     const placeholder=requireChoice?`<option value="" selected>Choose…</option>`:'';
-    const options=[placeholder,`<option value="${CREATE_PERSON_VALUE}"${selected===CREATE_PERSON_VALUE?' selected':''}>Create a new person</option>`,...candidates.map(person=>`<option value="${esc(person.id)}"${person.id===selected?' selected':''}>${esc(personIdentityLabel(person))}</option>`)].join('');
-    return `<div class="identity-resolution" data-testid="identity-resolution"><strong>${duplicate?'More than one saved person has this name':'A saved person may match'}</strong><p>${duplicate?'Choose using phone, role and area. Names alone never identify a person.':'Confirm whether this is the saved person or create a separate contact.'}</p><label class="capture-field"><span>${fieldLabel}</span><select data-testid="field-${name}" name="${name}">${options}</select></label></div>`;
+    const personName=parsed.person?.name || 'this person';
+    const options=[placeholder,`<option value="${CREATE_PERSON_VALUE}"${selected===CREATE_PERSON_VALUE?' selected':''}>Someone new named ${esc(personName)}</option>`,...candidates.map(person=>`<option value="${esc(person.id)}"${person.id===selected?' selected':''}>${esc(identityChoiceLabel(person))}</option>`)].join('');
+    return `<div class="identity-resolution" data-testid="identity-resolution"><strong>${duplicate?`Two people named ${esc(personName)}. Which one?`:'A saved person may match'}</strong><p>${duplicate?'Two people share this name. Choose the right one.':'Confirm whether this is the saved person or add someone new.'}</p><label class="capture-field"><span>${fieldLabel}</span><select data-testid="field-${name}" name="${name}">${options}</select></label></div>`;
   }
   function suggestedPropertyId(parsed){
     const update=parsed.propertyUpdate || parsed.interaction || {}; const name=String(parsed.person?.name || '').trim().toLowerCase(); const repo=window.__PA_REPOSITORY__;
@@ -137,15 +141,58 @@
     }
     const local=new Date(date.getTime()-date.getTimezoneOffset()*60000); return local.toISOString().slice(0,16);
   }
+  function humanPropertyType(value){
+    const raw=String(value || '').trim();
+    if(!raw) return 'property';
+    if(/^\d+(\.\d+)?bhk$/i.test(raw)) return raw.toUpperCase();
+    return titleCase(raw);
+  }
+  function readbackMoneyPhrase(amount,label){
+    if(amount==null) return '';
+    const rendered=typeof formatMoney==='function' ? formatMoney(amount,false) : `₹${Number(amount).toLocaleString('en-IN')}`;
+    return `${label} about ${rendered}.`;
+  }
+  function readbackSentence(parsed){
+    const name=parsed.person?.name ? esc(parsed.person.name) : 'This person';
+    if(parsed.kind==='requirement'){
+      const r=parsed.requirement || {};
+      const place=r.locations?.[0] ? ` near ${esc(r.locations[0])}` : '';
+      const rentLike=r.intent==='rent'||r.intent==='lease';
+      const moneyPhrase=readbackMoneyPhrase(r.budgetMax, rentLike?'Rent':'Budget');
+      return `${name} is looking for a ${humanPropertyType(r.propertyType)}${place}.${moneyPhrase?` ${moneyPhrase}`:''} Is that right?`;
+    }
+    if(parsed.kind==='property'){
+      const p=parsed.property || {};
+      const place=p.locality ? ` near ${esc(p.locality)}` : '';
+      const rentLike=p.intent==='rent'||p.intent==='lease';
+      const moneyPhrase=readbackMoneyPhrase(p.price, rentLike?'Rent':'Price');
+      const who=parsed.person?.name ? `${name} has` : 'This is';
+      return `${who} a ${humanPropertyType(p.propertyType)}${place}.${moneyPhrase?` ${moneyPhrase}`:''} Is that right?`;
+    }
+    if(parsed.kind==='property_update'){
+      const u=parsed.propertyUpdate || {};
+      const moneyPhrase=readbackMoneyPhrase(u.price,'New price');
+      return `Updating the price${moneyPhrase?` — ${moneyPhrase}`:''} Is that right?`.trim();
+    }
+    if(parsed.kind==='followup'){
+      const due=parsed.followUp?.dueText ? ` ${String(parsed.followUp.dueText).toLowerCase()}` : '';
+      return `Follow up with ${name}${due}. Is that right?`;
+    }
+    return `Noting what happened with ${name}. Is that right?`;
+  }
+  function readbackCard(parsed){
+    return `<div class="placeholder-card" data-testid="review-readback"><p>I read this as: ${readbackSentence(parsed)}</p></div>`;
+  }
 
   function reviewBody(parsed){
     const labels=(parsed.uncertain || []).map(key=>uncertaintyLabels[key] || key);
     const uncertain = labels.length ? `<div class="placeholder-card"><strong>Please check these details</strong><p data-testid="uncertain-fields">${esc(labels.join(', '))}</p></div>` : `<div class="placeholder-card"><strong>Looks complete</strong><p>No low-confidence fields were detected by the local rules.</p></div>`;
-    if(parsed.kind==='property') return `${uncertain}<form data-testid="review-form">${kindSwitch(parsed)}${field('Owner name','name',parsed.person?.name || '')}${field('Primary phone (optional)','primaryPhone',parsed.person?.primaryPhone || '')}${identityField('Existing owner (optional)','targetPerson',parsed)}${field('Property type','propertyType',parsed.property?.propertyType || '')}${sizeFields(parsed.property?.size)}${locationField('Area / locality','locality',parsed.property?.locality || '')}${field('Intent','intent',parsed.property?.intent || 'sale')}${field('Price / rate','price',money(parsed.property?.price),'number')}${selectField('Price basis','priceBasis',[{value:'total',label:'Total price'},{value:'per_month',label:'Per month'},{value:'per_acre',label:'Per acre'},{value:'per_cent',label:'Per cent'},{value:'per_sqft',label:'Per sqft'}],parsed.property?.priceBasis || 'total',false)}${field('Attributes (comma separated)','attributes',listValue(parsed.property?.attributes))}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save property</button><button class="button" type="button" data-testid="edit-capture-note">Edit note</button></div></form>`;
-    if(parsed.kind==='requirement') return `${uncertain}<form data-testid="review-form">${kindSwitch(parsed)}${field('Name','name',parsed.person?.name || '')}${field('Primary phone (optional)','primaryPhone',parsed.person?.primaryPhone || '')}${identityField('Existing contact (optional)','targetPerson',parsed)}${field('Property type','propertyType',parsed.requirement?.propertyType || '')}${sizeFields(parsed.requirement?.size,true)}${locationField('Area / locality','locality',parsed.requirement?.locations?.[0] || '')}${field('Intent','intent',parsed.requirement?.intent || 'buy')}<div class="field-row">${field('Budget from','budgetMin',money(parsed.requirement?.budgetMin),'number')}${field('Budget up to','budgetMax',money(parsed.requirement?.budgetMax),'number')}</div>${field('Move / decision timing','timing',parsed.requirement?.timing || '')}${field('Preferences (comma separated)','preferences',listValue(parsed.requirement?.preferences))}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save requirement</button><button class="button" type="button" data-testid="edit-capture-note">Edit note</button></div></form>`;
-    if(parsed.kind==='property_update') return `${uncertain}<form data-testid="review-form">${selectField('Property to update','targetProperty',propertyOptions(),suggestedPropertyId(parsed))}${field('New price / rate','price',money(parsed.propertyUpdate?.price),'number')}${selectField('Price basis','priceBasis',[{value:'total',label:'Total price'},{value:'per_month',label:'Per month'},{value:'per_acre',label:'Per acre'},{value:'per_cent',label:'Per cent'},{value:'per_sqft',label:'Per sqft'}],parsed.propertyUpdate?.priceBasis || 'total',false)}${field('Updated attributes','attributes',listValue(parsed.propertyUpdate?.attributes))}${textArea('Original update note','summary',parsed.source)}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Apply property update</button><button class="button" type="button" data-testid="edit-capture-note">Edit note</button></div></form>`;
-    if(parsed.kind==='followup') return `${uncertain}<form data-testid="review-form">${field('Name','name',parsed.person?.name || '')}${field('Primary phone (optional)','primaryPhone',parsed.person?.primaryPhone || '')}${identityField('Existing person (optional)','targetPerson',parsed) || selectField('Existing person (optional)','targetPerson',peopleOptions(),suggestedPersonId(parsed))}${field('Follow-up title','title',parsed.followUp?.title || 'Follow up')}${field('Due at','dueAt',dueLocal(parsed.followUp?.dueText),'datetime-local')}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Save follow-up</button><button class="button" type="button" data-testid="edit-capture-note">Edit note</button></div></form>`;
-    return `${uncertain}<form data-testid="review-form">${field('Name','name',parsed.person?.name || '')}${field('Primary phone (optional)','primaryPhone',parsed.person?.primaryPhone || '')}${identityField('Existing person (optional)','targetPerson',parsed) || selectField('Existing person (optional)','targetPerson',peopleOptions(),suggestedPersonId(parsed))}${selectField('Related property (optional)','targetProperty',propertyOptions(),suggestedPropertyId(parsed))}${textArea('What happened','summary',parsed.interaction?.summary || parsed.source)}${field('Preferences learned (comma separated)','learnedPreferences',listValue(parsed.interaction?.learnedPreferences))}<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Remember update</button><button class="button" type="button" data-testid="edit-capture-note">Edit note</button></div></form>`;
+    const saveEditActions=`<div class="page-actions"><button class="button primary" type="submit" data-testid="save-capture">Yes, save</button><button class="button" type="button" data-testid="edit-capture-note">Fix it</button></div>`;
+    if(parsed.kind==='property') return `${readbackCard(parsed)}${uncertain}<form data-testid="review-form">${kindSwitch(parsed)}${field('Owner name','name',parsed.person?.name || '')}${field('Primary phone (optional)','primaryPhone',parsed.person?.primaryPhone || '')}${identityField('Existing owner (optional)','targetPerson',parsed)}${field('Property type','propertyType',parsed.property?.propertyType || '')}${sizeFields(parsed.property?.size)}${locationField('Area / locality','locality',parsed.property?.locality || '')}${field('They have','intent',parsed.property?.intent || 'sale')}${field('Price / rate','price',money(parsed.property?.price),'number')}${selectField('Price basis','priceBasis',[{value:'total',label:'Total price'},{value:'per_month',label:'Per month'},{value:'per_acre',label:'Per acre'},{value:'per_cent',label:'Per cent'},{value:'per_sqft',label:'Per sqft'}],parsed.property?.priceBasis || 'total',false)}${field('Attributes (comma separated)','attributes',listValue(parsed.property?.attributes))}${saveEditActions}</form>`;
+    if(parsed.kind==='requirement') return `${readbackCard(parsed)}${uncertain}<form data-testid="review-form">${kindSwitch(parsed)}${field('Name','name',parsed.person?.name || '')}${field('Primary phone (optional)','primaryPhone',parsed.person?.primaryPhone || '')}${identityField('Existing person (optional)','targetPerson',parsed)}${field('Property type','propertyType',parsed.requirement?.propertyType || '')}${sizeFields(parsed.requirement?.size,true)}${locationField('Area / locality','locality',parsed.requirement?.locations?.[0] || '')}${field('They want','intent',parsed.requirement?.intent || 'buy')}<div class="field-row">${field('Budget from','budgetMin',money(parsed.requirement?.budgetMin),'number')}${field('Budget up to','budgetMax',money(parsed.requirement?.budgetMax),'number')}</div>${field('Move / decision timing','timing',parsed.requirement?.timing || '')}${field('Preferences (comma separated)','preferences',listValue(parsed.requirement?.preferences))}${saveEditActions}</form>`;
+    if(parsed.kind==='property_update') return `${readbackCard(parsed)}${uncertain}<form data-testid="review-form">${selectField('Property to update','targetProperty',propertyOptions(),suggestedPropertyId(parsed))}${field('New price / rate','price',money(parsed.propertyUpdate?.price),'number')}${selectField('Price basis','priceBasis',[{value:'total',label:'Total price'},{value:'per_month',label:'Per month'},{value:'per_acre',label:'Per acre'},{value:'per_cent',label:'Per cent'},{value:'per_sqft',label:'Per sqft'}],parsed.propertyUpdate?.priceBasis || 'total',false)}${field('Updated attributes','attributes',listValue(parsed.propertyUpdate?.attributes))}${textArea('Original update note','summary',parsed.source)}${saveEditActions}</form>`;
+    if(parsed.kind==='followup') return `${readbackCard(parsed)}${uncertain}<form data-testid="review-form">${field('Name','name',parsed.person?.name || '')}${field('Primary phone (optional)','primaryPhone',parsed.person?.primaryPhone || '')}${identityField('Existing person (optional)','targetPerson',parsed) || selectField('Existing person (optional)','targetPerson',peopleOptions(),suggestedPersonId(parsed))}${field('Follow-up title','title',parsed.followUp?.title || 'Follow up')}${field('Due at','dueAt',dueLocal(parsed.followUp?.dueText),'datetime-local')}${saveEditActions}</form>`;
+    return `${readbackCard(parsed)}${uncertain}<form data-testid="review-form">${field('Name','name',parsed.person?.name || '')}${field('Primary phone (optional)','primaryPhone',parsed.person?.primaryPhone || '')}${identityField('Existing person (optional)','targetPerson',parsed) || selectField('Existing person (optional)','targetPerson',peopleOptions(),suggestedPersonId(parsed))}${selectField('Related property (optional)','targetProperty',propertyOptions(),suggestedPropertyId(parsed))}${textArea('What happened','summary',parsed.interaction?.summary || parsed.source)}${field('Preferences learned (comma separated)','learnedPreferences',listValue(parsed.interaction?.learnedPreferences))}${saveEditActions}</form>`;
   }
 
   function renderReview(){
