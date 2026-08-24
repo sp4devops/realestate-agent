@@ -88,12 +88,12 @@ function search(snapshot,q){
      if(!structuredHit)continue;
    }
    const linkedTerms=[...personRequirements.flatMap(r=>[r.propertyType,r.intent,...(r.locations||[])]),...ownedProperties.flatMap(property=>[property.propertyType,property.intent,property.locality])];
-   if(includesTerms([p.name,p.primaryPhone,(p.alternatePhones||[]).join(' '),...linkedTerms],q.terms)) out.push({kind:'person',id:p.id,title:p.name,subtitle:`${(p.roles || [p.role]).join(' / ').replaceAll('_',' ')} · ${p.primaryPhone || 'phone pending'}`});
+   if(includesTerms([p.name,p.primaryPhone,(p.alternatePhones||[]).join(' '),...linkedTerms],q.terms)) out.push({kind:'person',id:p.id,title:p.name,subtitle:`${(p.roles || [p.role]).join(' / ').replaceAll('_',' ')} · ${p.primaryPhone || 'phone pending'}`,phone:p.primaryPhone||null});
  }
  for(const p of properties) if(q.entity==='all'||q.entity==='properties'){
    if(!propertyMatches(p,q))continue;
    if(!includesTerms([p.propertyType,p.locality,p.intent],q.terms))continue;
-   const suffix={per_acre:'/acre',per_cent:'/cent',per_sqft:'/sqft',per_month:'/month'}[p.priceBasis] || '';
+   const suffix={per_acre:' per acre',per_cent:' per cent',per_sqft:' per sqft',per_month:' per month'}[p.priceBasis] || '';
    out.push({kind:'property',id:p.id,title:`${p.propertyType} in ${p.locality}`,subtitle:`${p.intent} · ${p.price==null?'Price not set':`₹${Number(p.price).toLocaleString('en-IN')}${suffix}`}`});
  }
  for(const m of Object.values(e.matches||{})) if(q.entity==='matches'){
@@ -101,7 +101,8 @@ function search(snapshot,q){
    if(q.personRole&&!(person?.roles || [person?.role]).includes(q.personRole))continue;
    if(!requirementMatches(r,q)||!propertyMatches(p,q))continue;
    if(!includesTerms([person?.name,p.propertyType,p.locality,(m.reasons||[]).join(' ')],q.terms))continue;
-   out.push({kind:'match',id:m.id,title:`${person?.name||'Buyer'} ↔ ${p.propertyType} in ${p.locality}`,subtitle:`Match score ${m.score} · ${(m.reasons||[])[0]||''}`});
+   const owner=p.ownerPersonId?e.people?.[p.ownerPersonId]:null;
+   out.push({kind:'match',id:m.id,title:`${owner?.name||'Owner'} has a ${p.propertyType} that may fit ${person?.name||'buyer'}.`,subtitle:`Match score ${m.score} · ${(m.reasons||[])[0]||''}`,ownerName:owner?.name||null,ownerPhone:owner?.primaryPhone||null,buyerName:person?.name||null});
  }
  return out;
 }
