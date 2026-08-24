@@ -15,7 +15,7 @@
 
   function assertIdentityChoice(candidateCount, phoneMatchedId, choice) {
     if (requiresExplicitIdentityChoice(candidateCount, phoneMatchedId) && !String(choice || '').trim()) {
-      throw new Error('Choose which saved person this is, or create a new person. Names alone never identify a person.');
+      throw new Error('Two people share this name. Which one?');
     }
   }
 

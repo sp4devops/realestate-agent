@@ -1,6 +1,7 @@
 (function(){
 'use strict';
 const repo=window.__PA_REPOSITORY__;
+const communication=window.PropertyAssistantAfterCall.createCommunicationService(window);
 function freshDraft(){return {imageBlob:null,imageName:null,ocrText:'',phone:null,phoneNeedsReview:false,posterLocation:null,captureLocation:null,capturedAt:null,leadId:null};}
 let draft=freshDraft();
 let ocrGeneration=0;
@@ -43,7 +44,7 @@ function useTypedText(){
 function renderReview(){
  clearPreview();if(draft.imageBlob)previewUrl=URL.createObjectURL(draft.imageBlob);
  const preview=previewUrl?`<img class="poster-preview" data-testid="poster-preview" src="${esc(previewUrl)}" alt="Selected poster to compare with recognized text" />`:'';
- app.innerHTML=shell(`<section class="page"><p class="eyebrow">REVIEW POSTER</p><h1>Poster review</h1><p class="lead">Confirm the extracted details before saving. Poster location and photo GPS stay separate.</p>${preview}<label class="field"><span>Phone number</span><input data-testid="poster-phone" value="${esc(draft.phone||'')}" inputmode="tel" /></label><div class="capture-field location-field"><label for="poster-location">Poster says area / location</label><div class="location-input-row"><input id="poster-location" data-testid="poster-location" value="${esc(draft.posterLocation||'')}" role="combobox" aria-autocomplete="list" aria-controls="poster-location-options" aria-expanded="false" autocomplete="off" /><button class="pin-location-button" type="button" data-testid="pin-poster-location">☆ Pin area</button></div><div class="location-options" id="poster-location-options" role="listbox" aria-label="Area suggestions" hidden></div></div><label class="field"><span>Recognized poster text</span><textarea rows="5" data-testid="poster-review-text">${esc(draft.ocrText||'')}</textarea></label><div class="placeholder-card"><strong>Original image</strong><p>${draft.imageBlob?`${esc(draft.imageName||'poster-image')} · saved locally with this lead`:'No image attached; text-only lead.'}</p><strong>Photo taken at</strong><p data-testid="capture-location">${draft.captureLocation?esc(draft.captureLocation):'Not captured. GPS is optional.'}</p></div><div class="page-actions"><button class="button" type="button" data-testid="get-capture-location">Use current location once</button><button class="button primary" type="button" data-testid="save-poster-lead">Save poster lead</button></div><p class="lead" data-testid="poster-review-status"></p></section>`,'');
+ app.innerHTML=shell(`<section class="page"><p class="eyebrow">REVIEW POSTER</p><h1>Poster review</h1><p class="lead">Confirm the extracted details before saving. Poster location and photo GPS stay separate.</p>${preview}<label class="field"><span>Phone number</span><input data-testid="poster-phone" value="${esc(draft.phone||'')}" inputmode="tel" /></label><div class="capture-field location-field"><label for="poster-location">Poster says area / location</label><div class="location-input-row"><input id="poster-location" data-testid="poster-location" value="${esc(draft.posterLocation||'')}" role="combobox" aria-autocomplete="list" aria-controls="poster-location-options" aria-expanded="false" autocomplete="off" /><button class="pin-location-button" type="button" data-testid="pin-poster-location">☆ Pin area</button></div><div class="location-options" id="poster-location-options" role="listbox" aria-label="Area suggestions" hidden></div></div><label class="field"><span>Recognized poster text</span><textarea rows="5" data-testid="poster-review-text">${esc(draft.ocrText||'')}</textarea></label><div class="placeholder-card"><strong>Original image</strong><p>${draft.imageBlob?`${esc(draft.imageName||'poster-image')} · saved locally with this note`:'No photo; text only.'}</p><strong>Photo taken at</strong><p data-testid="capture-location">${draft.captureLocation?esc(draft.captureLocation):'Not captured. GPS is optional.'}</p></div><div class="page-actions"><button class="button" type="button" data-testid="get-capture-location">Use current location once</button><button class="button primary" type="button" data-testid="save-poster-lead">Save this number</button></div><p class="lead" data-testid="poster-review-status"></p></section>`,'');
  const phoneInput=document.querySelector('[data-testid="poster-phone"]');
  if(draft.phoneNeedsReview){
   phoneInput?.closest('.field')?.insertAdjacentHTML('afterend','<div class="capture-error" id="poster-phone-warning" data-testid="poster-phone-warning" role="alert">Some phone characters were unclear. Compare the number with the photo. <button class="text-button" type="button" data-testid="confirm-poster-phone">Number matches photo</button></div>');
@@ -88,19 +89,21 @@ async function saveLead(){
   }
   const saved=repo.transact((tx)=>{
    const lead=tx.create('posterLeads',{phone,imageRef,posterLocation,captureLocation:draft.captureLocation,capturedAt:draft.capturedAt||new Date().toISOString(),ocrText:text});
-   const followUp=tx.create('followUps',{dueAt:new Date().toISOString(),status:'open',title:`Review poster lead ${phone}`,posterLeadId:lead.id});
+   const followUp=tx.create('followUps',{dueAt:new Date().toISOString(),status:'open',title:`Call ${phone}`,posterLeadId:lead.id});
    return {lead,followUp};
   });
   draft={...draft,leadId:saved.lead.id,phone,posterLocation,ocrText:text,imageRef};location.hash=`#/poster-lead?id=${encodeURIComponent(saved.lead.id)}`;
  }catch(error){
   if(imageRef){try{await window.PropertyAssistantPosterImages.remove(imageRef);}catch(_){} }
-  status.textContent=error.message||'Poster lead could not be saved.';button.disabled=false;
+  status.textContent=error.message||'This number could not be saved.';button.disabled=false;
  }
 }
 function renderLead(){
  const id=new URLSearchParams(location.hash.split('?')[1]||'').get('id')||draft.leadId; const lead=id?repo.get('posterLeads',id):null;
- if(!lead){app.innerHTML=shell(`<section class="page"><h1>Poster lead not found</h1><div class="page-actions"><button class="button" data-route="poster">Scan another poster</button></div></section>`,'');bindShell();return;}
- app.innerHTML=shell(`<section class="page"><p class="eyebrow">POSTER LEAD</p><h1>Poster lead</h1><div class="placeholder-card"><strong>Phone</strong><p data-testid="saved-poster-phone">${esc(lead.phone)}</p><strong>Original image</strong><p data-testid="saved-poster-image">${lead.imageRef?'Saved locally':'No image attached'}</p><strong>Poster says location</strong><p>${esc(lead.posterLocation||'Not found')}</p><strong>Photo taken at</strong><p>${esc(lead.captureLocation||'GPS not captured')}</p></div><div class="page-actions"><button class="button primary" data-route="followups">View follow-up</button><button class="button" data-route="poster">Scan another poster</button></div></section>`,'');bindShell();
+ if(!lead){app.innerHTML=shell(`<section class="page"><h1>Saved number not found</h1><div class="page-actions"><button class="button" data-route="poster">Scan another poster</button></div></section>`,'');bindShell();return;}
+ app.innerHTML=shell(`<section class="page"><p class="eyebrow">FROM THE POSTER</p><h1>Number saved</h1><div class="placeholder-card"><strong>Phone</strong><p data-testid="saved-poster-phone">${esc(lead.phone)}</p><strong>Original image</strong><p data-testid="saved-poster-image">${lead.imageRef?'Saved locally':'No image attached'}</p><strong>Poster says location</strong><p>${esc(lead.posterLocation||'Not found')}</p><strong>Photo taken at</strong><p>${esc(lead.captureLocation||'GPS not captured')}</p></div><div class="page-actions"><button class="button primary" type="button" data-testid="call-poster-lead">${icon('phone')} Call this number</button><button class="button" data-route="followups">View follow-up</button><button class="button" data-route="poster">Scan another poster</button></div></section>`,'');
+ bindShell();
+ document.querySelector('[data-testid="call-poster-lead"]')?.addEventListener('click',()=>{ try{ communication.call(lead.phone,null); }catch(_){} });
 }
 function bindShell(){document.querySelectorAll('[data-route]').forEach(el=>el.addEventListener('click',()=>{location.hash=`#/${el.dataset.route}`;}));}
 function owned(){const r=route();if(r==='poster')renderPoster();else if(r==='poster-review')renderReview();else if(r==='poster-lead')renderLead();}

@@ -9,7 +9,7 @@ test('settings creates an encrypted local backup and shows privacy/status', asyn
   const downloadPromise=page.waitForEvent('download');
   await page.getByTestId('create-backup').click();
   const download=await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/\.pabackup$/);
+  expect(download.suggestedFilename()).toMatch(/^phone-copy-.*\.json$/);
   await expect(page.getByTestId('settings-status')).toContainText('Encrypted backup created');
   await expect(page.getByTestId('backup-status')).toContainText('Last backup:');
 });
@@ -34,7 +34,7 @@ test('a produced encrypted backup restores through the file-upload UI', async ({
     localStorage.setItem('pa.displayLanguage','ta');
     (window as any).__PA_REPOSITORY__.create('people',{id:'person-temporary',name:'Temporary',role:'buyer',primaryPhone:'+91 90000 00009',alternatePhones:[]});
   });
-  await page.getByTestId('restore-file').setInputFiles({name:'produced.pabackup',mimeType:'application/json',buffer:Buffer.from(encrypted)});
+  await page.getByTestId('restore-file').setInputFiles({name:'produced-phone-copy.json',mimeType:'application/json',buffer:Buffer.from(encrypted)});
   await page.getByTestId('restore-password').fill('restore-safe-123');
   const loadPromise=page.waitForEvent('load');
   await page.getByTestId('restore-backup').click();
@@ -53,7 +53,7 @@ test('wrong restore password fails safely without changing local records', async
     return core.encryptPayload(payload,'correct-safe-123');
   });
   const before=await page.evaluate(()=>JSON.stringify((window as any).__PA_REPOSITORY__.loadSnapshot()));
-  await page.getByTestId('restore-file').setInputFiles({name:'safe.pabackup',mimeType:'application/json',buffer:Buffer.from(encrypted)});
+  await page.getByTestId('restore-file').setInputFiles({name:'safe-phone-copy.json',mimeType:'application/json',buffer:Buffer.from(encrypted)});
   await page.getByTestId('restore-password').fill('wrong-safe-123');
   await page.getByTestId('restore-backup').click();
   await expect(page.getByTestId('settings-status')).toContainText(/wrong or the backup is corrupted/i);

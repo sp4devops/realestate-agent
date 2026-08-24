@@ -19,11 +19,11 @@ test('two Rameshes without a phone match do not preselect Create new and block S
  await seedTwoRameshes(page);
  await page.getByTestId('capture-text').fill('Ramesh wants land in Bhavani budget 25 lakh');
  await page.getByTestId('analyze-capture').click();
- await expect(page.getByTestId('identity-resolution')).toContainText('More than one saved person has this name');
+ await expect(page.getByTestId('identity-resolution')).toContainText('Two people named Ramesh. Which one?');
  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
  await expect(page.getByTestId('field-targetPerson')).not.toHaveValue('__create_new_person__');
  await page.getByTestId('save-capture').click();
- await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ await expect(page.getByTestId('review-error')).toContainText('Two people share this name. Which one?');
  expect(await rameshPeople(page)).toHaveLength(2);
 });
 
@@ -63,7 +63,7 @@ test('explicit Create new is the only way to a third Ramesh',async({page})=>{
  await page.getByTestId('analyze-capture').click();
  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
  await page.getByTestId('save-capture').click();
- await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ await expect(page.getByTestId('review-error')).toContainText('Two people share this name. Which one?');
  expect(await rameshPeople(page)).toHaveLength(2);
  await page.getByTestId('field-targetPerson').selectOption('__create_new_person__');
  await page.getByTestId('save-capture').click();
@@ -89,11 +89,11 @@ test('Ramesh rejected this refuses save until a person is chosen',async({page})=
  await seedTwoRameshes(page);
  await page.getByTestId('capture-text').fill('Ramesh rejected this');
  await page.getByTestId('analyze-capture').click();
- await expect(page.getByTestId('identity-resolution')).toContainText('More than one saved person has this name');
+ await expect(page.getByTestId('identity-resolution')).toContainText('Two people named Ramesh. Which one?');
  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
  await expect(page.getByTestId('field-targetPerson')).not.toHaveValue('__create_new_person__');
  await page.getByTestId('save-capture').click();
- await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ await expect(page.getByTestId('review-error')).toContainText('Two people share this name. Which one?');
  expect(await rameshPeople(page)).toHaveLength(2);
 });
 
@@ -105,7 +105,7 @@ test('airplane mode still refuses a rushed two-Ramesh save',async({page})=>{
  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
  await expect(page.getByTestId('field-targetPerson')).not.toHaveValue('__create_new_person__');
  await page.getByTestId('save-capture').click();
- await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ await expect(page.getByTestId('review-error')).toContainText('Two people share this name. Which one?');
  expect(await rameshPeople(page)).toHaveLength(2);
 });
 
@@ -141,7 +141,7 @@ for(const kind of Object.keys(identityDrafts) as Array<keyof typeof identityDraf
    (window as any).__PA_REPOSITORY__.create('people',{id:'saved-ramesh',name:'Saved Ramesh',role:'buyer',roles:['buyer'],primaryPhone:'9876540002',alternatePhones:[],identityStatus:'confirmed'});
    sessionStorage.setItem('pa.captureDraft',JSON.stringify(draft));location.hash='#/review';
   },{draft:identityDrafts[kind]});
-  await page.getByTestId('field-targetPerson').selectOption({label:'Create a new person'});
+  await page.getByTestId('field-targetPerson').selectOption('__create_new_person__');
   await page.getByTestId('save-capture').click();
   await expect(page.getByTestId('review-error')).toContainText('already saved for Saved Ramesh');
   const state=await page.evaluate(()=>({people:(window as any).__PA_REPOSITORY__.list('people'),requirements:(window as any).__PA_REPOSITORY__.list('requirements'),properties:(window as any).__PA_REPOSITORY__.list('properties'),followUps:(window as any).__PA_REPOSITORY__.list('followUps'),interactions:(window as any).__PA_REPOSITORY__.list('interactions')}));

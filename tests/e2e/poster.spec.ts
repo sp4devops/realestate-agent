@@ -9,7 +9,7 @@ test('typed poster fallback saves phone-first lead and creates follow-up without
  await expect(page.getByTestId('poster-location')).toHaveValue('Erode');
  await expect(page.getByTestId('capture-location')).toContainText('GPS is optional');
  await page.getByTestId('save-poster-lead').click();
- await expect(page.getByRole('heading',{name:'Poster lead'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Number saved'})).toBeVisible();
  await expect(page.getByTestId('saved-poster-phone')).toHaveText('9876543210');
  const persisted=await page.evaluate(()=>(window as any).__PA_REPOSITORY__.loadSnapshot());
  const lead=Object.values((persisted as any).entities.posterLeads).find((item:any)=>item.phone==='9876543210') as any;
@@ -84,7 +84,7 @@ test('one-shot GPS preserves corrected poster phone, area and text through save'
  await expect(page.getByTestId('poster-location')).toHaveValue('Perundurai');
  await expect(page.getByTestId('poster-review-text')).toHaveValue('Corrected land poster in Perundurai. Call 9345678901');
  await page.getByTestId('save-poster-lead').click();
- await expect(page.getByRole('heading',{name:'Poster lead'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Number saved'})).toBeVisible();
  const lead=await page.evaluate(()=>Object.values((window as any).__PA_REPOSITORY__.loadSnapshot().entities.posterLeads).find((item:any)=>item.phone==='9345678901') as any);
  expect(lead).toMatchObject({phone:'9345678901',posterLocation:'Perundurai',ocrText:'Corrected land poster in Perundurai. Call 9345678901'});
  expect(lead.captureLocation).toContain('11.341');
@@ -112,10 +112,10 @@ test('GPS completion does not redraw poster review after navigation away',async(
  await page.getByTestId('use-poster-text').click();
  await page.getByTestId('get-capture-location').click();
  await page.evaluate(()=>{location.hash='#/people';});
- await expect(page.getByRole('heading',{name:'Contacts',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'People',exact:true})).toBeVisible();
  await page.waitForTimeout(250);
  await expect(page).toHaveURL(/#\/people$/);
- await expect(page.getByRole('heading',{name:'Contacts',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'People',exact:true})).toBeVisible();
 });
 
 test('typed fallback keeps a selected poster image with the saved lead',async({page})=>{
@@ -143,14 +143,14 @@ test('GPS permission denial is recoverable and saving remains available',async({
  await expect(page.getByTestId('poster-review-status')).toContainText('Location permission was not available');
  await expect(page.getByTestId('save-poster-lead')).toBeEnabled();
  await page.getByTestId('save-poster-lead').click();
- await expect(page.getByRole('heading',{name:'Poster lead'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Number saved'})).toBeVisible();
 });
 
 test('OCR unavailable is a recoverable user-facing state',async({page})=>{
  await page.goto('/#/poster');
  await page.getByTestId('poster-image').setInputFiles({name:'poster.png',mimeType:'image/png',buffer:Buffer.from('fake-image')});
  await page.getByTestId('read-poster').click();
- await expect(page.getByTestId('poster-status')).toContainText('Local OCR is unavailable');
+ await expect(page.getByTestId('poster-status')).toContainText('Could not read this poster here');
  await expect(page.getByTestId('poster-text')).toBeEditable();
 });
 
@@ -183,7 +183,7 @@ test('a new poster flow cannot inherit the previous lead image or GPS evidence',
  await page.getByRole('button',{name:'Scan another poster'}).click();
  await page.getByTestId('poster-text').fill('Plot in Erode. Contact 9345678901');
  await page.getByTestId('use-poster-text').click();
- await expect(page.getByText('No image attached; text-only lead.')).toBeVisible();
+ await expect(page.getByText('No photo; text only.')).toBeVisible();
  await expect(page.getByTestId('capture-location')).toContainText('Not captured');
  await page.getByTestId('save-poster-lead').click();
  const second=await page.evaluate(()=>Object.values((window as any).__PA_REPOSITORY__.loadSnapshot().entities.posterLeads).find((item:any)=>item.phone==='9345678901') as any);

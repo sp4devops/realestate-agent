@@ -71,7 +71,7 @@ async function prepareImageDataUrl(blob){
  }finally{bitmap?.close?.();}
 }
 async function recognizeWithAndroid(blob){
- const host=root.PropertyAssistantHost;if(!host||typeof host.recognizePoster!=='function')throw new Error('Local OCR is unavailable.');
+ const host=root.PropertyAssistantHost;if(!host||typeof host.recognizePoster!=='function')throw new Error('Reading from the poster is unavailable.');
  const imageDataUrl=await prepareImageDataUrl(blob);const requestId=`ocr-${Date.now()}-${Math.random().toString(16).slice(2)}`;
  return new Promise((resolve,reject)=>{
   const timeout=setTimeout(()=>{nativeRequests.delete(requestId);reject(new Error('Poster reading timed out. Retake it or type the text.'));},30000);
@@ -83,7 +83,7 @@ if(root.PropertyAssistantHost&&typeof root.PropertyAssistantHost.recognizePoster
 function createOcrService(){
  return {async recognize(imageBlob){
    const adapter=root.__PA_LOCAL_OCR__;
-   if(!adapter||typeof adapter.recognize!=='function')return {ok:false,error:'Local OCR is unavailable. You can type the poster text and continue.'};
+   if(!adapter||typeof adapter.recognize!=='function')return {ok:false,error:'Could not read this poster here. You can type the poster text and continue.'};
    try{
     const result=await adapter.recognize(imageBlob);
     const text=typeof result==='string'?result:result?.text;
