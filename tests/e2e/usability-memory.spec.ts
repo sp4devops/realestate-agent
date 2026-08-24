@@ -23,7 +23,7 @@ test('two Rameshes without a phone match do not preselect Create new and block S
  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
  await expect(page.getByTestId('field-targetPerson')).not.toHaveValue('__create_new_person__');
  await page.getByTestId('save-capture').click();
- await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ await expect(page.getByTestId('review-error')).toContainText('Two people share this name. Which one?');
  expect(await rameshPeople(page)).toHaveLength(2);
 });
 
@@ -63,7 +63,7 @@ test('explicit Create new is the only way to a third Ramesh',async({page})=>{
  await page.getByTestId('analyze-capture').click();
  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
  await page.getByTestId('save-capture').click();
- await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ await expect(page.getByTestId('review-error')).toContainText('Two people share this name. Which one?');
  expect(await rameshPeople(page)).toHaveLength(2);
  await page.getByTestId('field-targetPerson').selectOption('__create_new_person__');
  await page.getByTestId('save-capture').click();
@@ -93,7 +93,7 @@ test('Ramesh rejected this refuses save until a person is chosen',async({page})=
  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
  await expect(page.getByTestId('field-targetPerson')).not.toHaveValue('__create_new_person__');
  await page.getByTestId('save-capture').click();
- await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ await expect(page.getByTestId('review-error')).toContainText('Two people share this name. Which one?');
  expect(await rameshPeople(page)).toHaveLength(2);
 });
 
@@ -105,7 +105,7 @@ test('airplane mode still refuses a rushed two-Ramesh save',async({page})=>{
  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
  await expect(page.getByTestId('field-targetPerson')).not.toHaveValue('__create_new_person__');
  await page.getByTestId('save-capture').click();
- await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ await expect(page.getByTestId('review-error')).toContainText('Two people share this name. Which one?');
  expect(await rameshPeople(page)).toHaveLength(2);
 });
 
