@@ -26,7 +26,7 @@ test('Android-style native backup export completes only after host success callb
   await expect(page.getByTestId('settings-status')).toContainText('saved locally');
   await expect(page.getByTestId('backup-status')).toContainText('Last backup:');
   const exported=await page.evaluate(()=>(window as any).__nativeBackup);
-  expect(exported.name).toMatch(/\.pabackup$/);
+  expect(exported.name).toMatch(/^phone-copy-.*\.json$/);
   expect(exported.encrypted).toContain('property-assistant-backup');
 });
 
