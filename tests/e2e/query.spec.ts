@@ -12,7 +12,6 @@ test('typed Ask returns an actionable local property card',async({page})=>{
   await page.getByTestId('run-query').click();
   const card=page.getByTestId('query-result-card').filter({hasText:'land in Erode'});
   await expect(card).toContainText('₹22,00,000');
-  await expect(card.getByRole('button',{name:'See the note'})).toBeVisible();
   await card.getByRole('button',{name:'See the note'}).click();
   await expect(page.getByTestId('property-title')).toContainText('land in Erode');
 });
