@@ -7,7 +7,7 @@ const requiredStaticRoutes = [
   ['properties','Properties'],
   ['after-call','After-call recap'],
   ['ask','Ask'],
-  ['people','Contacts'],
+  ['people','People'],
   ['matches','Matches'],
   ['poster','Scan Poster'],
   ['poster-review','Poster review'],
@@ -52,7 +52,7 @@ test('all approved shell routes render, including dynamic persistence/capture/ma
     }).id;
   });
   await page.goto(`/#/poster-lead?id=${posterLeadId}`);
-  await expect(page.getByRole('heading', { name: 'Poster lead', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Number saved', exact: true })).toBeVisible();
   await expect(page.getByTestId('saved-poster-phone')).toHaveText('9876543210');
 });
 

@@ -12,7 +12,8 @@ test('typed Ask returns an actionable local property card',async({page})=>{
   await page.getByTestId('run-query').click();
   const card=page.getByTestId('query-result-card').filter({hasText:'land in Erode'});
   await expect(card).toContainText('₹22,00,000');
-  await card.getByRole('button',{name:'Open'}).click();
+  await expect(card.getByRole('button',{name:'See the note'})).toBeVisible();
+  await card.getByRole('button',{name:'See the note'}).click();
   await expect(page.getByTestId('property-title')).toContainText('land in Erode');
 });
 
@@ -21,7 +22,7 @@ test('typed Ask supports keyboard submit and contact lookup',async({page})=>{
   await page.getByTestId('query-input').fill('find Suresh contact');
   await page.getByTestId('query-input').press('Enter');
   await expect(page.getByTestId('query-result-card').filter({hasText:'Suresh (Demo)'})).toBeVisible();
-  await expect(page.getByTestId('query-summary')).toHaveText('1 result from local memory.');
+  await expect(page.getByTestId('query-summary')).toHaveText('1 result saved on this phone.');
 });
 
 test('empty Ask input shows guidance instead of dumping all local memory',async({page})=>{
