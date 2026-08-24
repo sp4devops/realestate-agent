@@ -101,3 +101,22 @@ test('matching only pairs requirements against properties', () => {
   assert.deepEqual(rank([first,second],[]),[]);
   assert.equal(evaluate(first,second).eligible,false);
 });
+
+test('incomplete demand without location or budget does not match any 2bhk rent',()=>{
+  const incomplete={id:'r-blank',intent:'rent',propertyType:'2bhk',locations:[]};
+  const otherCity={id:'p-chennai',intent:'rent',propertyType:'2bhk',locality:'Chennai',price:12000,priceBasis:'per_month'};
+  const anyRent={id:'p-erode',intent:'rent',propertyType:'2bhk',locality:'Erode Railway Station',price:17500,priceBasis:'per_month'};
+  assert.equal(evaluate(incomplete,otherCity).eligible,false);
+  assert.equal(evaluate(incomplete,anyRent).eligible,false);
+  assert.equal(evaluate({...incomplete,locations:['Erode Railway Station']},anyRent).eligible,false);
+  assert.equal(evaluate({...incomplete,budgetMax:18000},anyRent).eligible,false);
+});
+
+test('complete Ramesh and Murugan pair still matches when location and budget are present',()=>{
+  const requirement={id:'r-ramesh-complete',intent:'rent',propertyType:'2bhk',locations:['Erode Railway Station'],budgetMax:18000};
+  const property={id:'p-murugan-complete',intent:'rent',propertyType:'2bhk',locality:'Erode Railway Station',price:17500,priceBasis:'per_month'};
+  const result=evaluate(requirement,property);
+  assert.equal(result.eligible,true);
+  assert.ok(result.reasons.some(reason=>reason.includes('Exact location')));
+  assert.ok(result.reasons.some(reason=>reason.includes('Within stated budget')));
+});
