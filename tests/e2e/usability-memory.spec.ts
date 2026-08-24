@@ -12,7 +12,8 @@ test('same-name people are resolved by stable identity instead of silently merge
  await page.getByTestId('capture-text').fill('Ramesh wants land in Bhavani budget 25 lakh');
  await page.getByTestId('analyze-capture').click();
  await expect(page.getByTestId('identity-resolution')).toContainText('More than one saved person has this name');
- await expect(page.getByTestId('field-targetPerson').locator('option')).toHaveCount(3);
+ await expect(page.getByTestId('field-targetPerson').locator('option')).toHaveCount(4);
+ await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
  await page.getByTestId('field-targetPerson').selectOption('ramesh-perundurai');
  await page.getByTestId('save-capture').click();
  const result=await page.evaluate(()=>({
@@ -48,8 +49,13 @@ test('a new phone still requires an explicit same-name identity choice',async({p
   sessionStorage.setItem('pa.captureDraft',JSON.stringify({ok:true,kind:'requirement',source:'Ramesh 9876540002 wants land in Erode',person:{name:'Ramesh',primaryPhone:'9876540002'},requirement:{intent:'buy',propertyType:'land',locations:['Erode']},uncertain:[]}));
   location.hash='#/review';
  });
- await expect(page.getByTestId('field-targetPerson').locator('option')).toHaveCount(3);
- await expect(page.getByTestId('field-targetPerson')).toHaveValue('__create_new_person__');
+ await expect(page.getByTestId('field-targetPerson').locator('option')).toHaveCount(4);
+ await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
+ await page.getByTestId('save-capture').click();
+ await expect(page.getByTestId('review-error')).toContainText('Choose which saved person');
+ const blocked=await page.evaluate(()=>(window as any).__PA_REPOSITORY__.list('people').filter((person:any)=>person.name==='Ramesh'));
+ expect(blocked).toHaveLength(2);
+ await page.getByTestId('field-targetPerson').selectOption('__create_new_person__');
  await page.getByTestId('save-capture').click();
  const result=await page.evaluate(()=>({people:(window as any).__PA_REPOSITORY__.list('people'),pending:(window as any).__PA_REPOSITORY__.get('people','pending-ramesh')}));
  expect(result.people.filter((person:any)=>person.name==='Ramesh')).toHaveLength(3);
@@ -70,7 +76,7 @@ for(const kind of ['followup','interaction'] as const){
    sessionStorage.setItem('pa.captureDraft',JSON.stringify(draft));location.hash='#/review';
   },kind);
   await expect(page.getByTestId('identity-resolution')).toContainText('More than one saved person has this name');
-  await expect(page.getByTestId('field-targetPerson')).toHaveValue('__create_new_person__');
+  await expect(page.getByTestId('field-targetPerson')).toHaveValue('');
   await page.getByTestId('field-targetPerson').selectOption('ramesh-two');
   await page.getByTestId('save-capture').click();
   const people=await page.evaluate(()=>(window as any).__PA_REPOSITORY__.list('people').filter((person:any)=>person.name==='Ramesh'));
